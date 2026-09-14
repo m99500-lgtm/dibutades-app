@@ -22,6 +22,10 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+app.get('/validation-key.txt', (req, res) => {
+  res.set('Content-Type', 'text/plain');
+  res.status(200).send('e98f7ad5c60b5908de11f1ed');
+});
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
