@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/32222689/README.md)[Uplo# 디부타데스 (Pi Dibutades)
+# 디부타데스 (Pi Dibutades)
 
 "낙서를 하자, 낙서를 보자, 나의 앱을 홍보하자"
 
@@ -151,4 +151,3 @@ username, payments
 - `data.json` 파일 저장 → 실제 데이터베이스로 교체 (동시 접속자 늘어나면 파일 저장은 한계가 있음)
 - 홍보 링크 자동 검증(도메인 패턴)에 더해, 운영자가 수동으로 한 번 더 확인하는 승인 큐 추가하면 신뢰도 향상
 - 낙서 도배/욕설 방지를 위한 간단한 빈도 제한(rate limit) 또는 신고 기능
-ading README.md…]()
