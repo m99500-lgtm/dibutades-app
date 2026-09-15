@@ -1,7 +1,7 @@
 {
-  "name": "pi-graffiti-wall",
+  "name": "dibutades-app",
   "version": "0.1.0",
-  "description": "낙서를 하자, 낙서를 보자, 나의 앱을 홍보하자 - Pi Network 낙서벽 앱",
+  "description": "디부타데스 - 낙서를 쓰고, 보고, 나의 앱을 홍보하는 Pi Network 앱",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
