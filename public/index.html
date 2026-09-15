@@ -877,6 +877,7 @@
 
 <script>
 const API_BASE = ''; // 배포 시 백엔드 주소로 교체 (동일 도메인이면 비워둠)
+
 let currentUser = null; // { uid, username, accessToken }
 
 // ---------- 왼쪽 세계시계 실시간 업데이트 ----------
@@ -1139,7 +1140,7 @@ function initPi(){
     return;
   }
   // sandbox: true 는 테스트넷 개발 중에만 사용, 메인넷 배포 시 false 로 변경
-  Pi.init({ version: "2.0", sandbox: true });
+  Pi.init({ version: "2.0" });
 }
 initPi();
 
@@ -1156,6 +1157,23 @@ async function loginWithPi(){
       username: authResult.user.username,
       accessToken: authResult.accessToken
     };
+
+    // ---- App Studio 검증용: accessToken을 App Studio 서버에 교환 ----
+    // (모든 App Studio 등록 앱이 필수로 거쳐야 하는 단계. 실패해도 앱 자체 로그인은 이미 끝난 상태라 무시하고 진행)
+    try{
+      const exchangeRes = await fetch('https://backend.appstudio-u7cm9zhmha0ruwv8.piappengine.com/pi/auth/v1/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: authResult.accessToken })
+      });
+      if(exchangeRes.ok){
+        const exchangeData = await exchangeRes.json();
+        currentUser.appStudioSessionToken = exchangeData.sessionToken; // 필요 시 이후 요청에 사용
+      }
+    }catch(exchangeErr){
+      console.warn('App Studio 토큰 교환 실패 (앱 자체 로그인에는 영향 없음):', exchangeErr);
+    }
+
     document.getElementById('whoamiText').textContent = '@' + currentUser.username + ' 로 로그인됨 / Logged in as @' + currentUser.username;
     document.getElementById('loginBtn').style.display = 'none';
   }catch(e){
