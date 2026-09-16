@@ -1,10 +1,9 @@
 /**
  * 디부타데스 (Pi Dibutades) - 백엔드 서버
  * -----------------------------------------------------------
- * 이 서버는 데모/시작점 코드입니다. 실제 서비스에는 다음을 반드시 교체하세요:
- *  - JSON 파일 저장(data.json) → 실제 데이터베이스 (Postgres, SQLite, Supabase 등)
- *  - 간단한 URL 정규식 검증 → 더 엄격한 Pi 앱 검증 (필요 시 운영자 수동 승인 큐 추가 권장)
- *  - PI_API_KEY, PORT 등은 .env 파일로 관리 (절대 코드에 하드코딩하지 마세요)
+ * 데이터 저장을 로컬 JSON 파일(data.json) 대신 Vercel Blob으로 변경한 버전입니다.
+ * Vercel 서버리스 환경은 파일시스템이 읽기 전용이라 fs.writeFileSync가
+ * EROFS 에러를 냈기 때문에, 대신 Vercel Blob(클라우드 저장소)에 읽고 씁니다.
  *
  * 결제 흐름은 Pi Platform 공식 문서의 U2A(User-To-App) 결제 절차를 따릅니다:
  *  1) 프론트에서 Pi.createPayment() 호출
@@ -18,8 +17,8 @@
  */
 
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
+const { put, list } = require('@vercel/blob');
 
 const app = express();
 app.get('/validation-key.txt', (req, res) => {
@@ -32,7 +31,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 const PORT = process.env.PORT || 3000;
 const PI_API_KEY = process.env.PI_API_KEY; // Pi Developer Portal에서 발급받은 서버 API 키
 const PI_API_BASE = 'https://api.minepi.com/v2';
-const DATA_FILE = path.join(__dirname, 'data.json');
+
+// Vercel Blob에 저장할 파일 이름
+const DATA_BLOB_NAME = 'dibutades-data.json';
 
 // ---------- 오늘의 질문 (매일 자정 자동 로테이션) ----------
 // 목록을 자유롭게 추가/수정/순서 변경해도 됩니다. 40개가 다 돌면 처음부터 반복됩니다.
@@ -91,15 +92,31 @@ app.get('/api/question/today', (req, res) => {
   res.json(getTodayQuestion());
 });
 
-// ---------- 아주 단순한 파일 기반 저장소 (데모용) ----------
-function loadData(){
-  if(!fs.existsSync(DATA_FILE)){
+// ---------- Vercel Blob 기반 저장소 ----------
+// data.json 로컬 파일 대신, Vercel Blob에 하나의 JSON 파일을 두고 매번 읽고 씁니다.
+async function loadData(){
+  try{
+    const { blobs } = await list({ prefix: DATA_BLOB_NAME, limit: 1 });
+    if(blobs.length === 0){
+      return { graffiti: [], promos: [] };
+    }
+    const url = blobs[0].url;
+    const r = await fetch(url, { cache: 'no-store' });
+    if(!r.ok) return { graffiti: [], promos: [] };
+    return await r.json();
+  }catch(e){
+    console.error('loadData error:', e);
     return { graffiti: [], promos: [] };
   }
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
 }
-function saveData(data){
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+
+async function saveData(data){
+  await put(DATA_BLOB_NAME, JSON.stringify(data, null, 2), {
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+    allowOverwrite: true
+  });
 }
 
 // Pi 생태계 앱 URL만 허용 (pi:// 스킴 또는 *.pinet.com 도메인)
@@ -113,7 +130,7 @@ function generateId(){
 }
 
 // ---------- 낙서 (일반, 결제 없음) ----------
-app.post('/api/graffiti', (req, res) => {
+app.post('/api/graffiti', async (req, res) => {
   const { author, message } = req.body;
   // 로그인한 Pi 계정만 낙서를 남길 수 있음 (익명 게시 차단)
   if(!author || typeof author !== 'string' || !author.trim()){
@@ -125,36 +142,51 @@ app.post('/api/graffiti', (req, res) => {
   if(message.length > 200){
     return res.status(400).json({ error: 'message too long' });
   }
-  const data = loadData();
-  data.graffiti.push({
-    id: generateId(),
-    author: author.trim().slice(0, 40),
-    message: message.trim(),
-    views: 0,
-    createdAt: Date.now()
-  });
-  saveData(data);
-  res.json({ ok: true });
+  try{
+    const data = await loadData();
+    data.graffiti.push({
+      id: generateId(),
+      author: author.trim().slice(0, 40),
+      message: message.trim(),
+      views: 0,
+      createdAt: Date.now()
+    });
+    await saveData(data);
+    res.json({ ok: true });
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ---------- 낙서 조회수 올리기 (사용자가 낙서를 실제로 눌러서 볼 때 호출) ----------
-app.post('/api/graffiti/:id/view', (req, res) => {
-  const data = loadData();
-  const item = data.graffiti.find(g => g.id === req.params.id);
-  if(!item) return res.status(404).json({ error: 'not found' });
-  item.views = (item.views || 0) + 1;
-  saveData(data);
-  res.json({ ok: true, views: item.views });
+app.post('/api/graffiti/:id/view', async (req, res) => {
+  try{
+    const data = await loadData();
+    const item = data.graffiti.find(g => g.id === req.params.id);
+    if(!item) return res.status(404).json({ error: 'not found' });
+    item.views = (item.views || 0) + 1;
+    await saveData(data);
+    res.json({ ok: true, views: item.views });
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ---------- 조회수 TOP 5 낙서 (닉네임 + 조회수) ----------
-app.get('/api/graffiti/top', (req, res) => {
-  const data = loadData();
-  const top = [...data.graffiti]
-    .sort((a, b) => (b.views || 0) - (a.views || 0))
-    .slice(0, 5)
-    .map(g => ({ id: g.id, author: g.author, views: g.views || 0 }));
-  res.json(top);
+app.get('/api/graffiti/top', async (req, res) => {
+  try{
+    const data = await loadData();
+    const top = [...data.graffiti]
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 5)
+      .map(g => ({ id: g.id, author: g.author, views: g.views || 0 }));
+    res.json(top);
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ---------- 런치패드 TOP5 / 스테이킹 TOP5 ----------
@@ -178,16 +210,21 @@ app.get('/api/staking/top5', (req, res) => {
 });
 
 // ---------- 디부타데스 통합 피드 (낙서 + 홍보, 최신순) ----------
-app.get('/api/wall', (req, res) => {
-  const data = loadData();
-  const now = Date.now();
-  const activePromos = data.promos
-    .filter(p => now - p.createdAt < 7 * 24 * 60 * 60 * 1000) // 7일(1주일) 노출
-    .map(p => ({ type: 'promo', ...p }));
-  const graffiti = data.graffiti.map(g => ({ type: 'graffiti', ...g }));
+app.get('/api/wall', async (req, res) => {
+  try{
+    const data = await loadData();
+    const now = Date.now();
+    const activePromos = data.promos
+      .filter(p => now - p.createdAt < 7 * 24 * 60 * 60 * 1000) // 7일(1주일) 노출
+      .map(p => ({ type: 'promo', ...p }));
+    const graffiti = data.graffiti.map(g => ({ type: 'graffiti', ...g }));
 
-  const combined = [...activePromos, ...graffiti].sort((a, b) => b.createdAt - a.createdAt);
-  res.json(combined.slice(0, 100));
+    const combined = [...activePromos, ...graffiti].sort((a, b) => b.createdAt - a.createdAt);
+    res.json(combined.slice(0, 100));
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ---------- Pi 결제: 서버 승인 ----------
@@ -228,7 +265,7 @@ app.post('/api/payments/complete', async (req, res) => {
     });
     if(!r.ok) throw new Error(`Pi API complete failed: ${r.status}`);
 
-    const data = loadData();
+    const data = await loadData();
     data.promos.push({
       appName: String(appName || '').slice(0, 40),
       appUrl: appUrl.slice(0, 200),
@@ -236,7 +273,7 @@ app.post('/api/payments/complete', async (req, res) => {
       author: String(author || '개발자').slice(0, 40),
       createdAt: Date.now()
     });
-    saveData(data);
+    await saveData(data);
 
     res.json({ ok: true });
   }catch(e){
