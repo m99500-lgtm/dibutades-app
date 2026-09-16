@@ -18,7 +18,7 @@
 
 const express = require('express');
 const path = require('path');
-const { put, list } = require('@vercel/blob');
+const { put, get } = require('@vercel/blob');
 
 const app = express();
 app.get('/validation-key.txt', (req, res) => {
@@ -92,19 +92,19 @@ app.get('/api/question/today', (req, res) => {
   res.json(getTodayQuestion());
 });
 
-// ---------- Vercel Blob 기반 저장소 ----------
-// data.json 로컬 파일 대신, Vercel Blob에 하나의 JSON 파일을 두고 매번 읽고 씁니다.
+// ---------- Vercel Blob 기반 저장소 (Private Store) ----------
+// data.json 로컬 파일 대신, Private Blob 저장소에 하나의 JSON 파일을 두고 매번 읽고 씁니다.
+// Private 저장소는 URL로 직접 접근이 안 되고, 반드시 get()으로 인증된 방식으로 읽어야 합니다.
 async function loadData(){
   try{
-    const { blobs } = await list({ prefix: DATA_BLOB_NAME, limit: 1 });
-    if(blobs.length === 0){
+    const response = await get(DATA_BLOB_NAME, { access: 'private' });
+    const text = await new Response(response.stream).text();
+    return JSON.parse(text);
+  }catch(e){
+    // 아직 파일이 한 번도 저장된 적 없으면 (첫 실행) 빈 데이터로 시작
+    if(e && (e.name === 'BlobNotFoundError' || /not.*found/i.test(e.message || ''))){
       return { graffiti: [], promos: [] };
     }
-    const url = blobs[0].url;
-    const r = await fetch(url, { cache: 'no-store' });
-    if(!r.ok) return { graffiti: [], promos: [] };
-    return await r.json();
-  }catch(e){
     console.error('loadData error:', e);
     return { graffiti: [], promos: [] };
   }
@@ -112,7 +112,7 @@ async function loadData(){
 
 async function saveData(data){
   await put(DATA_BLOB_NAME, JSON.stringify(data, null, 2), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
     allowOverwrite: true
