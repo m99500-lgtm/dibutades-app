@@ -393,6 +393,8 @@
 
   nav{
     display:flex;
+    flex-direction:row;
+    flex-wrap:nowrap;
     gap:0;
     border-bottom:1px solid var(--line);
     position:sticky;
@@ -401,7 +403,13 @@
     z-index:10;
   }
   nav button{
-    flex:1;
+    flex:1 1 0;
+    min-width:0;
+    min-height:56px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
     border:none;
     color:var(--chalk);
     font-family:'Noto Sans KR', sans-serif;
@@ -615,8 +623,15 @@
   .status.err{background:rgba(227,84,60,0.15); color:var(--spray-r);}
   .status .en{ display:block; font-size:11px; opacity:0.85; margin-top:2px; }
 
+  .app.showing-fullpage header p,
+  .app.showing-fullpage header #whoami{
+    display:none;
+  }
+  .app.showing-fullpage header{
+    padding-bottom:14px;
+  }
+
   /* ---------- 둘러보기/홍보 완료: 헤더만 남기고 전환되는 전체 페이지 ---------- */
-  nav, main{ display:block; }
   .app.showing-fullpage nav,
   .app.showing-fullpage main{ display:none; }
   .fullpage{
@@ -859,8 +874,35 @@
         </p>
       </section>
 
-      <!-- 2. 나의 앱을 홍보하자 / Promote App -->
-      <section id="tab-promo">
+    </main>
+
+    <!-- 둘러보기: 낙서만 조용히 보여주는 별도 페이지 (헤더는 그대로 유지) -->
+    <div id="pageBrowse" class="fullpage">
+      <label class="my-posts-toggle">
+        <input type="checkbox" id="myPostsOnly">
+        내 글만 보기
+        <span class="en">My posts only</span>
+      </label>
+      <div id="wallLoading">방을 불러오는 중...<span class="en">Loading the room...</span></div>
+      <div id="wallEmpty" style="display:none;">
+        아직 아무도 낙서를 남기지 않았어요. 첫 낙서의 주인공이 되어보세요!
+        <span class="en">No graffiti yet. Be the first to leave one!</span>
+      </div>
+      <div id="wallList" class="meditative-list"></div>
+
+      <!-- 인기 낙서 TOP5: 이 방을 열 때마다 아래에 표시 -->
+      <div id="topboard">
+        <div class="tb-title">인기 낙서 TOP5<span class="en">Top 5 Viewed</span></div>
+        <div id="tbList"></div>
+        <div class="tb-empty" id="tbEmpty" style="display:none;">아직 순위 없음<span class="en">No ranking yet</span></div>
+      </div>
+
+      <button class="btn btn-back" id="backFromBrowse">메인화면으로 돌아가기<span class="en">Back to Main</span></button>
+    </div>
+
+    <!-- 앱 홍보: 폼 작성부터 결제 완료까지 한 서브화면 안에서 진행 (헤더는 로고+soSOso만 유지) -->
+    <div id="pagePromo" class="fullpage">
+      <div id="promoFormWrap">
         <p class="hint">
           <b>Pi 생태계 앱만 등록 가능합니다.</b> Pi Developer Portal에 등록된 앱 URL만 허용되며, 그 외 외부 사이트 링크는 등록되지 않습니다. 이는 Pi 코어팀의 메인넷 리스팅 정책(외부 사이트 리다이렉트 제한)을 지키기 위함입니다.
           <span class="en">Only Pi ecosystem apps can be listed. Only URLs registered in the Pi Developer Portal are allowed — other external links will be rejected, in line with Pi's mainnet listing policy restricting external redirects.</span>
@@ -889,37 +931,10 @@
           이 기능은 Pi 공식 "Pi Ad Network"와는 별개의, 개발자 간 자율 홍보 마켓입니다. 별도의 Ad Network 승인 없이도 표준 U2A 결제만으로 운영됩니다.
           <span class="en">This is a separate developer-to-developer promotion market, not the official Pi Ad Network. It runs on standard U2A payments without needing separate Ad Network approval.</span>
         </p>
-      </section>
-
-    </main>
-
-    <!-- 둘러보기: 낙서만 조용히 보여주는 별도 페이지 (헤더는 그대로 유지) -->
-    <div id="pageBrowse" class="fullpage">
-      <label class="my-posts-toggle">
-        <input type="checkbox" id="myPostsOnly">
-        내 글만 보기
-        <span class="en">My posts only</span>
-      </label>
-      <div id="wallLoading">방을 불러오는 중...<span class="en">Loading the room...</span></div>
-      <div id="wallEmpty" style="display:none;">
-        아직 아무도 낙서를 남기지 않았어요. 첫 낙서의 주인공이 되어보세요!
-        <span class="en">No graffiti yet. Be the first to leave one!</span>
-      </div>
-      <div id="wallList" class="meditative-list"></div>
-
-      <!-- 인기 낙서 TOP5: 이 방을 열 때마다 아래에 표시 -->
-      <div id="topboard">
-        <div class="tb-title">인기 낙서 TOP5<span class="en">Top 5 Viewed</span></div>
-        <div id="tbList"></div>
-        <div class="tb-empty" id="tbEmpty" style="display:none;">아직 순위 없음<span class="en">No ranking yet</span></div>
       </div>
 
-      <button class="btn btn-back" id="backFromBrowse">메인화면으로 돌아가기<span class="en">Back to Main</span></button>
-    </div>
+      <div id="promoResultWrap" style="display:none;"></div>
 
-    <!-- 앱 홍보: 결제 진행/완료 상태만 보여주는 별도 페이지 (헤더는 그대로 유지) -->
-    <div id="pagePromo" class="fullpage">
-      <div id="promoPageBody"></div>
       <button class="btn btn-back" id="backFromPromo">메인화면으로 돌아가기<span class="en">Back to Main</span></button>
     </div>
 
@@ -1208,6 +1223,10 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       showBrowsePage();
       return;
     }
+    if(btn.dataset.tab === 'promo'){
+      showPromoPage();
+      return;
+    }
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
     btn.classList.add('active');
@@ -1220,25 +1239,40 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 const appEl = document.querySelector('.app');
 const pageBrowseEl = document.getElementById('pageBrowse');
 const pagePromoEl = document.getElementById('pagePromo');
+const worldclockEl = document.getElementById('worldclock');
+const rightpanelEl = document.getElementById('rightpanel');
+const promoFormWrapEl = document.getElementById('promoFormWrap');
+const promoResultWrapEl = document.getElementById('promoResultWrap');
+
+function enterFullpage(){
+  appEl.classList.add('showing-fullpage');
+  worldclockEl.style.display = 'none';
+  rightpanelEl.style.display = 'none';
+  sosoWriteTabActive = false;
+}
 
 function showBrowsePage(){
-  appEl.classList.add('showing-fullpage');
+  enterFullpage();
   pagePromoEl.classList.remove('show');
   pageBrowseEl.classList.add('show');
-  sosoWriteTabActive = false;
   loadWall();
   loadTopBoard();
 }
 
 function showPromoPage(){
-  appEl.classList.add('showing-fullpage');
+  enterFullpage();
   pageBrowseEl.classList.remove('show');
   pagePromoEl.classList.add('show');
-  sosoWriteTabActive = false;
+  // 서브화면을 다시 열 때는 항상 폼부터 보여줌 (이전 결제 결과는 초기화)
+  promoResultWrapEl.style.display = 'none';
+  promoResultWrapEl.innerHTML = '';
+  promoFormWrapEl.style.display = 'block';
 }
 
 function backToMain(){
   appEl.classList.remove('showing-fullpage');
+  worldclockEl.style.display = '';
+  rightpanelEl.style.display = '';
   pageBrowseEl.classList.remove('show');
   pagePromoEl.classList.remove('show');
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -1250,8 +1284,10 @@ function backToMain(){
 document.getElementById('backFromBrowse').addEventListener('click', backToMain);
 document.getElementById('backFromPromo').addEventListener('click', backToMain);
 
+// 폼 제출 후에는 폼을 숨기고, 결제 진행/완료/오류 상태만 결과 영역에 표시
 function renderPromoPageBody(kind, msgKo, msgEn, preview){
-  const body = document.getElementById('promoPageBody');
+  promoFormWrapEl.style.display = 'none';
+  promoResultWrapEl.style.display = 'block';
   let html = `<div class="status show ${kind}" style="margin-top:0;">${msgKo}${msgEn ? `<span class="en">${msgEn}</span>` : ''}</div>`;
   if(preview){
     html += `
@@ -1260,7 +1296,7 @@ function renderPromoPageBody(kind, msgKo, msgEn, preview){
         <div class="msg"><b>${escapeHtml(preview.appName)}</b><br>${escapeHtml(preview.message)}</div>
       </div>`;
   }
-  body.innerHTML = html;
+  promoResultWrapEl.innerHTML = html;
 }
 
 // ---------- Pi SDK 초기화 ----------
@@ -1440,10 +1476,9 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
     return;
   }
 
-  // 여기까지 통과하면 바로 전용 페이지로 이동해 결제 진행 상태를 보여줌
+  // 여기까지 통과하면 폼을 숨기고 결제 진행 상태를 같은 서브화면 안에서 보여줌
   const previewData = { appName, message, author: currentUser.username };
   renderPromoPageBody('ok', '결제를 진행해주세요...', 'Please complete the payment in Pi Browser...', previewData);
-  showPromoPage();
 
   try{
     await Pi.createPayment({
