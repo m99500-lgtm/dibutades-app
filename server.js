@@ -151,13 +151,18 @@ const BANNED_WORDS = [
 ];
 
 // 문자 사이에 공백/특수문자를 끼워 필터를 피하는 걸 어느 정도 막기 위해,
-// 검사할 때는 한글/영문/숫자가 아닌 문자를 제거하고 비교합니다.
+// 검사할 때는 한글(완성형+낱자)/영문/숫자가 아닌 문자를 제거하고 비교합니다.
+// ㄱ-ㅎ, ㅏ-ㅣ 범위(한글 낱자)를 빼먹으면 'ㅅㅂ' 같은 낱자 단어가 빈 문자열이 되어
+// 모든 메시지가 오탐(false positive)되는 버그가 생기므로 반드시 포함해야 합니다.
 function normalizeForFilter(s){
-  return (s || '').toLowerCase().replace(/[^가-힣a-z0-9]/g, '');
+  return (s || '').toLowerCase().replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-z0-9]/g, '');
 }
 function containsBannedWord(message){
   const normalized = normalizeForFilter(message);
-  return BANNED_WORDS.some(w => normalized.includes(normalizeForFilter(w)));
+  return BANNED_WORDS.some(w => {
+    const nw = normalizeForFilter(w);
+    return nw.length > 0 && normalized.includes(nw); // 빈 문자열은 매칭 대상에서 제외
+  });
 }
 
 // 같은 글자/이모지를 과도하게 반복하는 스팸성 게시물 감지 (예: "ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ")
