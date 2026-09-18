@@ -552,9 +552,44 @@
   }
   .btn-primary{background:var(--spray-y); color:#241b04; box-shadow:0 0 0 rgba(255,201,60,0.5); transition: box-shadow .2s, transform .1s;}
   .btn-promo{background:var(--spray-c); color:#04262a; box-shadow:0 0 0 rgba(73,185,199,0.5); transition: box-shadow .2s, transform .1s;}
+  .btn-share{
+    background:transparent;
+    color:var(--spray-y);
+    border:1px solid rgba(255,201,60,0.5);
+    margin-top:10px;
+  }
   .btn-primary:active{ transform:scale(0.98); box-shadow:0 0 18px rgba(255,201,60,0.55); }
   .btn-promo:active{ transform:scale(0.98); box-shadow:0 0 18px rgba(73,185,199,0.55); }
+  .btn-share:active{ transform:scale(0.98); }
   .btn:disabled{opacity:0.5; cursor:not-allowed;}
+
+  .streak-badge{
+    display:inline-block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--spray-y);
+    background:rgba(255,201,60,0.12);
+    border:1px solid rgba(255,201,60,0.3);
+    border-radius:20px;
+    padding:4px 12px;
+    margin-top:8px;
+  }
+
+  .heart-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    background:none;
+    border:none;
+    color:var(--chalk-dim);
+    font-size:12px;
+    cursor:pointer;
+    padding:4px 0;
+    margin-top:8px;
+  }
+  .heart-btn.reacted{ color:var(--spray-r); }
+  .heart-btn .heart-count{ font-variant-numeric: tabular-nums; }
+
 
   .hint{font-size:11.5px; color:var(--chalk-dim); margin-top:8px; line-height:1.6;}
   .hint b{color:var(--spray-y);}
@@ -864,6 +899,7 @@
         </label>
         <button class="btn btn-primary" id="submitGraffiti">낙서 남기기<span class="en">Post Graffiti</span></button>
         <div class="status" id="writeStatus"></div>
+        <button class="btn btn-share" id="shareCardBtn" style="display:none;">오늘의 낙서 카드로 저장/공유<span class="en">Save/Share as Image Card</span></button>
         <p class="hint">
           닉네임은 로그인한 Pi 계정 이름으로 자동 표시됩니다. 개인정보(전화번호, 이메일 등)는 절대 입력하지 마세요.
           <span class="en">Your nickname is taken automatically from your logged-in Pi username. Never enter personal info (phone, email, etc).</span>
@@ -1361,6 +1397,8 @@ writeMsgElRef.addEventListener('beforeinput', (e)=>{
 writeMsgElRef.addEventListener('paste', (e)=>{ e.preventDefault(); });
 writeMsgElRef.addEventListener('drop', (e)=>{ e.preventDefault(); });
 
+let lastPostedCard = null; // 카드 이미지 생성을 위한 마지막 게시 내용 저장
+
 document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
   const msg = document.getElementById('writeMsg').value.trim();
   if(!currentUser){
@@ -1381,13 +1419,108 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
         message: msg
       })
     });
-    if(!res.ok) throw new Error('서버 오류');
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){
+      // 서버가 구체적인 사유(도배 방지/욕설·스팸/일반 오류)를 message로 내려줌
+      const msgKo = data.message || '등록에 실패했습니다.';
+      showStatus('writeStatus','err', msgKo, data.error || 'Failed to post.');
+      return;
+    }
+    lastPostedCard = { question: document.getElementById('todayQText').textContent.trim(), message: msg, author: currentUser.username };
     document.getElementById('writeMsg').value = '';
     document.getElementById('selfCertCheck').checked = false;
-    showStatus('writeStatus','ok','낙서가 방에 붙었어요!','Your graffiti has been posted!');
+    const streakLine = data.streak
+      ? `<div class="streak-badge">🔥 ${data.streak}일 연속 작성 중이에요<span class="en">${data.streak}-day streak!</span></div>`
+      : '';
+    document.getElementById('writeStatus').innerHTML = '낙서가 방에 붙었어요!<span class="en">Your graffiti has been posted!</span>' + streakLine;
+    document.getElementById('writeStatus').className = 'status show ok';
+    document.getElementById('shareCardBtn').style.display = 'block';
   }catch(e){
     showStatus('writeStatus','err','등록에 실패했습니다: ' + e.message, 'Failed to post: ' + e.message);
   }
+});
+
+// ---------- 오늘의 낙서를 이미지 카드로 만들어 저장/공유 ----------
+function drawCardCanvas(data){
+  const canvas = document.createElement('canvas');
+  const W = 1080, H = 1080;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // 배경: 앱과 같은 톤의 그라디언트
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#23222a');
+  grad.addColorStop(1, '#322824');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 상단 로고 텍스트
+  ctx.fillStyle = '#ffc93c';
+  ctx.font = "bold 56px 'Noto Sans KR', sans-serif";
+  ctx.textAlign = 'left';
+  ctx.fillText('디부타데스', 70, 120);
+  ctx.font = "28px 'Noto Sans KR', sans-serif";
+  ctx.fillStyle = 'rgba(243,237,224,0.6)';
+  ctx.fillText('DIBUTADES · soSOso', 70, 160);
+
+  // 오늘의 질문
+  ctx.fillStyle = '#ffc93c';
+  ctx.font = "bold 30px 'Noto Sans KR', sans-serif";
+  wrapText(ctx, data.question || '오늘의 질문', 70, 280, W - 140, 42);
+
+  // 낙서 본문
+  ctx.fillStyle = '#f3ede0';
+  ctx.font = "44px 'Noto Sans KR', sans-serif";
+  wrapText(ctx, data.message, 70, 460, W - 140, 62);
+
+  // 작성자
+  ctx.fillStyle = 'rgba(243,237,224,0.7)';
+  ctx.font = "30px 'Noto Sans KR', sans-serif";
+  ctx.fillText('@' + (data.author || '익명'), 70, H - 90);
+
+  return canvas;
+}
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  const chars = String(text || '').split('');
+  let line = '';
+  let curY = y;
+  chars.forEach((ch)=>{
+    const testLine = line + ch;
+    if(ctx.measureText(testLine).width > maxWidth && line !== ''){
+      ctx.fillText(line, x, curY);
+      line = ch;
+      curY += lineHeight;
+    }else{
+      line = testLine;
+    }
+  });
+  if(line) ctx.fillText(line, x, curY);
+}
+
+document.getElementById('shareCardBtn').addEventListener('click', async ()=>{
+  if(!lastPostedCard) return;
+  const canvas = drawCardCanvas(lastPostedCard);
+  canvas.toBlob(async (blob)=>{
+    if(!blob) return;
+    const fileName = 'dibutades-' + Date.now() + '.png';
+    const file = new File([blob], fileName, { type: 'image/png' });
+
+    // 모바일에서 공유 시트(파일 공유)를 지원하면 바로 공유, 아니면 다운로드로 대체
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try{
+        await navigator.share({ files: [file], title: '디부타데스', text: lastPostedCard.message });
+        return;
+      }catch(e){ /* 공유 취소 시 조용히 무시 */ return; }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
 });
 
 // ---------- 2. 디부타데스 불러오기 ----------
@@ -1443,9 +1576,15 @@ function renderWallItems(){
     card.innerHTML = `
       <div class="meta"><span>@${escapeHtml(item.author||'익명')}</span><span>${formatTime(item.createdAt)} · ${item.views||0}회 / views</span></div>
       <div class="msg">${escapeHtml(item.message)}</div>
+      <button class="heart-btn" data-id="${escapeAttr(item.id||'')}">🤍 <span class="heart-count">${item.hearts||0}</span></button>
     `;
     if(item.id){
       card.addEventListener('click', ()=> bumpView(item.id, card), { once:true });
+      const heartBtn = card.querySelector('.heart-btn');
+      heartBtn.addEventListener('click', (e)=>{
+        e.stopPropagation(); // 카드 전체 클릭(조회수 증가)과 겹치지 않게
+        sendReaction(item.id, heartBtn);
+      }, { once:true });
     }
     listEl.appendChild(card);
   });
@@ -1537,6 +1676,21 @@ async function bumpView(id, cardEl){
       }
     }
     loadTopBoard();
+  }catch(e){ /* 조용히 무시 */ }
+}
+
+// 낙서에 공감(하트) 남기기 — 한 카드당 한 번만 누를 수 있게 눌린 뒤 버튼을 비활성화
+async function sendReaction(id, btnEl){
+  btnEl.disabled = true;
+  btnEl.classList.add('reacted');
+  try{
+    const res = await fetch(API_BASE + `/api/graffiti/${id}/react`, { method:'POST' });
+    const data = await res.json();
+    if(data && typeof data.hearts === 'number'){
+      const countSpan = btnEl.querySelector('.heart-count');
+      if(countSpan) countSpan.textContent = data.hearts;
+    }
+    btnEl.innerHTML = `🩷 <span class="heart-count">${data.hearts||''}</span>`;
   }catch(e){ /* 조용히 무시 */ }
 }
 
