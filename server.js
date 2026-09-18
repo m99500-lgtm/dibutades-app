@@ -96,18 +96,26 @@ app.get('/api/question/today', (req, res) => {
 // data.json 로컬 파일 대신, Private Blob 저장소에 하나의 JSON 파일을 두고 매번 읽고 씁니다.
 // Private 저장소는 URL로 직접 접근이 안 되고, 반드시 get()으로 인증된 방식으로 읽어야 합니다.
 async function loadData(){
+  let data;
   try{
     const response = await get(DATA_BLOB_NAME, { access: 'private' });
     const text = await new Response(response.stream).text();
-    return JSON.parse(text);
+    data = JSON.parse(text);
   }catch(e){
     // 아직 파일이 한 번도 저장된 적 없으면 (첫 실행) 빈 데이터로 시작
     if(e && (e.name === 'BlobNotFoundError' || /not.*found/i.test(e.message || ''))){
-      return { graffiti: [], promos: [] };
+      data = {};
+    }else{
+      console.error('loadData error:', e);
+      data = {};
     }
-    console.error('loadData error:', e);
-    return { graffiti: [], promos: [] };
   }
+  // 예전에 저장된 데이터에는 아래 필드가 없을 수 있으므로 기본값으로 채워줌
+  data.graffiti = data.graffiti || [];
+  data.promos = data.promos || [];
+  data.lastPostAt = data.lastPostAt || {};   // 도배 방지: { username: timestamp }
+  data.streaks = data.streaks || {};         // 연속 작성: { username: { count, lastDate } }
+  return data;
 }
 
 async function saveData(data){
@@ -129,6 +137,61 @@ function generateId(){
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+// ---------- 도배 방지 ----------
+// 같은 계정이 이 시간(ms) 안에 다시 낙서를 올리면 막습니다. 필요하면 숫자만 바꾸세요.
+const POST_COOLDOWN_MS = 20 * 1000; // 20초
+
+// ---------- 욕설/스팸 필터 ----------
+// 아주 기본적인 블랙리스트 방식입니다. 완벽하지 않으니, 실제 운영하면서
+// 자주 보이는 우회 표현(초성, 특수문자 섞기 등)을 이 배열에 계속 추가해주세요.
+const BANNED_WORDS = [
+  '시발', '씨발', 'ㅅㅂ', 'ㅆㅂ', '개새끼', '병신', 'ㅂㅅ', '지랄', '좆', '존나', 'ㅈㄴ',
+  '느금', '엄창', '섹스', '자살하', '죽어버려',
+  'fuck', 'shit', 'bitch', 'asshole'
+];
+
+// 문자 사이에 공백/특수문자를 끼워 필터를 피하는 걸 어느 정도 막기 위해,
+// 검사할 때는 한글/영문/숫자가 아닌 문자를 제거하고 비교합니다.
+function normalizeForFilter(s){
+  return (s || '').toLowerCase().replace(/[^가-힣a-z0-9]/g, '');
+}
+function containsBannedWord(message){
+  const normalized = normalizeForFilter(message);
+  return BANNED_WORDS.some(w => normalized.includes(normalizeForFilter(w)));
+}
+
+// 같은 글자/이모지를 과도하게 반복하는 스팸성 게시물 감지 (예: "ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ")
+function looksLikeSpam(message){
+  if(/(.)\1{9,}/.test(message)) return true; // 같은 문자가 10번 이상 연속
+  const urlCount = (message.match(/https?:\/\//gi) || []).length;
+  if(urlCount >= 2) return true; // 링크 2개 이상 도배성 게시물로 간주
+  return false;
+}
+
+// ---------- 연속 작성(스트릭) 계산 ----------
+function kstDateString(ts){
+  // 한국 시간(KST, UTC+9) 기준 날짜 문자열(YYYY-MM-DD)로 변환
+  const d = new Date(ts + 9 * 60 * 60 * 1000);
+  return d.toISOString().slice(0, 10);
+}
+function updateStreak(data, username, now){
+  const today = kstDateString(now);
+  const yesterday = kstDateString(now - 24 * 60 * 60 * 1000);
+  const prev = data.streaks[username];
+  let count;
+  if(!prev){
+    count = 1;
+  }else if(prev.lastDate === today){
+    count = prev.count; // 오늘 이미 작성함 — 스트릭 유지, 중복 증가 없음
+  }else if(prev.lastDate === yesterday){
+    count = prev.count + 1; // 어제에 이어 오늘도 작성 — 스트릭 이어짐
+  }else{
+    count = 1; // 하루 이상 건너뜀 — 스트릭 초기화
+  }
+  data.streaks[username] = { count, lastDate: today };
+  return count;
+}
+
 // ---------- 낙서 (일반, 결제 없음) ----------
 app.post('/api/graffiti', async (req, res) => {
   const { author, message } = req.body;
@@ -142,17 +205,52 @@ app.post('/api/graffiti', async (req, res) => {
   if(message.length > 200){
     return res.status(400).json({ error: 'message too long' });
   }
+  if(containsBannedWord(message)){
+    return res.status(400).json({ error: 'inappropriate_content', message: '부적절한 표현이 포함되어 있어요.' });
+  }
+  if(looksLikeSpam(message)){
+    return res.status(400).json({ error: 'spam_detected', message: '도배성 게시물로 감지되었어요.' });
+  }
   try{
     const data = await loadData();
+    const authorKey = author.trim().toLowerCase();
+    const now = Date.now();
+
+    // 도배 방지: 최근에 이 계정으로 올린 적이 있으면 쿨다운 시간이 지날 때까지 막음
+    const lastAt = data.lastPostAt[authorKey] || 0;
+    const elapsed = now - lastAt;
+    if(elapsed < POST_COOLDOWN_MS){
+      const waitSec = Math.ceil((POST_COOLDOWN_MS - elapsed) / 1000);
+      return res.status(429).json({ error: 'cooldown', message: `너무 빠르게 연속 게시했어요. ${waitSec}초 후 다시 시도해주세요.`, retryAfter: waitSec });
+    }
+
+    const streak = updateStreak(data, authorKey, now);
+    data.lastPostAt[authorKey] = now;
     data.graffiti.push({
       id: generateId(),
       author: author.trim().slice(0, 40),
       message: message.trim(),
       views: 0,
-      createdAt: Date.now()
+      hearts: 0,
+      createdAt: now
     });
     await saveData(data);
-    res.json({ ok: true });
+    res.json({ ok: true, streak });
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- 낙서에 공감(하트) 남기기 ----------
+app.post('/api/graffiti/:id/react', async (req, res) => {
+  try{
+    const data = await loadData();
+    const item = data.graffiti.find(g => g.id === req.params.id);
+    if(!item) return res.status(404).json({ error: 'not found' });
+    item.hearts = (item.hearts || 0) + 1;
+    await saveData(data);
+    res.json({ ok: true, hearts: item.hearts });
   }catch(e){
     console.error(e);
     res.status(500).json({ error: e.message });
