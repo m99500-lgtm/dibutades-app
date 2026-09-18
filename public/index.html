@@ -602,15 +602,6 @@
   }
   .my-posts-toggle .en{ font-size:11px; font-weight:400; opacity:0.8; }
 
-  #wallEmpty, #wallLoading{
-    text-align:center;
-    color:var(--chalk-dim);
-    font-size:12.5px;
-    padding:30px 10px;
-    line-height:1.6;
-  }
-  #wallEmpty .en, #wallLoading .en{ display:block; opacity:0.8; margin-top:4px; }
-
   .status{
     font-size:12.5px;
     margin-top:10px;
@@ -623,6 +614,61 @@
   .status.ok{background:rgba(73,185,199,0.15); color:var(--spray-c);}
   .status.err{background:rgba(227,84,60,0.15); color:var(--spray-r);}
   .status .en{ display:block; font-size:11px; opacity:0.85; margin-top:2px; }
+
+  /* ---------- 둘러보기/홍보 완료: 헤더만 남기고 전환되는 전체 페이지 ---------- */
+  nav, main{ display:block; }
+  .app.showing-fullpage nav,
+  .app.showing-fullpage main{ display:none; }
+  .fullpage{
+    display:none;
+    padding:20px 14px 40px;
+  }
+  .fullpage.show{ display:block; }
+
+  .btn-back{
+    display:block;
+    width:100%;
+    margin-top:28px;
+    padding:13px 18px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:rgba(0,0,0,0.2);
+    color:var(--chalk-dim);
+    font-family:'Noto Sans KR', sans-serif;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    line-height:1.5;
+  }
+  .btn-back .en{ display:block; font-size:11px; font-weight:400; opacity:0.8; margin-top:2px; }
+
+  /* ---------- 명상 모드: 카드가 하나씩 부드럽게 떠오르며, 구분선만으로 조용히 흘러가는 목록 ---------- */
+  .meditative-list .card{
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    border-left:none;
+    border-radius:0;
+    padding:22px 4px;
+    opacity:0;
+    animation: card-rise 0.7s ease forwards;
+  }
+  .meditative-list .card:last-child{ border-bottom:none; }
+  .meditative-list .card .msg{ font-size:15px; line-height:1.8; letter-spacing:0.2px; }
+  .meditative-list .card .meta{ opacity:0.65; margin-bottom:10px; }
+  @keyframes card-rise{
+    from{ opacity:0; transform:translateY(14px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  #wallEmpty, #wallLoading{
+    text-align:center;
+    color:var(--chalk-dim);
+    font-size:12.5px;
+    padding:30px 10px;
+    line-height:1.6;
+  }
+  #wallEmpty .en, #wallLoading .en{ display:block; opacity:0.8; margin-top:4px; }
 
   @media (max-width:360px){
     #worldclock{ width:64px; flex-basis:64px; padding:10px 4px; }
@@ -813,29 +859,7 @@
         </p>
       </section>
 
-      <!-- 2. 낙서를 보자 / View Room -->
-      <section id="tab-wall">
-        <label class="my-posts-toggle">
-          <input type="checkbox" id="myPostsOnly">
-          내 글만 보기
-          <span class="en">My posts only</span>
-        </label>
-        <div id="wallLoading">방을 불러오는 중...<span class="en">Loading the room...</span></div>
-        <div id="wallEmpty" style="display:none;">
-          아직 아무도 낙서를 남기지 않았어요. 첫 낙서의 주인공이 되어보세요!
-          <span class="en">No graffiti yet. Be the first to leave one!</span>
-        </div>
-        <div id="wallList"></div>
-
-        <!-- 인기 낙서 TOP5: 이 방을 열 때마다 아래에 표시 -->
-        <div id="topboard">
-          <div class="tb-title">인기 낙서 TOP5<span class="en">Top 5 Viewed</span></div>
-          <div id="tbList"></div>
-          <div class="tb-empty" id="tbEmpty" style="display:none;">아직 순위 없음<span class="en">No ranking yet</span></div>
-        </div>
-      </section>
-
-      <!-- 3. 나의 앱을 홍보하자 / Promote App -->
+      <!-- 2. 나의 앱을 홍보하자 / Promote App -->
       <section id="tab-promo">
         <p class="hint">
           <b>Pi 생태계 앱만 등록 가능합니다.</b> Pi Developer Portal에 등록된 앱 URL만 허용되며, 그 외 외부 사이트 링크는 등록되지 않습니다. 이는 Pi 코어팀의 메인넷 리스팅 정책(외부 사이트 리다이렉트 제한)을 지키기 위함입니다.
@@ -868,6 +892,37 @@
       </section>
 
     </main>
+
+    <!-- 둘러보기: 낙서만 조용히 보여주는 별도 페이지 (헤더는 그대로 유지) -->
+    <div id="pageBrowse" class="fullpage">
+      <label class="my-posts-toggle">
+        <input type="checkbox" id="myPostsOnly">
+        내 글만 보기
+        <span class="en">My posts only</span>
+      </label>
+      <div id="wallLoading">방을 불러오는 중...<span class="en">Loading the room...</span></div>
+      <div id="wallEmpty" style="display:none;">
+        아직 아무도 낙서를 남기지 않았어요. 첫 낙서의 주인공이 되어보세요!
+        <span class="en">No graffiti yet. Be the first to leave one!</span>
+      </div>
+      <div id="wallList" class="meditative-list"></div>
+
+      <!-- 인기 낙서 TOP5: 이 방을 열 때마다 아래에 표시 -->
+      <div id="topboard">
+        <div class="tb-title">인기 낙서 TOP5<span class="en">Top 5 Viewed</span></div>
+        <div id="tbList"></div>
+        <div class="tb-empty" id="tbEmpty" style="display:none;">아직 순위 없음<span class="en">No ranking yet</span></div>
+      </div>
+
+      <button class="btn btn-back" id="backFromBrowse">메인화면으로 돌아가기<span class="en">Back to Main</span></button>
+    </div>
+
+    <!-- 앱 홍보: 결제 진행/완료 상태만 보여주는 별도 페이지 (헤더는 그대로 유지) -->
+    <div id="pagePromo" class="fullpage">
+      <div id="promoPageBody"></div>
+      <button class="btn btn-back" id="backFromPromo">메인화면으로 돌아가기<span class="en">Back to Main</span></button>
+    </div>
+
   </div>
 
   <!-- 오른쪽: Pi 실시간 가치 / 런치패드 TOP5 / 스테이킹 TOP5 -->
@@ -1149,14 +1204,64 @@ loadTodayQuestion();
 // ---------- 탭 전환 ----------
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
+    if(btn.dataset.tab === 'wall'){
+      showBrowsePage();
+      return;
+    }
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
     sosoWriteTabActive = (btn.dataset.tab === 'write');
-    if(btn.dataset.tab === 'wall'){ loadWall(); loadTopBoard(); }
   });
 });
+
+// ---------- 전체 페이지 전환: 둘러보기 / 홍보 ----------
+const appEl = document.querySelector('.app');
+const pageBrowseEl = document.getElementById('pageBrowse');
+const pagePromoEl = document.getElementById('pagePromo');
+
+function showBrowsePage(){
+  appEl.classList.add('showing-fullpage');
+  pagePromoEl.classList.remove('show');
+  pageBrowseEl.classList.add('show');
+  sosoWriteTabActive = false;
+  loadWall();
+  loadTopBoard();
+}
+
+function showPromoPage(){
+  appEl.classList.add('showing-fullpage');
+  pageBrowseEl.classList.remove('show');
+  pagePromoEl.classList.add('show');
+  sosoWriteTabActive = false;
+}
+
+function backToMain(){
+  appEl.classList.remove('showing-fullpage');
+  pageBrowseEl.classList.remove('show');
+  pagePromoEl.classList.remove('show');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
+  document.querySelector('.tab-btn[data-tab="write"]').classList.add('active');
+  document.getElementById('tab-write').classList.add('active');
+  sosoWriteTabActive = true;
+}
+document.getElementById('backFromBrowse').addEventListener('click', backToMain);
+document.getElementById('backFromPromo').addEventListener('click', backToMain);
+
+function renderPromoPageBody(kind, msgKo, msgEn, preview){
+  const body = document.getElementById('promoPageBody');
+  let html = `<div class="status show ${kind}" style="margin-top:0;">${msgKo}${msgEn ? `<span class="en">${msgEn}</span>` : ''}</div>`;
+  if(preview){
+    html += `
+      <div class="card promo" style="margin-top:18px;">
+        <div class="meta"><span>@${escapeHtml(preview.author||'개발자')}</span><span class="badge">홍보 / AD</span></div>
+        <div class="msg"><b>${escapeHtml(preview.appName)}</b><br>${escapeHtml(preview.message)}</div>
+      </div>`;
+  }
+  body.innerHTML = html;
+}
 
 // ---------- Pi SDK 초기화 ----------
 function initPi(){
@@ -1274,10 +1379,11 @@ function renderWallItems(){
   const emptyEl = document.getElementById('wallEmpty');
   const myPostsOnly = document.getElementById('myPostsOnly').checked;
 
-  let items = wallItemsCache;
+  // 둘러보기 페이지는 오직 낙서만 보여줌 (홍보 카드는 제외)
+  let items = wallItemsCache.filter(item => item.type === 'graffiti');
   if(myPostsOnly){
     items = currentUser
-      ? items.filter(item => item.type === 'graffiti' && item.author === currentUser.username)
+      ? items.filter(item => item.author === currentUser.username)
       : [];
   }
 
@@ -1293,25 +1399,17 @@ function renderWallItems(){
   }
   emptyEl.style.display = 'none';
 
-  items.forEach(item=>{
+  items.forEach((item, i)=>{
     const card = document.createElement('div');
-    if(item.type === 'promo'){
-      card.className = 'card promo';
-      card.innerHTML = `
-        <div class="meta"><span>@${escapeHtml(item.author||'개발자')}</span><span class="badge">홍보 / AD</span></div>
-        <div class="msg"><b>${escapeHtml(item.appName)}</b><br>${escapeHtml(item.message)}</div>
-        <a class="applink" href="${escapeAttr(item.appUrl)}" target="_blank" rel="noopener">앱 열어보기 → / Open App →</a>
-      `;
-    }else{
-      card.className = 'card tag';
-      card.style.cursor = 'pointer';
-      card.innerHTML = `
-        <div class="meta"><span>@${escapeHtml(item.author||'익명')}</span><span>${formatTime(item.createdAt)} · ${item.views||0}회 / views</span></div>
-        <div class="msg">${escapeHtml(item.message)}</div>
-      `;
-      if(item.id){
-        card.addEventListener('click', ()=> bumpView(item.id, card), { once:true });
-      }
+    card.className = 'card tag';
+    card.style.cursor = 'pointer';
+    card.style.animationDelay = Math.min(i * 0.08, 1.2) + 's';
+    card.innerHTML = `
+      <div class="meta"><span>@${escapeHtml(item.author||'익명')}</span><span>${formatTime(item.createdAt)} · ${item.views||0}회 / views</span></div>
+      <div class="msg">${escapeHtml(item.message)}</div>
+    `;
+    if(item.id){
+      card.addEventListener('click', ()=> bumpView(item.id, card), { once:true });
     }
     listEl.appendChild(card);
   });
@@ -1342,6 +1440,11 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
     return;
   }
 
+  // 여기까지 통과하면 바로 전용 페이지로 이동해 결제 진행 상태를 보여줌
+  const previewData = { appName, message, author: currentUser.username };
+  renderPromoPageBody('ok', '결제를 진행해주세요...', 'Please complete the payment in Pi Browser...', previewData);
+  showPromoPage();
+
   try{
     await Pi.createPayment({
       amount: 1,
@@ -1361,20 +1464,20 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ paymentId, txid, appName, appUrl, message, author: currentUser.username })
         });
-        showStatus('promoStatus','ok','결제 완료! 홍보가 등록되었습니다.','Payment complete! Your promo is now live.');
+        renderPromoPageBody('ok', '결제 완료! 홍보가 등록되었습니다.', 'Payment complete! Your promo is now live.', previewData);
         document.getElementById('promoName').value = '';
         document.getElementById('promoUrl').value = '';
         document.getElementById('promoMsg').value = '';
       },
       onCancel: function(paymentId){
-        showStatus('promoStatus','err','결제가 취소되었습니다.','Payment was cancelled.');
+        renderPromoPageBody('err', '결제가 취소되었습니다.', 'Payment was cancelled.');
       },
       onError: function(error, payment){
-        showStatus('promoStatus','err','결제 오류: ' + error, 'Payment error: ' + error);
+        renderPromoPageBody('err', '결제 오류: ' + error, 'Payment error: ' + error);
       }
     });
   }catch(e){
-    showStatus('promoStatus','err','결제 시작에 실패했습니다: ' + e.message, 'Failed to start payment: ' + e.message);
+    renderPromoPageBody('err', '결제 시작에 실패했습니다: ' + e.message, 'Failed to start payment: ' + e.message);
   }
 });
 
