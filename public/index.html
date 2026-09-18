@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>디부타데스 | Pi Dibutades</title>
+<!-- 일부 안드로이드 브라우저/웹뷰의 "웹사이트 강제 다크모드"가 사이트 자체 테마 전환(다크/라이트 토글)을 덮어쓰는 것을 막기 위함 -->
+<meta name="color-scheme" content="light dark">
 
 <!-- Pi SDK: 공식 문서 기준 CDN. 반드시 실제 배포 도메인에서 https로 로드해야 합니다. -->
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
@@ -13,6 +15,7 @@
 
 <style>
   :root{
+    color-scheme: dark;
     --wall:      #23222a;   /* 벽돌 벽, 밤 */
     --wall-2:    #322824;   /* 벽돌 언더톤 */
     --chalk:     #f3ede0;   /* 분필/스프레이 화이트 */
@@ -23,6 +26,7 @@
     --line:      rgba(243,237,224,0.14);
   }
   body.light-theme{
+    color-scheme: light;
     --wall:      #f6f1e4;   /* 밝은 벽, 낮 */
     --wall-2:    #e9dfc7;   /* 벽돌 언더톤 (밝은 버전) */
     --chalk:     #2b2b2f;   /* 짙은 글자색 */
@@ -627,11 +631,18 @@
     #rightpanel{ width:86px; flex-basis:86px; padding:10px 4px; }
   }
 
-  /* ---------- 모바일 화면: 좌우 패널을 숨기고 가운데 콘텐츠를 넓게 ---------- */
-  @media (max-width:700px){
-    #worldclock, #rightpanel{ display:none; }
-    .layout{ max-width:none; }
-    .app{ width:100%; max-width:520px; margin:0 auto; }
+  /* ---------- 일반적인 모바일 폭: 좌우 패널은 유지하되 더 좁혀서 가운데 공간 확보 ---------- */
+  @media (max-width:480px){
+    #worldclock{ width:58px; flex-basis:58px; padding:10px 3px; }
+    .clock-card .flag{ font-size:12px; }
+    .clock-card .city{ font-size:8px; }
+    .clock-card .city .en{ font-size:7px; }
+    .clock-card .time{ font-size:9px; }
+    .clock-plus{ width:16px; height:16px; line-height:14px; font-size:10px; }
+    #rightpanel{ width:78px; flex-basis:78px; padding:10px 3px; }
+    .rank-item .name{ font-size:8.5px; }
+    .rank-item .metric{ font-size:7.5px; }
+    .pi-price .amount{ font-size:13px; }
   }
 </style>
 </head>
