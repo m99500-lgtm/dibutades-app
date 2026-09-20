@@ -1039,11 +1039,12 @@
   </aside>
 </div>
 
-<!-- 이미지 카드 저장용 모달: 새 창을 열지 않고 같은 화면 안에서 길게 눌러 저장하도록 안내 -->
+<!-- 이미지 카드 저장용 모달: 다운로드 버튼을 우선 제공하고, 길게 눌러 저장도 보조로 안내 -->
 <div id="cardModal" class="card-modal">
   <div class="card-modal-inner">
-    <p class="card-modal-hint">이미지를 길게 눌러서 "이미지 저장"을 선택해주세요<span class="en">Long-press the image and choose "Save Image"</span></p>
     <img id="cardModalImg" alt="디부타데스 카드">
+    <a id="cardDownloadLink" class="btn btn-primary" download="dibutades-card.png">📥 이미지 다운로드<span class="en">Download Image</span></a>
+    <p class="card-modal-hint">다운로드가 안 되면, 이미지를 길게 눌러서 "이미지 저장"을 선택해주세요<span class="en">If the button doesn't work, long-press the image and choose "Save Image"</span></p>
     <button class="btn btn-back" id="closeCardModal">닫기<span class="en">Close</span></button>
   </div>
 </div>
@@ -1592,10 +1593,15 @@ document.getElementById('shareCardBtn').addEventListener('click', async ()=>{
       }
     }
 
-    // 2) 공유 시트가 없거나 실패한 경우: 새 창을 열지 않고 같은 화면 안에 이미지를 띄워
-    //    "길게 눌러 저장하세요"로 안내 (window.open/다운로드는 파이 브라우저 등 임베디드
-    //    웹뷰에서 조용히 막히는 경우가 많아, 항상 되는 이 방식을 기본 안전망으로 사용)
+    // 2) 공유 시트가 없거나 실패한 경우: 같은 화면 안에 이미지와 함께
+    //    바로 누를 수 있는 다운로드 버튼을 띄움 (길게 누르기가 막혀있는
+    //    웹뷰가 있어, 버튼 클릭 방식을 기본으로 하고 길게 누르기는 보조 안내로 남김)
+    const blob = dataUrlToBlob(dataUrl);
+    const blobUrl = URL.createObjectURL(blob);
     document.getElementById('cardModalImg').src = dataUrl;
+    const downloadLink = document.getElementById('cardDownloadLink');
+    downloadLink.href = blobUrl;
+    downloadLink.download = fileName;
     document.getElementById('cardModal').classList.add('show');
   }catch(e){
     console.error(e);
@@ -1604,6 +1610,8 @@ document.getElementById('shareCardBtn').addEventListener('click', async ()=>{
 });
 document.getElementById('closeCardModal').addEventListener('click', ()=>{
   document.getElementById('cardModal').classList.remove('show');
+  const downloadLink = document.getElementById('cardDownloadLink');
+  if(downloadLink.href) URL.revokeObjectURL(downloadLink.href); // 메모리 정리
 });
 
 // ---------- 2. 디부타데스 불러오기 ----------
