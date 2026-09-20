@@ -897,8 +897,8 @@
         <textarea id="writeMsg" maxlength="200" placeholder="오늘 하루 한마디 남겨보세요 (최대 200자) / Leave a message about your day (max 200 chars)"></textarea>
         <label class="self-cert">
           <input type="checkbox" id="selfCertCheck">
-          제가 직접 쓴 글이며, AI 도움이나 복사/붙여넣기가 아닙니다
-          <span class="en">I wrote this myself — no AI help, no copy-paste</span>
+          직접 쓴 글만 가능
+          <span class="en">Only text you typed yourself is allowed</span>
         </label>
         <button class="btn btn-primary" id="submitGraffiti">낙서 남기기<span class="en">Post Graffiti</span></button>
         <div class="status" id="writeStatus"></div>
@@ -906,10 +906,6 @@
         <p class="hint">
           닉네임은 로그인한 Pi 계정 이름으로 자동 표시됩니다. 개인정보(전화번호, 이메일 등)는 절대 입력하지 마세요.
           <span class="en">Your nickname is taken automatically from your logged-in Pi username. Never enter personal info (phone, email, etc).</span>
-        </p>
-        <p class="hint">
-          낙서를 남기려면 Pi 로그인이 필요하고, 붙여넣기·드래그로 넣은 글은 등록되지 않습니다. 직접 타이핑해주세요.
-          <span class="en">Posting requires Pi login. Pasted or dragged text is blocked — please type it yourself.</span>
         </p>
       </section>
 
