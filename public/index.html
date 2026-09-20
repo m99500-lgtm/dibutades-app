@@ -1509,30 +1509,61 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight){
   if(line) ctx.fillText(line, x, curY);
 }
 
+function dataUrlToBlob(dataUrl){
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
 document.getElementById('shareCardBtn').addEventListener('click', async ()=>{
   if(!lastPostedCard) return;
-  const canvas = drawCardCanvas(lastPostedCard);
-  canvas.toBlob(async (blob)=>{
-    if(!blob) return;
+  try{
+    const canvas = drawCardCanvas(lastPostedCard);
+    // toBlob은 일부 구형 웹뷰(Pi Browser 포함)에서 콜백이 아예 안 불릴 수 있어
+    // 호환성이 훨씬 넓은 toDataURL 방식을 기본으로 사용
+    const dataUrl = canvas.toDataURL('image/png');
     const fileName = 'dibutades-' + Date.now() + '.png';
+    const blob = dataUrlToBlob(dataUrl);
     const file = new File([blob], fileName, { type: 'image/png' });
 
-    // 모바일에서 공유 시트(파일 공유)를 지원하면 바로 공유, 아니면 다운로드로 대체
+    // 1) 공유 시트 지원하면 우선 시도
     if(navigator.canShare && navigator.canShare({ files: [file] })){
       try{
         await navigator.share({ files: [file], title: '디부타데스', text: lastPostedCard.message });
         return;
-      }catch(e){ /* 공유 취소 시 조용히 무시 */ return; }
+      }catch(shareErr){
+        // 사용자가 공유를 취소한 경우엔 그냥 종료, 그 외 오류면 아래 다운로드로 계속 진행
+        if(shareErr && shareErr.name === 'AbortError') return;
+      }
     }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }, 'image/png');
+
+    // 2) 다운로드 시도
+    let downloadWorked = false;
+    try{
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      downloadWorked = true;
+    }catch(dlErr){ /* 아래 3번 안전망으로 이어짐 */ }
+
+    // 3) 위 두 방법이 안 먹히는 웹뷰(Pi Browser 등)를 위한 안전망:
+    //    새 창/탭에 이미지를 열어 길게 눌러 저장할 수 있게 함
+    const win = window.open();
+    if(win){
+      win.document.write(`<title>디부타데스 카드 저장</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${dataUrl}" style="max-width:100%;height:auto;" alt="디부타데스 카드"></body>`);
+    }else if(!downloadWorked){
+      showStatus('writeStatus','err','이미지 생성에는 성공했지만 저장/공유 창을 열 수 없었어요. 팝업 차단을 해제해보세요.','Image was created but the save window could not open. Try disabling the popup blocker.');
+    }
+  }catch(e){
+    console.error(e);
+    showStatus('writeStatus','err','카드 이미지를 만드는 중 오류가 발생했어요: ' + e.message, 'Failed to create the image card: ' + e.message);
+  }
 });
 
 // ---------- 2. 디부타데스 불러오기 ----------
