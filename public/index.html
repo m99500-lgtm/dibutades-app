@@ -1043,8 +1043,11 @@
 <div id="cardModal" class="card-modal">
   <div class="card-modal-inner">
     <img id="cardModalImg" alt="디부타데스 카드">
-    <a id="cardDownloadLink" class="btn btn-primary" download="dibutades-card.png">📥 이미지 다운로드<span class="en">Download Image</span></a>
-    <p class="card-modal-hint">다운로드가 안 되면, 이미지를 길게 눌러서 "이미지 저장"을 선택해주세요<span class="en">If the button doesn't work, long-press the image and choose "Save Image"</span></p>
+    <a id="cardDownloadLink" class="btn btn-primary">🖼️ 이미지 화면으로 이동<span class="en">Open Image in Full Screen</span></a>
+    <p class="card-modal-hint">
+      이동한 화면에서 이미지를 길게 눌러 "이미지 저장"을 선택해주세요. 저장 후엔 왼쪽 위 뒤로가기(←)로 돌아오시면 돼요.
+      <span class="en">On the next screen, long-press the image and choose "Save Image". After saving, tap the back arrow (←) at top-left to return.</span>
+    </p>
     <button class="btn btn-back" id="closeCardModal">닫기<span class="en">Close</span></button>
   </div>
 </div>
@@ -1593,15 +1596,14 @@ document.getElementById('shareCardBtn').addEventListener('click', async ()=>{
       }
     }
 
-    // 2) 공유 시트가 없거나 실패한 경우: 같은 화면 안에 이미지와 함께
-    //    바로 누를 수 있는 다운로드 버튼을 띄움 (길게 누르기가 막혀있는
-    //    웹뷰가 있어, 버튼 클릭 방식을 기본으로 하고 길게 누르기는 보조 안내로 남김)
-    const blob = dataUrlToBlob(dataUrl);
-    const blobUrl = URL.createObjectURL(blob);
+    // 2) 공유 시트가 없거나 실패한 경우: 같은 화면 안에 이미지를 미리 보여주고,
+    //    "이미지 화면으로 이동" 링크는 다운로드 속성 없이 순수 이동만 시켜서
+    //    (일부 웹뷰는 download 속성 자체를 무시해 아무 반응이 없음) 최대한 넓게 동작하게 함
     document.getElementById('cardModalImg').src = dataUrl;
     const downloadLink = document.getElementById('cardDownloadLink');
-    downloadLink.href = blobUrl;
-    downloadLink.download = fileName;
+    downloadLink.href = dataUrl;
+    downloadLink.target = '_blank';
+    downloadLink.rel = 'noopener';
     document.getElementById('cardModal').classList.add('show');
   }catch(e){
     console.error(e);
@@ -1610,8 +1612,6 @@ document.getElementById('shareCardBtn').addEventListener('click', async ()=>{
 });
 document.getElementById('closeCardModal').addEventListener('click', ()=>{
   document.getElementById('cardModal').classList.remove('show');
-  const downloadLink = document.getElementById('cardDownloadLink');
-  if(downloadLink.href) URL.revokeObjectURL(downloadLink.href); // 메모리 정리
 });
 
 // ---------- 2. 디부타데스 불러오기 ----------
