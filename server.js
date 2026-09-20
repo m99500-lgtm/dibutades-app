@@ -236,7 +236,7 @@ app.post('/api/graffiti', async (req, res) => {
       author: author.trim().slice(0, 40),
       message: message.trim(),
       views: 0,
-      hearts: 0,
+      reactions: { heart: 0, thumbsup: 0, pray: 0, happy: 0, sad: 0 },
       createdAt: now
     });
     await saveData(data);
@@ -247,15 +247,22 @@ app.post('/api/graffiti', async (req, res) => {
   }
 });
 
-// ---------- 낙서에 공감(하트) 남기기 ----------
+// ---------- 낙서에 반응(하트/엄지척/기도/기쁨/슬픔) 남기기 ----------
+const REACTION_TYPES = ['heart', 'thumbsup', 'pray', 'happy', 'sad'];
 app.post('/api/graffiti/:id/react', async (req, res) => {
+  const { type } = req.body || {};
+  if(!REACTION_TYPES.includes(type)){
+    return res.status(400).json({ error: 'invalid reaction type' });
+  }
   try{
     const data = await loadData();
     const item = data.graffiti.find(g => g.id === req.params.id);
     if(!item) return res.status(404).json({ error: 'not found' });
-    item.hearts = (item.hearts || 0) + 1;
+    // 예전에 등록된 낙서에는 reactions 필드가 없을 수 있으므로 채워줌
+    item.reactions = item.reactions || { heart: 0, thumbsup: 0, pray: 0, happy: 0, sad: 0 };
+    item.reactions[type] = (item.reactions[type] || 0) + 1;
     await saveData(data);
-    res.json({ ok: true, hearts: item.hearts });
+    res.json({ ok: true, reactions: item.reactions });
   }catch(e){
     console.error(e);
     res.status(500).json({ error: e.message });
