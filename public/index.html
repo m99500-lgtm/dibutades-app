@@ -555,15 +555,8 @@
   }
   .btn-primary{background:var(--spray-y); color:#241b04; box-shadow:0 0 0 rgba(255,201,60,0.5); transition: box-shadow .2s, transform .1s;}
   .btn-promo{background:var(--spray-c); color:#04262a; box-shadow:0 0 0 rgba(73,185,199,0.5); transition: box-shadow .2s, transform .1s;}
-  .btn-share{
-    background:transparent;
-    color:var(--spray-y);
-    border:1px solid rgba(255,201,60,0.5);
-    margin-top:10px;
-  }
   .btn-primary:active{ transform:scale(0.98); box-shadow:0 0 18px rgba(255,201,60,0.55); }
   .btn-promo:active{ transform:scale(0.98); box-shadow:0 0 18px rgba(73,185,199,0.55); }
-  .btn-share:active{ transform:scale(0.98); }
   .btn:disabled{opacity:0.5; cursor:not-allowed;}
 
   .streak-badge{
@@ -704,37 +697,6 @@
     line-height:1.5;
   }
   .btn-back .en{ display:block; font-size:11px; font-weight:400; opacity:0.8; margin-top:2px; }
-
-  /* ---------- 이미지 카드 저장 모달 ---------- */
-  .card-modal{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.85);
-    z-index:500;
-    padding:24px 16px;
-    overflow-y:auto;
-  }
-  .card-modal.show{ display:flex; align-items:flex-start; justify-content:center; }
-  .card-modal-inner{
-    width:100%;
-    max-width:420px;
-    text-align:center;
-  }
-  .card-modal-hint{
-    color:var(--chalk);
-    font-size:13px;
-    line-height:1.6;
-    margin:0 0 14px;
-  }
-  .card-modal-hint .en{ display:block; font-size:11.5px; opacity:0.8; margin-top:3px; }
-  #cardModalImg{
-    width:100%;
-    height:auto;
-    border-radius:12px;
-    border:1px solid var(--line);
-    -webkit-touch-callout:default; /* iOS에서 길게 눌러 저장 메뉴가 뜨도록 허용 */
-  }
 
   /* ---------- 명상 모드: 카드가 하나씩 부드럽게 떠오르며, 구분선만으로 조용히 흘러가는 목록 ---------- */
   .meditative-list .card{
@@ -943,7 +905,6 @@
         </label>
         <button class="btn btn-primary" id="submitGraffiti">낙서 남기기<span class="en">Post Graffiti</span></button>
         <div class="status" id="writeStatus"></div>
-        <button class="btn btn-share" id="shareCardBtn" style="display:none;">오늘의 낙서 카드로 저장/공유<span class="en">Save/Share as Image Card</span></button>
         <p class="hint">
           닉네임은 로그인한 Pi 계정 이름으로 자동 표시됩니다. 개인정보(전화번호, 이메일 등)는 절대 입력하지 마세요.
           <span class="en">Your nickname is taken automatically from your logged-in Pi username. Never enter personal info (phone, email, etc).</span>
@@ -1037,19 +998,6 @@
       <div class="rp-empty" id="stakingEmpty" style="display:none;">데이터 준비 중<span class="en">Data coming soon</span></div>
     </div>
   </aside>
-</div>
-
-<!-- 이미지 카드 저장용 모달: 다운로드 버튼을 우선 제공하고, 길게 눌러 저장도 보조로 안내 -->
-<div id="cardModal" class="card-modal">
-  <div class="card-modal-inner">
-    <img id="cardModalImg" alt="디부타데스 카드">
-    <a id="cardDownloadLink" class="btn btn-primary">🖼️ 이미지 화면으로 이동<span class="en">Open Image in Full Screen</span></a>
-    <p class="card-modal-hint">
-      이동한 화면에서 이미지를 길게 눌러 "이미지 저장"을 선택해주세요. 저장 후엔 왼쪽 위 뒤로가기(←)로 돌아오시면 돼요.
-      <span class="en">On the next screen, long-press the image and choose "Save Image". After saving, tap the back arrow (←) at top-left to return.</span>
-    </p>
-    <button class="btn btn-back" id="closeCardModal">닫기<span class="en">Close</span></button>
-  </div>
 </div>
 
 <script>
@@ -1462,8 +1410,6 @@ writeMsgElRef.addEventListener('beforeinput', (e)=>{
 writeMsgElRef.addEventListener('paste', (e)=>{ e.preventDefault(); });
 writeMsgElRef.addEventListener('drop', (e)=>{ e.preventDefault(); });
 
-let lastPostedCard = null; // 카드 이미지 생성을 위한 마지막 게시 내용 저장
-
 document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
   const msg = document.getElementById('writeMsg').value.trim();
   if(!currentUser){
@@ -1491,7 +1437,6 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
       showStatus('writeStatus','err', msgKo, data.error || 'Failed to post.');
       return;
     }
-    lastPostedCard = { question: document.getElementById('todayQText').textContent.trim(), message: msg, author: currentUser.username };
     document.getElementById('writeMsg').value = '';
     document.getElementById('selfCertCheck').checked = false;
     const streakLine = data.streak
@@ -1499,119 +1444,10 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
       : '';
     document.getElementById('writeStatus').innerHTML = '낙서가 방에 붙었어요!<span class="en">Your graffiti has been posted!</span>' + streakLine;
     document.getElementById('writeStatus').className = 'status show ok';
-    document.getElementById('shareCardBtn').style.display = 'block';
     playSosoJourney(); // 낙서를 남긴 반가운 순간에 한 번 더 인사
   }catch(e){
     showStatus('writeStatus','err','등록에 실패했습니다: ' + e.message, 'Failed to post: ' + e.message);
   }
-});
-
-// ---------- 오늘의 낙서를 이미지 카드로 만들어 저장/공유 ----------
-function drawCardCanvas(data){
-  const canvas = document.createElement('canvas');
-  const W = 1080, H = 1080;
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // 배경: 앱과 같은 톤의 그라디언트
-  const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, '#23222a');
-  grad.addColorStop(1, '#322824');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-
-  // 상단 로고 텍스트
-  ctx.fillStyle = '#ffc93c';
-  ctx.font = "bold 56px 'Noto Sans KR', sans-serif";
-  ctx.textAlign = 'left';
-  ctx.fillText('디부타데스', 70, 120);
-  ctx.font = "28px 'Noto Sans KR', sans-serif";
-  ctx.fillStyle = 'rgba(243,237,224,0.6)';
-  ctx.fillText('DIBUTADES · soSOso', 70, 160);
-
-  // 오늘의 질문
-  ctx.fillStyle = '#ffc93c';
-  ctx.font = "bold 30px 'Noto Sans KR', sans-serif";
-  wrapText(ctx, data.question || '오늘의 질문', 70, 280, W - 140, 42);
-
-  // 낙서 본문
-  ctx.fillStyle = '#f3ede0';
-  ctx.font = "44px 'Noto Sans KR', sans-serif";
-  wrapText(ctx, data.message, 70, 460, W - 140, 62);
-
-  // 작성자
-  ctx.fillStyle = 'rgba(243,237,224,0.7)';
-  ctx.font = "30px 'Noto Sans KR', sans-serif";
-  ctx.fillText('@' + (data.author || '익명'), 70, H - 90);
-
-  return canvas;
-}
-function wrapText(ctx, text, x, y, maxWidth, lineHeight){
-  const chars = String(text || '').split('');
-  let line = '';
-  let curY = y;
-  chars.forEach((ch)=>{
-    const testLine = line + ch;
-    if(ctx.measureText(testLine).width > maxWidth && line !== ''){
-      ctx.fillText(line, x, curY);
-      line = ch;
-      curY += lineHeight;
-    }else{
-      line = testLine;
-    }
-  });
-  if(line) ctx.fillText(line, x, curY);
-}
-
-function dataUrlToBlob(dataUrl){
-  const [header, base64] = dataUrl.split(',');
-  const mime = header.match(/:(.*?);/)[1];
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: mime });
-}
-
-document.getElementById('shareCardBtn').addEventListener('click', async ()=>{
-  if(!lastPostedCard) return;
-  try{
-    const canvas = drawCardCanvas(lastPostedCard);
-    // toBlob은 일부 구형 웹뷰(Pi Browser 포함)에서 콜백이 아예 안 불릴 수 있어
-    // 호환성이 훨씬 넓은 toDataURL 방식을 기본으로 사용
-    const dataUrl = canvas.toDataURL('image/png');
-    const fileName = 'dibutades-' + Date.now() + '.png';
-
-    // 1) 공유 시트 지원하면 우선 시도 (지원하는 브라우저에서는 가장 편한 방법)
-    if(navigator.canShare){
-      try{
-        const blob = dataUrlToBlob(dataUrl);
-        const file = new File([blob], fileName, { type: 'image/png' });
-        if(navigator.canShare({ files: [file] })){
-          await navigator.share({ files: [file], title: '디부타데스', text: lastPostedCard.message });
-          return;
-        }
-      }catch(shareErr){
-        // 사용자가 공유를 취소한 경우엔 그냥 종료, 그 외 오류면 아래 모달로 계속 진행
-        if(shareErr && shareErr.name === 'AbortError') return;
-      }
-    }
-
-    // 2) 공유 시트가 없거나 실패한 경우: 같은 화면 안에 이미지를 미리 보여주고,
-    //    "이미지 화면으로 이동" 링크는 다운로드 속성 없이 순수 이동만 시켜서
-    //    (일부 웹뷰는 download 속성 자체를 무시해 아무 반응이 없음) 최대한 넓게 동작하게 함
-    document.getElementById('cardModalImg').src = dataUrl;
-    const downloadLink = document.getElementById('cardDownloadLink');
-    downloadLink.href = dataUrl;
-    downloadLink.target = '_blank';
-    downloadLink.rel = 'noopener';
-    document.getElementById('cardModal').classList.add('show');
-  }catch(e){
-    console.error(e);
-    showStatus('writeStatus','err','카드 이미지를 만드는 중 오류가 발생했어요: ' + e.message, 'Failed to create the image card: ' + e.message);
-  }
-});
-document.getElementById('closeCardModal').addEventListener('click', ()=>{
-  document.getElementById('cardModal').classList.remove('show');
 });
 
 // ---------- 2. 디부타데스 불러오기 ----------
