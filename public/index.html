@@ -1300,8 +1300,31 @@ function enterFullpage(){
   sosoWriteTabActive = false;
 }
 
+// ---------- 뒤로가기(브라우저/웹뷰 back) 처리 ----------
+// 서브화면(둘러보기/앱)에 들어갈 때 히스토리를 한 칸 쌓아두면, 뒤로가기를 눌렀을 때
+// 앱을 완전히 벗어나는 대신 먼저 메인화면으로만 돌아오게 만들 수 있음.
+history.replaceState({ view: 'main' }, ''); // 처음 로드된 화면을 '메인'으로 기록
+let inFullpage = false;
+
+function pushFullpageHistory(){
+  if(!inFullpage){
+    history.pushState({ view: 'sub' }, '');
+    inFullpage = true;
+  }
+}
+
+window.addEventListener('popstate', ()=>{
+  if(inFullpage){
+    // 서브화면에서 뒤로가기 → 메인화면으로만 이동 (앱을 나가지 않음)
+    goToMainScreen();
+  }
+  // 이미 메인화면이었다면 popstate가 소비할 히스토리가 더 없다는 뜻이므로,
+  // 별도 처리 없이 그대로 두면 앱을 나가는 기본 동작이 자연스럽게 진행됨
+});
+
 function showBrowsePage(){
   enterFullpage();
+  pushFullpageHistory();
   pagePromoEl.classList.remove('show');
   pageBrowseEl.classList.add('show');
   loadWall();
@@ -1310,6 +1333,7 @@ function showBrowsePage(){
 
 function showPromoPage(){
   enterFullpage();
+  pushFullpageHistory();
   pageBrowseEl.classList.remove('show');
   pagePromoEl.classList.add('show');
   // 서브화면을 다시 열 때는 항상 폼부터 보여줌 (이전 결제 결과는 초기화)
@@ -1318,7 +1342,9 @@ function showPromoPage(){
   promoFormWrapEl.style.display = 'block';
 }
 
-function backToMain(){
+// 실제 화면 전환만 담당 (히스토리는 건드리지 않음) — popstate 콜백에서 호출됨
+function goToMainScreen(){
+  inFullpage = false;
   appEl.classList.remove('showing-fullpage');
   worldclockEl.style.display = '';
   rightpanelEl.style.display = '';
@@ -1329,6 +1355,16 @@ function backToMain(){
   document.querySelector('.tab-btn[data-tab="write"]').classList.add('active');
   document.getElementById('tab-write').classList.add('active');
   sosoWriteTabActive = true;
+}
+
+// 화면 안의 "메인화면으로 돌아가기" 버튼: 직접 화면을 바꾸지 않고 history.back()을 호출해서
+// popstate 흐름을 그대로 타게 함 (뒤로가기 버튼을 눌렀을 때와 완전히 같은 경로로 처리)
+function backToMain(){
+  if(inFullpage){
+    history.back();
+  }else{
+    goToMainScreen();
+  }
 }
 document.getElementById('backFromBrowse').addEventListener('click', backToMain);
 document.getElementById('backFromPromo').addEventListener('click', backToMain);
