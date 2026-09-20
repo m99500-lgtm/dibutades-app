@@ -317,7 +317,8 @@
   }
   .letter-wave{
     display:inline-block;
-    animation: soso-wave 1.8s ease-in-out infinite, soso-color 5s linear infinite;
+    color:#4dd679; /* Pi 실시간 가치 상승 표시와 같은 초록색 */
+    animation: soso-wave 1.8s ease-in-out infinite;
   }
   .soso.resting .letter-wave{
     animation-play-state: paused;
@@ -325,15 +326,6 @@
   @keyframes soso-wave{
     0%, 100%{ transform: translateY(0); }
     50%{ transform: translateY(-4px); }
-  }
-  @keyframes soso-color{
-    0%{ color:#e8a2a2; }
-    16%{ color:#e8c7a2; }
-    33%{ color:#e3d98f; }
-    50%{ color:#a8d9b8; }
-    66%{ color:#9fc7ce; }
-    83%{ color:#b3aee0; }
-    100%{ color:#e8a2a2; }
   }
 
   /* ---------- 글자가 목표 지점에 닿을 때마다 떨어지는 보라색 물방울 ---------- */
