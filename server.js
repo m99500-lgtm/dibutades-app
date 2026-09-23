@@ -406,9 +406,14 @@ app.post('/api/payments/complete-existing', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`디부타데스 서버 실행 중: http://localhost:${PORT}`);
-  if(!PI_API_KEY){
-    console.warn('⚠️  PI_API_KEY 환경변수가 설정되지 않았습니다. 결제 기능이 동작하지 않습니다.');
-  }
-});
+// 로컬에서 직접 실행할 때만 서버를 띄우고, Vercel에서는 app만 내보냅니다
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`디부타데스 서버 실행 중: http://localhost:${PORT}`);
+    if(!PI_API_KEY){
+      console.warn('⚠️  PI_API_KEY 환경변수가 설정되지 않았습니다. 결제 기능이 동작하지 않습니다.');
+    }
+  });
+}
+
+module.exports = app;
