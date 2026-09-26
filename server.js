@@ -23,7 +23,7 @@ const { put, get } = require('@vercel/blob');
 const app = express();
 app.get('/validation-key.txt', (req, res) => {
   res.set('Content-Type', 'text/plain');
-  res.status(200).send('e98f7ad5c60b5908de11f1ed');
+  res.status(200).send('e98f7ad5c60b5908de11f1ed625fea1bbe7bcfae50fe519efe928bb9756ddaad6c7360906c6d332217e395ece90cdafbf91b4bfb81b3735febe13fe5af0a4479');
 });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
