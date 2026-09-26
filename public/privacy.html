@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>개인정보처리방침 | 디부타데스</title>
+<style>
+  :root{
+    --purple:#6b3fa0;
+    --purple-dark:#4a2b70;
+    --bg:#faf8fc;
+    --text:#2a2a2a;
+    --muted:#6b6b6b;
+    --card:#ffffff;
+    --border:#e6def2;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.7;
+  }
+  header{
+    background:linear-gradient(135deg,var(--purple),var(--purple-dark));
+    color:#fff;
+    padding:32px 20px 28px;
+    text-align:center;
+  }
+  header h1{
+    margin:0 0 6px;
+    font-size:22px;
+  }
+  header p{
+    margin:0;
+    font-size:13px;
+    opacity:.85;
+  }
+  main{
+    max-width:640px;
+    margin:0 auto;
+    padding:24px 20px 64px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px 22px;
+    margin-bottom:16px;
+  }
+  .updated{
+    font-size:13px;
+    color:var(--muted);
+    text-align:right;
+    margin:0 0 20px;
+  }
+  h2{
+    font-size:16px;
+    color:var(--purple-dark);
+    margin:0 0 10px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  p, li{
+    font-size:14.5px;
+    color:var(--text);
+  }
+  ul{
+    margin:8px 0 0;
+    padding-left:20px;
+  }
+  li{margin-bottom:6px;}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:8px;
+    font-size:13.5px;
+  }
+  th, td{
+    text-align:left;
+    padding:8px 6px;
+    border-bottom:1px solid var(--border);
+    vertical-align:top;
+  }
+  th{
+    color:var(--purple-dark);
+    width:38%;
+  }
+  .badge{
+    display:inline-block;
+    background:#f1e9fb;
+    color:var(--purple-dark);
+    font-size:12px;
+    padding:2px 8px;
+    border-radius:999px;
+    margin-left:4px;
+  }
+  footer{
+    text-align:center;
+    font-size:12.5px;
+    color:var(--muted);
+    padding:0 20px 40px;
+  }
+  a{color:var(--purple);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>개인정보처리방침</h1>
+  <p>디부타데스 (Dibutades)</p>
+</header>
+
+<main>
+  <p class="updated">최종 업데이트: 2026년 9월 26일</p>
+
+  <div class="card">
+    <h2>1. 수집하는 개인정보 항목</h2>
+    <p>디부타데스는 서비스 제공에 꼭 필요한 최소한의 정보만 수집합니다.</p>
+    <table>
+      <tr><th>항목</th><td>내용</td></tr>
+      <tr><th>Pi 계정 정보</th><td>Pi Network 로그인(Pi SDK)을 통해 제공되는 공개 사용자명(username)</td></tr>
+      <tr><th>게시 콘텐츠</th><td>이용자가 직접 작성한 낙서(메시지) 내용, 작성 시각</td></tr>
+      <tr><th>반응 정보</th><td>다른 낙서에 남긴 하트·엄지척·기도·기쁨·슬픔 등 반응 기록 (도배 방지 목적)</td></tr>
+      <tr><th>홍보 신청 정보</th><td>홍보 기능 이용 시 입력한 앱 이름, 소개 문구, 홍보 링크(pi:// 또는 *.pinet.com)</td></tr>
+      <tr><th>결제 정보</th><td>홍보 기능 이용을 위한 Pi 결제 내역(Payment ID). 결제 자체는 Pi Network 공식 결제(U2A)로 처리되며, 카드번호·은행정보 등은 저장하지 않습니다.</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>2. 수집하지 않는 정보</h2>
+    <ul>
+      <li>이메일 주소, 전화번호</li>
+      <li>위치정보(GPS 등)</li>
+      <li>기기 식별자, 광고 식별자</li>
+      <li>주민등록번호 등 기타 개인식별정보</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>3. 개인정보의 이용 목적</h2>
+    <ul>
+      <li>낙서 게시·조회·반응 등 서비스 핵심 기능 제공</li>
+      <li>동일 계정의 짧은 시간 내 반복 게시(도배) 및 욕설·스팸 방지</li>
+      <li>홍보 신청 검토 및 홍보 기간(7일) 관리</li>
+      <li>Pi 결제 승인·완료 처리</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>4. 보관 및 저장 방식</h2>
+    <p>수집된 정보는 Vercel Blob(비공개 스토리지)에 저장되며, 서비스 운영 목적으로만 사용됩니다. 별도의 이용자 요청이 없는 한 서비스 운영 기간 동안 보관되며, 탈퇴나 삭제 요청 시 해당 이용자가 작성한 낙서를 확인 후 삭제 조치합니다.</p>
+  </div>
+
+  <div class="card">
+    <h2>5. 제3자 제공 및 위탁</h2>
+    <p>디부타데스는 수집한 정보를 외부에 판매하거나 제3자에게 제공하지 않습니다. 다만 아래 서비스는 호스팅·결제 처리를 위해 이용되며, 각 서비스의 자체 정책을 따릅니다.</p>
+    <ul>
+      <li>Vercel — 웹 호스팅 및 데이터 저장(Blob)</li>
+      <li>Pi Network — 로그인 인증(Pi SDK) 및 결제 처리(U2A)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>6. 이용자의 권리</h2>
+    <p>이용자는 본인이 작성한 낙서의 삭제를 요청할 수 있으며, 아래 문의처를 통해 요청 시 확인 후 조치합니다.</p>
+  </div>
+
+  <div class="card">
+    <h2>7. 문의처</h2>
+    <p>개인정보 관련 문의: <a href="https://x.com/minkyeungsoon31" target="_blank" rel="noopener">@minkyeungsoon31 (X)</a></p>
+  </div>
+
+  <div class="card">
+    <h2>8. 정책 변경</h2>
+    <p>본 개인정보처리방침은 서비스 개선 또는 관련 법령·정책 변경에 따라 수정될 수 있으며, 변경 시 본 페이지를 통해 고지합니다.</p>
+  </div>
+</main>
+
+<footer>
+  © 2026 디부타데스 (Dibutades) — Pi Network 생태계 커뮤니티 앱
+</footer>
+
+</body>
+</html>
