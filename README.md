@@ -1,4 +1,4 @@
-[README (1).md](https://github.com/user-attachments/files/32448318/README.1.md)
+
 디부타데스 (Pi Dibutades)
 "느낌 오면 낙서하면 돼~" / "Feel something? Just scribble it."
 
