@@ -1,6 +1,6 @@
 [README (1).md](https://github.com/user-attachments/files/32448318/README.1.md)
 디부타데스 (Pi Dibutades)
-"거울은 사라지고 낙서는 남아요~ 흔적은 누군가의 맘을 울려요~"
+"느낌 오면 낙서하면 돼~" / "Feel something? Just scribble it."
 
 Pi Network 생태계용 낙서 게시판 앱입니다. 일반 방문자는 부담 없이 낙서만 남길 수 있고, Pi 앱을 가진 개발자는 1 Pi를 내고 1주일(7일) 동안 자신의 앱을 디부타데스에 홍보할 수 있습니다.
 
