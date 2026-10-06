@@ -88,68 +88,52 @@
     z-index:1;
   }
 
-  /* ---------- 왼쪽 세계시계 패널 ---------- */
-  #worldclock{
-    width:78px;
-    flex:0 0 78px;
+  /* ---------- 왼쪽 패널: 실시간 낙서 피드 ---------- */
+  #livefeed{
+    width:92px;
+    flex:0 0 92px;
     border-right:1px solid var(--line);
     padding:14px 6px;
     display:flex;
     flex-direction:column;
-    gap:14px;
+    gap:8px;
     background:rgba(0,0,0,0.18);
   }
-  .clock-card{
+  .lf-title{
+    font-size:10px;
+    color:var(--chalk-dim);
     text-align:center;
+    line-height:1.4;
   }
-  .clock-card .flag{ font-size:16px; line-height:1; }
-  .clock-card .city{
-    font-size:9px;
-    color:var(--chalk-dim);
-    margin-top:3px;
-    line-height:1.3;
-  }
-  .clock-card .city .en{
-    display:block;
-    font-size:8px;
-    opacity:0.75;
-  }
-  .clock-card .date{
-    font-size:8.5px;
-    color:var(--chalk-dim);
-    margin-top:2px;
-    font-variant-numeric: tabular-nums;
-  }
-  .clock-card .time{
-    font-size:11px;
-    font-weight:700;
-    color:var(--spray-y);
-    margin-top:4px;
-    font-variant-numeric: tabular-nums;
-  }
-  .clock-plus{
-    margin-top:5px;
-    width:18px;
-    height:18px;
-    line-height:16px;
-    border-radius:50%;
-    border:1px solid var(--line);
-    background:rgba(255,201,60,0.1);
-    color:var(--spray-y);
-    font-size:11px;
-    font-weight:700;
-    cursor:pointer;
-    padding:0;
-  }
-  #extraClocks, .clock-extra-group{
-    margin-top:10px;
-    margin-bottom:4px;
-    padding:10px 0 4px;
+  .lf-title .en{ display:block; font-size:8px; opacity:0.75; }
+  .lf-count{ text-align:center; margin-bottom:4px; }
+  .lf-count .num{ font-size:20px; font-weight:900; color:var(--spray-y); font-variant-numeric:tabular-nums; }
+  .lf-count .lbl{ font-size:8.5px; color:var(--chalk-dim); line-height:1.3; }
+  .lf-count .lbl .en{ display:block; font-size:7.5px; opacity:0.75; }
+  .lf-item{
     border-top:1px dashed var(--line);
-    display:flex;
-    flex-direction:column;
-    gap:14px;
+    padding:7px 0 2px;
+    cursor:pointer;
   }
+  .lf-item .who{ font-size:8.5px; color:var(--spray-y); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lf-item .msg{
+    font-size:9px;
+    color:var(--chalk);
+    line-height:1.35;
+    margin-top:2px;
+    display:-webkit-box;
+    -webkit-line-clamp:3;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    word-break:break-all;
+  }
+  .lf-item .ago{ font-size:7.5px; color:var(--chalk-dim); margin-top:2px; }
+  .lf-empty{ font-size:9px; color:var(--chalk-dim); text-align:center; line-height:1.4; padding-top:6px; }
+
+  /* ---------- 오른쪽 상단 시계 (두 줄: 날짜 / 24시간) ---------- */
+  .top-clock{ text-align:center; padding-bottom:10px; border-bottom:1px dashed var(--line); }
+  .top-clock .tc-date{ font-size:10px; color:var(--chalk-dim); font-variant-numeric:tabular-nums; }
+  .top-clock .tc-time{ font-size:15px; font-weight:900; color:var(--spray-y); margin-top:3px; font-variant-numeric:tabular-nums; }
 
   /* ---------- 가운데 메인 앱 ---------- */
   .app{
@@ -268,6 +252,8 @@
     display:flex;
     align-items:center;
     justify-content:center;
+    z-index:100;
+    pointer-events:auto;
   }
   header .logo{
     font-family:'Nanum Pen Script', cursive;
@@ -719,20 +705,16 @@
   #wallEmpty .en, #wallLoading .en{ display:block; opacity:0.8; margin-top:4px; }
 
   @media (max-width:360px){
-    #worldclock{ width:64px; flex-basis:64px; padding:10px 4px; }
-    .clock-card .flag{ font-size:13px; }
-    .clock-card .time{ font-size:10px; }
+    #livefeed{ width:72px; flex-basis:72px; padding:10px 4px; }
     #rightpanel{ width:86px; flex-basis:86px; padding:10px 4px; }
   }
 
   /* ---------- 일반적인 모바일 폭: 좌우 패널은 유지하되 더 좁혀서 가운데 공간 확보 ---------- */
   @media (max-width:480px){
-    #worldclock{ width:58px; flex-basis:58px; padding:10px 3px; }
-    .clock-card .flag{ font-size:12px; }
-    .clock-card .city{ font-size:8px; }
-    .clock-card .city .en{ font-size:7px; }
-    .clock-card .time{ font-size:9px; }
-    .clock-plus{ width:16px; height:16px; line-height:14px; font-size:10px; }
+    #livefeed{ width:68px; flex-basis:68px; padding:10px 3px; }
+    .lf-item .msg{ font-size:8.5px; }
+    .top-clock .tc-time{ font-size:13px; }
+    .top-clock .tc-date{ font-size:9px; }
     #rightpanel{ width:78px; flex-basis:78px; padding:10px 3px; }
     .rank-item .name{ font-size:8.5px; }
     .rank-item .metric{ font-size:7.5px; }
@@ -744,119 +726,12 @@
 
 <div class="layout">
 
-  <!-- 왼쪽: 세계 주요 5개국 실시간 시계 / World clock (5 countries incl. Korea) -->
-  <aside id="worldclock">
-    <div class="clock-card" data-tz="Asia/Seoul">
-      <div class="flag">🇰🇷</div>
-      <div class="city">한국 서울<span class="en">Seoul, KR</span></div>
-      <div class="date">----.--.--</div>
-      <div class="time">--:--:--</div>
-      <button class="clock-plus" data-target="extra-kr" aria-label="동아시아 주요국 더보기">＋</button>
-    </div>
-    <div class="clock-extra-group" id="extra-kr" style="display:none;">
-      <div class="clock-card" data-tz="Asia/Tokyo">
-        <div class="flag">🇯🇵</div>
-        <div class="city">일본 도쿄<span class="en">Tokyo, JP</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-      <div class="clock-card" data-tz="Asia/Shanghai">
-        <div class="flag">🇨🇳</div>
-        <div class="city">중국 베이징<span class="en">Beijing, CN</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-      <div class="clock-card" data-tz="Asia/Taipei">
-        <div class="flag">🇹🇼</div>
-        <div class="city">대만 타이베이<span class="en">Taipei, TW</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-    </div>
-
-    <div class="clock-card" data-tz="America/New_York">
-      <div class="flag">🇺🇸</div>
-      <div class="city">미국 뉴욕<span class="en">New York, US</span></div>
-      <div class="date">----.--.--</div>
-      <div class="time">--:--:--</div>
-      <button class="clock-plus" data-target="extra-us" aria-label="아메리카 주요국 더보기">＋</button>
-    </div>
-    <div class="clock-extra-group" id="extra-us" style="display:none;">
-      <div class="clock-card" data-tz="America/Toronto">
-        <div class="flag">🇨🇦</div>
-        <div class="city">캐나다 토론토<span class="en">Toronto, CA</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-      <div class="clock-card" data-tz="America/Mexico_City">
-        <div class="flag">🇲🇽</div>
-        <div class="city">멕시코시티<span class="en">Mexico City, MX</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-      <div class="clock-card" data-tz="America/Sao_Paulo">
-        <div class="flag">🇧🇷</div>
-        <div class="city">브라질 상파울루<span class="en">São Paulo, BR</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-    </div>
-
-    <div class="clock-card" data-tz="Europe/London">
-      <div class="flag">🇬🇧</div>
-      <div class="city">영국 런던<span class="en">London, UK</span></div>
-      <div class="date">----.--.--</div>
-      <div class="time">--:--:--</div>
-      <button class="clock-plus" data-target="extra-uk" aria-label="유럽 주요국 더보기">＋</button>
-    </div>
-    <div class="clock-extra-group" id="extra-uk" style="display:none;">
-      <div class="clock-card" data-tz="Europe/Paris">
-        <div class="flag">🇫🇷</div>
-        <div class="city">프랑스 파리<span class="en">Paris, FR</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-      <div class="clock-card" data-tz="Europe/Berlin">
-        <div class="flag">🇩🇪</div>
-        <div class="city">독일 베를린<span class="en">Berlin, DE</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-      <div class="clock-card" data-tz="Europe/Rome">
-        <div class="flag">🇮🇹</div>
-        <div class="city">이탈리아 로마<span class="en">Rome, IT</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-    </div>
-
-    <div class="clock-card" data-tz="Asia/Kolkata">
-      <div class="flag">🇮🇳</div>
-      <div class="city">인도 뉴델리<span class="en">New Delhi, IN</span></div>
-      <div class="date">----.--.--</div>
-      <div class="time">--:--:--</div>
-      <button class="clock-plus" data-target="extra-in" aria-label="남아시아·신흥국 더보기">＋</button>
-    </div>
-    <div class="clock-extra-group" id="extra-in" style="display:none;">
-      <div class="clock-card" data-tz="Asia/Karachi">
-        <div class="flag">🇵🇰</div>
-        <div class="city">파키스탄 카라치<span class="en">Karachi, PK</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-      <div class="clock-card" data-tz="Asia/Dhaka">
-        <div class="flag">🇧🇩</div>
-        <div class="city">방글라데시 다카<span class="en">Dhaka, BD</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-      <div class="clock-card" data-tz="Africa/Lagos">
-        <div class="flag">🇳🇬</div>
-        <div class="city">나이지리아 라고스<span class="en">Lagos, NG</span></div>
-        <div class="date">----.--.--</div>
-        <div class="time">--:--:--</div>
-      </div>
-    </div>
+  <!-- 왼쪽: 실시간 낙서 피드 / Live graffiti feed -->
+  <aside id="livefeed">
+    <div class="lf-title">실시간 낙서<span class="en">Live Graffiti</span></div>
+    <div class="lf-count"><div class="num" id="lfNum">-</div><div class="lbl">오늘의 낙서<span class="en">Today's scribbles</span></div></div>
+    <div id="lfList"></div>
+    <div class="lf-empty" id="lfEmpty" style="display:none;">첫 낙서를 남겨보세요<span class="en" style="display:block;">Be the first</span></div>
   </aside>
 
   <!-- 오른쪽: 메인 앱 -->
@@ -971,6 +846,11 @@
 
   <!-- 오른쪽: Pi 실시간 가치 / 런치패드 TOP5 / 스테이킹 TOP5 -->
   <aside id="rightpanel">
+    <div class="rp-block top-clock">
+      <div class="tc-date" id="tcDate">----년 --월 --일</div>
+      <div class="tc-time" id="tcTime">--:--:--</div>
+    </div>
+
     <div class="rp-block pi-price">
       <div class="rp-title">PI 실시간 가치<span class="en">Pi Live Price</span></div>
       <div class="amount" id="piAmount">--</div>
@@ -996,30 +876,50 @@
 const API_BASE = ''; // 배포 시 백엔드 주소로 교체 (동일 도메인이면 비워둠)
 let currentUser = null; // { uid, username, accessToken }
 
-// ---------- 왼쪽 세계시계 실시간 업데이트 ----------
+// ---------- 오른쪽 상단 시계 (한국시간: 년월일 / 24시간) ----------
 function updateClocks(){
-  document.querySelectorAll('.clock-card').forEach(card=>{
-    const tz = card.dataset.tz;
-    const timeEl = card.querySelector('.time');
-    const dateEl = card.querySelector('.date');
-    try{
-      const now = new Date();
-      const timeStr = new Intl.DateTimeFormat('ko-KR', {
-        timeZone: tz, hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'
-      }).format(now);
-      const dateStr = new Intl.DateTimeFormat('ko-KR', {
-        timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit'
-      }).format(now).replace(/\s/g, '').replace(/\.$/, '');
-      timeEl.textContent = timeStr;
-      dateEl.textContent = dateStr;
-    }catch(e){
-      timeEl.textContent = '--:--:--';
-      dateEl.textContent = '----.--.--';
-    }
-  });
+  const dEl = document.getElementById('tcDate'), tEl = document.getElementById('tcTime');
+  try{
+    const now = new Date();
+    const p = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23' })
+      .formatToParts(now).reduce((o,x)=>(o[x.type]=x.value,o),{});
+    dEl.textContent = `${p.year}년 ${p.month}월 ${p.day}일`;
+    tEl.textContent = `${p.hour}:${p.minute}:${p.second}`;
+  }catch(e){ dEl.textContent='----년 --월 --일'; tEl.textContent='--:--:--'; }
 }
 updateClocks();
 setInterval(updateClocks, 1000);
+
+// ---------- 왼쪽 실시간 낙서 피드 ----------
+function kstDay(ts){ return new Date(ts + 9*3600*1000).toISOString().slice(0,10); }
+function agoText(ts){
+  const m = Math.floor((Date.now()-ts)/60000);
+  if(m < 1) return '방금 · now';
+  if(m < 60) return m + '분 전';
+  const h = Math.floor(m/60);
+  if(h < 24) return h + '시간 전';
+  return Math.floor(h/24) + '일 전';
+}
+async function loadLiveFeed(){
+  try{
+    const res = await fetch(API_BASE + '/api/wall?_=' + Date.now());
+    const items = (await res.json()).filter(x => x.type === 'graffiti');
+    const listEl = document.getElementById('lfList');
+    const today = kstDay(Date.now());
+    document.getElementById('lfNum').textContent = items.filter(g => kstDay(g.createdAt) === today).length;
+    listEl.innerHTML = '';
+    document.getElementById('lfEmpty').style.display = items.length ? 'none' : 'block';
+    items.slice(0, 6).forEach(g=>{
+      const div = document.createElement('div');
+      div.className = 'lf-item';
+      div.innerHTML = `<div class="who">@${escapeHtml(g.author||'익명')}</div><div class="msg">${escapeHtml(g.message||'')}</div><div class="ago">${agoText(g.createdAt)}</div>`;
+      div.addEventListener('click', ()=>showBrowsePage());
+      listEl.appendChild(div);
+    });
+  }catch(e){ /* 조용히 무시 */ }
+}
+loadLiveFeed();
+setInterval(loadLiveFeed, 30000);
 
 // ---------- 라이트/다크 테마 전환 ----------
 const themeToggleBtn = document.getElementById('themeToggle');
@@ -1041,22 +941,22 @@ function applyTheme(theme){
   }
 }
 applyTheme(safeGetTheme() || 'dark');
-themeToggleBtn.addEventListener('click', ()=>{
+let themeToggleHandledByTouch = false;
+function toggleTheme(){
   const next = document.body.classList.contains('light-theme') ? 'dark' : 'light';
   applyTheme(next);
   safeSetTheme(next);
+}
+// 일부 임베디드 웹뷰(Pi Browser, 네이버 인앱 브라우저 등)는 버튼의 click 이벤트를
+// 제대로 합성하지 않는 경우가 있어, touchend로도 동일하게 처리해 안전망을 둠
+themeToggleBtn.addEventListener('touchend', (e)=>{
+  e.preventDefault();
+  themeToggleHandledByTouch = true;
+  toggleTheme();
 });
-
-// ---------- +버튼: 나라마다 자기 지역 주요 3개국이 각각 따로 열리고 닫힘 ----------
-document.querySelectorAll('.clock-plus').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const target = document.getElementById(btn.dataset.target);
-    if(!target) return;
-    const isOpen = target.style.display !== 'none';
-    target.style.display = isOpen ? 'none' : 'flex';
-    btn.textContent = isOpen ? '＋' : '－';
-    if(!isOpen) updateClocks(); // 열리는 순간 바로 정확한 시간으로 표시
-  });
+themeToggleBtn.addEventListener('click', ()=>{
+  if(themeToggleHandledByTouch){ themeToggleHandledByTouch = false; return; } // touchend에서 이미 처리했으면 중복 방지
+  toggleTheme();
 });
 
 // ---------- "so SO so" 글자: 평소엔 거울 속에서 조용히 잠들어 있다가,
@@ -1280,7 +1180,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 const appEl = document.querySelector('.app');
 const pageBrowseEl = document.getElementById('pageBrowse');
 const pagePromoEl = document.getElementById('pagePromo');
-const worldclockEl = document.getElementById('worldclock');
+const worldclockEl = document.getElementById('livefeed');
 const rightpanelEl = document.getElementById('rightpanel');
 const promoFormWrapEl = document.getElementById('promoFormWrap');
 const promoResultWrapEl = document.getElementById('promoResultWrap');
@@ -1472,6 +1372,7 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
       : '';
     document.getElementById('writeStatus').innerHTML = '낙서가 방에 붙었어요!<span class="en">Your graffiti has been posted!</span>' + streakLine;
     document.getElementById('writeStatus').className = 'status show ok';
+    if(typeof loadLiveFeed==='function') loadLiveFeed();
     playSosoJourney(); // 낙서를 남긴 반가운 순간에 한 번 더 인사
   }catch(e){
     showStatus('writeStatus','err','등록에 실패했습니다: ' + e.message, 'Failed to post: ' + e.message);
