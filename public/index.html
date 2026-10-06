@@ -532,6 +532,18 @@
     margin-top:2px;
   }
   .btn-primary{background:var(--spray-y); color:#241b04; box-shadow:0 0 0 rgba(255,201,60,0.5); transition: box-shadow .2s, transform .1s;}
+  .plan-list{ display:flex; flex-direction:column; gap:8px; margin:6px 0 4px; }
+  .plan-opt{
+    display:flex; align-items:center; gap:10px;
+    border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+    cursor:pointer; font-size:13.5px; color:var(--chalk); background:rgba(255,255,255,0.03);
+  }
+  .plan-opt input{ flex:0 0 auto; }
+  .plan-opt .pn{ flex:1; line-height:1.4; }
+  .plan-opt .pn .en{ display:block; font-size:11px; opacity:0.8; }
+  .plan-opt .pp{ font-weight:900; color:var(--spray-y); white-space:nowrap; }
+  .plan-opt.sel{ border-color:var(--spray-y); background:rgba(255,201,60,0.08); }
+  .plan-opt.off{ opacity:0.45; cursor:not-allowed; }
   .btn-promo{background:var(--spray-c); color:#04262a; box-shadow:0 0 0 rgba(73,185,199,0.5); transition: box-shadow .2s, transform .1s;}
   .btn-primary:active{ transform:scale(0.98); box-shadow:0 0 18px rgba(255,201,60,0.55); }
   .btn-promo:active{ transform:scale(0.98); box-shadow:0 0 18px rgba(73,185,199,0.55); }
@@ -817,15 +829,21 @@
         <label for="promoMsg">한 줄 소개<span class="en">One-line description</span></label>
         <textarea id="promoMsg" maxlength="120" placeholder="앱을 한 줄로 소개해주세요 (최대 120자) / Describe your app in one line (max 120 chars)"></textarea>
 
-        <label>홍보 게시 비용<span class="en">Promotion cost</span></label>
-        <div class="card" style="margin-top:6px;">
-          <div class="msg" style="font-size:13px;">
-            1 Pi 결제 시 1주일(7일) 동안 디부타데스 상단에 홍보 카드가 노출됩니다. 결제는 Pi 공식 결제(U2A)로 처리되며 앱 운영자에게 직접 전달됩니다.
-            <span class="en" style="display:block;margin-top:6px;">Pay 1 Pi to feature your promo card on the wall for 1 week (7 days). Payment is processed via Pi's official U2A payment and goes directly to the app operator.</span>
-          </div>
+        <label>홍보 기간 선택<span class="en">Choose a plan</span></label>
+        <div class="plan-list" id="planList">
+          <label class="plan-opt sel"><input type="radio" name="plan" value="7" checked>
+            <span class="pn">7일 노출<span class="en">7 days</span></span><span class="pp">0.5 Pi</span></label>
+          <label class="plan-opt"><input type="radio" name="plan" value="30">
+            <span class="pn">30일 노출<span class="en">30 days</span></span><span class="pp">1.5 Pi</span></label>
+          <label class="plan-opt off" id="freePlanOpt"><input type="radio" name="plan" value="free" disabled>
+            <span class="pn">무료 1일권<span class="en">Free 1-day pass</span><span class="en" id="freePlanInfo" style="display:block;">로그인하면 보유 장수가 보여요 / Log in to see your passes</span></span><span class="pp">0 Pi</span></label>
         </div>
+        <p class="hint">
+          연속 7일 낙서하면 무료 1일권을 1장 드려요. 유료 결제는 Pi 공식 결제(U2A)로 처리되며 앱 운영자에게 전달됩니다(네트워크 수수료 별도).
+          <span class="en">Write graffiti 7 days in a row to earn a free 1-day pass. Paid plans use Pi's official U2A payment (network fee may apply).</span>
+        </p>
 
-        <button class="btn btn-promo" id="submitPromo">1 Pi 내고 1주일 홍보하기<span class="en">Pay 1 Pi &amp; Promote for 1 Week</span></button>
+        <button class="btn btn-promo" id="submitPromo">0.5 Pi 내고 7일 홍보하기<span class="en">Pay 0.5 Pi &amp; Promote for 7 Days</span></button>
         <div class="status" id="promoStatus"></div>
         <p class="hint">
           이 기능은 Pi 공식 "Pi Ad Network"와는 별개의, 개발자 간 자율 홍보 마켓입니다. 별도의 Ad Network 승인 없이도 표준 U2A 결제만으로 운영됩니다.
@@ -1228,6 +1246,7 @@ function showPromoPage(){
   promoResultWrapEl.style.display = 'none';
   promoResultWrapEl.innerHTML = '';
   promoFormWrapEl.style.display = 'block';
+  loadMyTickets();
 }
 
 // 실제 화면 전환만 담당 (히스토리는 건드리지 않음) — popstate 콜백에서 호출됨
@@ -1366,7 +1385,10 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
     const streakLine = data.streak
       ? `<div class="streak-badge">🔥 ${data.streak}일 연속 작성 중이에요<span class="en">${data.streak}-day streak!</span></div>`
       : '';
-    document.getElementById('writeStatus').innerHTML = '낙서가 방에 붙었어요!<span class="en">Your graffiti has been posted!</span>' + streakLine;
+    const ticketLine = data.ticketEarned
+      ? `<div class="streak-badge">🎟️ 무료 홍보 1일권을 받았어요! (앱 탭에서 사용)<span class="en">You earned a free 1-day promo pass! (use it in the App tab)</span></div>`
+      : '';
+    document.getElementById('writeStatus').innerHTML = '낙서가 방에 붙었어요!<span class="en">Your graffiti has been posted!</span>' + streakLine + ticketLine;
     document.getElementById('writeStatus').className = 'status show ok';
     if(typeof loadLiveFeed==='function') loadLiveFeed();
     playSosoJourney(); // 낙서를 남긴 반가운 순간에 한 번 더 인사
@@ -1450,7 +1472,48 @@ function renderWallItems(){
 
 document.getElementById('myPostsOnly').addEventListener('change', renderWallItems);
 
-// ---------- 3. 앱 홍보하기 (Pi 결제) ----------
+// ---------- 홍보 요금제 선택 / 무료권 ----------
+const PLAN_INFO = {
+  '7':  { amount: 0.5, ko: '0.5 Pi 내고 7일 홍보하기', en: 'Pay 0.5 Pi &amp; Promote for 7 Days', memo: '디부타데스 앱 홍보 7일 게시' },
+  '30': { amount: 1.5, ko: '1.5 Pi 내고 30일 홍보하기', en: 'Pay 1.5 Pi &amp; Promote for 30 Days', memo: '디부타데스 앱 홍보 30일 게시' },
+  'free': { amount: 0, ko: '무료 1일권으로 홍보하기', en: 'Promote for 1 Day (Free Pass)' }
+};
+function selectedPlan(){
+  const r = document.querySelector('input[name="plan"]:checked');
+  return r ? r.value : '7';
+}
+function refreshPlanUI(){
+  const plan = selectedPlan();
+  document.querySelectorAll('.plan-opt').forEach(l=>{
+    l.classList.toggle('sel', l.querySelector('input').checked);
+  });
+  const info = PLAN_INFO[plan];
+  document.getElementById('submitPromo').innerHTML = `${info.ko}<span class="en">${info.en}</span>`;
+}
+document.querySelectorAll('input[name="plan"]').forEach(r=>r.addEventListener('change', refreshPlanUI));
+
+async function loadMyTickets(){
+  const optEl = document.getElementById('freePlanOpt');
+  const infoEl = document.getElementById('freePlanInfo');
+  const radio = optEl.querySelector('input');
+  let tickets = 0;
+  if(currentUser){
+    try{
+      const res = await fetch(API_BASE + '/api/tickets?user=' + encodeURIComponent(currentUser.username));
+      const d = await res.json();
+      tickets = d.tickets || 0;
+      infoEl.innerHTML = `보유 ${tickets}장 · 연속 ${d.streak||0}일째 (7일마다 1장)<span class="en">${tickets} pass(es) · ${d.streak||0}-day streak</span>`;
+    }catch(e){ /* 조용히 무시 */ }
+  }else{
+    infoEl.innerHTML = '로그인하면 보유 장수가 보여요<span class="en">Log in to see your passes</span>';
+  }
+  radio.disabled = tickets < 1;
+  optEl.classList.toggle('off', tickets < 1);
+  if(tickets < 1 && radio.checked){ document.querySelector('input[name="plan"][value="7"]').checked = true; }
+  refreshPlanUI();
+}
+
+// ---------- 3. 앱 홍보하기 (Pi 결제 / 무료권) ----------
 document.getElementById('submitPromo').addEventListener('click', async ()=>{
   const appName = document.getElementById('promoName').value.trim();
   const appUrl  = document.getElementById('promoUrl').value.trim();
@@ -1468,6 +1531,24 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
     showStatus('promoStatus','err','먼저 Pi로 로그인해주세요.','Please log in with Pi first.');
     return;
   }
+  const plan = selectedPlan();
+  if(plan === 'free'){
+    try{
+      const res = await fetch(API_BASE + '/api/promo/free', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ appName, appUrl, message, author: currentUser.username })
+      });
+      const d = await res.json();
+      if(!res.ok){ showStatus('promoStatus','err', d.error || '등록에 실패했습니다.', 'Failed to register.'); return; }
+      renderPromoPageBody('ok', '무료 1일권으로 홍보가 등록되었습니다!', 'Your 1-day free promo is now live!', { appName, message, author: currentUser.username });
+      document.getElementById('promoName').value = '';
+      document.getElementById('promoUrl').value = '';
+      document.getElementById('promoMsg').value = '';
+    }catch(e){
+      showStatus('promoStatus','err','등록 중 오류가 발생했습니다.','Something went wrong.');
+    }
+    return;
+  }
   if(typeof Pi === 'undefined'){
     showStatus('promoStatus','err','Pi Browser 안에서만 결제가 가능합니다.','Payments only work inside Pi Browser.');
     return;
@@ -1479,8 +1560,8 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
 
   try{
     await Pi.createPayment({
-      amount: 1,
-      memo: '디부타데스 앱 홍보 1주일 게시',
+      amount: PLAN_INFO[plan].amount,
+      memo: PLAN_INFO[plan].memo,
       metadata: { appName, appUrl, message, author: currentUser.username }
     }, {
       onReadyForServerApproval: async function(paymentId){
@@ -1496,7 +1577,7 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ paymentId, txid, appName, appUrl, message, author: currentUser.username })
         });
-        renderPromoPageBody('ok', '결제 완료! 홍보가 등록되었습니다.', 'Payment complete! Your promo is now live.', previewData);
+        renderPromoPageBody('ok', `결제 완료! ${plan}일 동안 홍보가 노출됩니다.`, `Payment complete! Your promo is live for ${plan} days.`, previewData);
         document.getElementById('promoName').value = '';
         document.getElementById('promoUrl').value = '';
         document.getElementById('promoMsg').value = '';
