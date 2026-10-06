@@ -23,7 +23,7 @@ const { put, get } = require('@vercel/blob');
 const app = express();
 app.get('/validation-key.txt', (req, res) => {
   res.set('Content-Type', 'text/plain');
-  res.status(200).send('e98f7ad5c60b5908de11f1ed625fea1bbe7bcfae50fe519efe928bb9756ddaad6c7360906c6d332217e395ece90cdafbf91b4bfb81b3735febe13fe5af0a4479');
+  res.status(200).send('e98f7ad5c60b5908de11f1ed');
 });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -115,6 +115,7 @@ async function loadData(){
   data.promos = data.promos || [];
   data.lastPostAt = data.lastPostAt || {};   // 도배 방지: { username: timestamp }
   data.streaks = data.streaks || {};         // 연속 작성: { username: { count, lastDate } }
+  data.tickets = data.tickets || {};         // 무료 홍보권(1일): { username: 장수 }
   return data;
 }
 
@@ -173,6 +174,23 @@ function looksLikeSpam(message){
   return false;
 }
 
+// ---------- 홍보 요금제 ----------
+// 결제 수수료(약 0.01 Pi)가 고정이라 너무 작은 금액은 수수료 비중이 커져서 최소 0.5 Pi로 둡니다.
+// 금액/기간은 여기 숫자만 바꾸면 서버·검증 모두 반영됩니다. (화면 문구는 index.html에서 별도 수정)
+const DAY_MS = 24 * 60 * 60 * 1000;
+const PLANS = {
+  7:  { amount: 0.5, days: 7 },
+  30: { amount: 1.5, days: 30 }
+};
+const FREE_PROMO_DAYS = 1;       // 무료 홍보권 1장 = 1일 노출
+const STREAK_FOR_TICKET = 7;     // 연속 7일 낙서마다 무료권 1장
+const MAX_FREE_ACTIVE = 3;       // 무료 홍보가 동시에 노출될 수 있는 최대 개수 (스팸/도배 방지)
+
+function promoExpiresAt(p){
+  // 예전에 등록된 홍보에는 expiresAt이 없으므로 등록 후 7일로 계산
+  return p.expiresAt || (p.createdAt + 7 * DAY_MS);
+}
+
 // ---------- 연속 작성(스트릭) 계산 ----------
 function kstDateString(ts){
   // 한국 시간(KST, UTC+9) 기준 날짜 문자열(YYYY-MM-DD)로 변환
@@ -194,7 +212,14 @@ function updateStreak(data, username, now){
     count = 1; // 하루 이상 건너뜀 — 스트릭 초기화
   }
   data.streaks[username] = { count, lastDate: today };
-  return count;
+  // 새로운 날에 스트릭이 늘어났고 7의 배수가 되면 무료 홍보권 1장 지급
+  let ticketEarned = false;
+  const isNewDay = !prev || prev.lastDate !== today;
+  if(isNewDay && count > 0 && count % STREAK_FOR_TICKET === 0){
+    data.tickets[username] = (data.tickets[username] || 0) + 1;
+    ticketEarned = true;
+  }
+  return { count, ticketEarned };
 }
 
 // ---------- 낙서 (일반, 결제 없음) ----------
@@ -229,7 +254,7 @@ app.post('/api/graffiti', async (req, res) => {
       return res.status(429).json({ error: 'cooldown', message: `너무 빠르게 연속 게시했어요. ${waitSec}초 후 다시 시도해주세요.`, retryAfter: waitSec });
     }
 
-    const streak = updateStreak(data, authorKey, now);
+    const { count: streak, ticketEarned } = updateStreak(data, authorKey, now);
     data.lastPostAt[authorKey] = now;
     data.graffiti.push({
       id: generateId(),
@@ -240,7 +265,7 @@ app.post('/api/graffiti', async (req, res) => {
       createdAt: now
     });
     await saveData(data);
-    res.json({ ok: true, streak });
+    res.json({ ok: true, streak, ticketEarned });
   }catch(e){
     console.error(e);
     res.status(500).json({ error: e.message });
@@ -325,7 +350,7 @@ app.get('/api/wall', async (req, res) => {
     const data = await loadData();
     const now = Date.now();
     const activePromos = data.promos
-      .filter(p => now - p.createdAt < 7 * 24 * 60 * 60 * 1000) // 7일(1주일) 노출
+      .filter(p => now < promoExpiresAt(p)) // 요금제별 노출 기간(7일/30일/무료 1일)
       .map(p => ({ type: 'promo', ...p }));
     const graffiti = data.graffiti.map(g => ({ type: 'graffiti', ...g }));
 
@@ -337,12 +362,85 @@ app.get('/api/wall', async (req, res) => {
   }
 });
 
+// ---------- 내 스트릭 / 무료 홍보권 조회 ----------
+app.get('/api/tickets', async (req, res) => {
+  try{
+    const user = String(req.query.user || '').trim().toLowerCase();
+    if(!user) return res.json({ tickets: 0, streak: 0 });
+    const data = await loadData();
+    const st = data.streaks[user];
+    res.json({ tickets: data.tickets[user] || 0, streak: st ? st.count : 0, every: STREAK_FOR_TICKET });
+  }catch(e){
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- 무료 홍보권 사용 (결제 없음, 1일 노출) ----------
+app.post('/api/promo/free', async (req, res) => {
+  const { appName, appUrl, message, author } = req.body;
+  if(!author || !String(author).trim()) return res.status(401).json({ error: 'login required' });
+  if(!appName || !message) return res.status(400).json({ error: '모든 항목을 입력해주세요.' });
+  if(!isAllowedPiAppUrl(appUrl)){
+    return res.status(400).json({ error: 'Pi 생태계 앱 URL만 등록할 수 있습니다.' });
+  }
+  if(containsBannedWord(appName) || containsBannedWord(message) || looksLikeSpam(message)){
+    return res.status(400).json({ error: '부적절한 표현이 포함되어 있어요.' });
+  }
+  try{
+    const data = await loadData();
+    const key = String(author).trim().toLowerCase();
+    const now = Date.now();
+    if(!(data.tickets[key] > 0)){
+      return res.status(400).json({ error: '무료 홍보권이 없어요. 연속 7일 낙서하면 1장 받아요.' });
+    }
+    const activeFree = data.promos.filter(p => p.free && now < promoExpiresAt(p));
+    if(activeFree.length >= MAX_FREE_ACTIVE){
+      return res.status(400).json({ error: '지금은 무료 홍보 자리가 가득 찼어요. 잠시 뒤 다시 시도해주세요.' });
+    }
+    if(activeFree.some(p => String(p.author).toLowerCase() === key)){
+      return res.status(400).json({ error: '이미 무료 홍보가 노출 중이에요.' });
+    }
+    data.tickets[key] -= 1;
+    data.promos.push({
+      appName: String(appName).slice(0, 40),
+      appUrl: appUrl.slice(0, 200),
+      message: String(message).slice(0, 120),
+      author: String(author).slice(0, 40),
+      free: true,
+      createdAt: now,
+      expiresAt: now + FREE_PROMO_DAYS * DAY_MS
+    });
+    await saveData(data);
+    res.json({ ok: true, tickets: data.tickets[key] });
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Pi 서버에서 결제 정보를 조회 (금액 위조 방지용)
+async function getPiPayment(paymentId){
+  const r = await fetch(`${PI_API_BASE}/payments/${paymentId}`, {
+    headers: { 'Authorization': `Key ${PI_API_KEY}` }
+  });
+  if(!r.ok) throw new Error(`Pi API get payment failed: ${r.status}`);
+  return r.json();
+}
+function planForAmount(amount){
+  return Object.values(PLANS).find(p => Math.abs(p.amount - Number(amount)) < 1e-9) || null;
+}
+
 // ---------- Pi 결제: 서버 승인 ----------
 app.post('/api/payments/approve', async (req, res) => {
   const { paymentId } = req.body;
   if(!paymentId) return res.status(400).json({ error: 'paymentId required' });
 
   try{
+    // 요금제에 없는 금액이면 승인하지 않음
+    const payment = await getPiPayment(paymentId);
+    if(!planForAmount(payment.amount)){
+      return res.status(400).json({ error: 'invalid amount' });
+    }
     const r = await fetch(`${PI_API_BASE}/payments/${paymentId}/approve`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${PI_API_KEY}` }
@@ -365,6 +463,11 @@ app.post('/api/payments/complete', async (req, res) => {
   }
 
   try{
+    // 기간은 클라이언트가 보낸 값이 아니라, 실제로 결제된 금액으로 결정함
+    const payment = await getPiPayment(paymentId);
+    const plan = planForAmount(payment.amount);
+    if(!plan) return res.status(400).json({ error: 'invalid amount' });
+
     const r = await fetch(`${PI_API_BASE}/payments/${paymentId}/complete`, {
       method: 'POST',
       headers: {
@@ -376,16 +479,19 @@ app.post('/api/payments/complete', async (req, res) => {
     if(!r.ok) throw new Error(`Pi API complete failed: ${r.status}`);
 
     const data = await loadData();
+    const now = Date.now();
     data.promos.push({
       appName: String(appName || '').slice(0, 40),
       appUrl: appUrl.slice(0, 200),
       message: String(message || '').slice(0, 120),
       author: String(author || '개발자').slice(0, 40),
-      createdAt: Date.now()
+      paymentId,
+      createdAt: now,
+      expiresAt: now + plan.days * DAY_MS
     });
     await saveData(data);
 
-    res.json({ ok: true });
+    res.json({ ok: true, days: plan.days });
   }catch(e){
     console.error(e);
     res.status(500).json({ error: e.message });
@@ -406,14 +512,9 @@ app.post('/api/payments/complete-existing', async (req, res) => {
   }
 });
 
-// 로컬에서 직접 실행할 때만 서버를 띄우고, Vercel에서는 app만 내보냅니다
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`디부타데스 서버 실행 중: http://localhost:${PORT}`);
-    if(!PI_API_KEY){
-      console.warn('⚠️  PI_API_KEY 환경변수가 설정되지 않았습니다. 결제 기능이 동작하지 않습니다.');
-    }
-  });
-}
-
-module.exports = app;
+app.listen(PORT, () => {
+  console.log(`디부타데스 서버 실행 중: http://localhost:${PORT}`);
+  if(!PI_API_KEY){
+    console.warn('⚠️  PI_API_KEY 환경변수가 설정되지 않았습니다. 결제 기능이 동작하지 않습니다.');
+  }
+});
