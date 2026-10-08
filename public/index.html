@@ -1407,6 +1407,17 @@ async function loginWithPi(){
 }
 document.getElementById('loginBtn').addEventListener('click', loginWithPi);
 
+// 서버가 로그인을 확인하지 못했을 때(토큰 만료 등): 로그인 상태를 풀고 다시 로그인하게 안내
+function handleLoginExpired(statusId){
+  currentUser = null;
+  document.getElementById('whoamiText').textContent = '로그인 필요 / Login needed';
+  document.getElementById('loginBtn').style.display = '';
+  const ko = '로그인이 만료되었어요. 다시 Pi로 로그인해주세요.';
+  const en = 'Your login expired. Please log in with Pi again.';
+  if(statusId) showStatus(statusId, 'err', ko, en);
+  else alert(ko + ' / ' + en);
+}
+
 // 앱을 껐다 켰을 때 미완료 결제가 남아있으면 서버에 통보해 정리
 function onIncompletePaymentFound(payment){
   fetch(API_BASE + '/api/payments/complete-existing', {
@@ -1452,11 +1463,12 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        author: currentUser.username,
+        accessToken: currentUser.accessToken,
         message: msg
       })
     });
     const data = await res.json().catch(()=>({}));
+    if(res.status === 401){ handleLoginExpired('writeStatus'); return; }
     if(!res.ok){
       // 서버가 구체적인 사유(도배 방지/욕설·스팸/일반 오류)를 message로 내려줌
       const msgKo = data.message || '등록에 실패했습니다.';
@@ -1583,7 +1595,7 @@ async function loadMyTickets(){
   let tickets = 0;
   if(currentUser){
     try{
-      const res = await fetch(API_BASE + '/api/tickets?user=' + encodeURIComponent(currentUser.username));
+      const res = await fetch(API_BASE + '/api/tickets', { headers: { 'x-pi-token': currentUser.accessToken } });
       const d = await res.json();
       tickets = d.tickets || 0;
       infoEl.innerHTML = `보유 ${tickets}장 · 연속 ${d.streak||0}일째 (7일마다 1장)<span class="en">${tickets} pass(es) · ${d.streak||0}-day streak</span>`;
@@ -1620,8 +1632,9 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
     try{
       const res = await fetch(API_BASE + '/api/promo/free', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ appName, appUrl, message, author: currentUser.username })
+        body: JSON.stringify({ appName, appUrl, message, accessToken: currentUser.accessToken })
       });
+      if(res.status === 401){ handleLoginExpired('promoStatus'); return; }
       const d = await res.json();
       if(!res.ok){ showStatus('promoStatus','err', d.error || '등록에 실패했습니다.', 'Failed to register.'); return; }
       renderPromoPageBody('ok', '무료 1일권으로 홍보가 등록되었습니다!', 'Your 1-day free promo is now live!', { appName, message, author: currentUser.username });
@@ -1659,7 +1672,7 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
         await fetch(API_BASE + '/api/payments/complete', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ paymentId, txid, appName, appUrl, message, author: currentUser.username })
+          body: JSON.stringify({ paymentId, txid, appName, appUrl, message, accessToken: currentUser.accessToken })
         });
         renderPromoPageBody('ok', `결제 완료! ${plan}일 동안 홍보가 노출됩니다.`, `Payment complete! Your promo is live for ${plan} days.`, previewData);
         document.getElementById('promoName').value = '';
@@ -1690,7 +1703,11 @@ function escapeAttr(s){ return escapeHtml(s); }
 // 낙서를 눌러서 열어보면 조회수 +1, 표시도 갱신, TOP5 패널도 갱신
 async function bumpView(id, cardEl){
   try{
-    const res = await fetch(API_BASE + `/api/graffiti/${id}/view`, { method:'POST' });
+    const res = await fetch(API_BASE + `/api/graffiti/${id}/view`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ accessToken: currentUser ? currentUser.accessToken : undefined })
+    });
     const data = await res.json();
     if(data && typeof data.views === 'number'){
       const metaSpan = cardEl.querySelector('.meta span:last-child');
@@ -1713,6 +1730,10 @@ const REACTION_TYPES = [
 
 // 낙서에 반응 남기기 — 카드 하나당 5개 중 한 종류만 고를 수 있게, 고르면 나머지는 흐리게 비활성화
 async function sendReaction(id, type, rowEl, pickedBtnEl){
+  if(!currentUser){
+    alert('반응은 Pi로 로그인한 파이오니어만 남길 수 있어요. / Please log in with Pi to react.');
+    return;
+  }
   rowEl.classList.add('answered');
   rowEl.querySelectorAll('.reaction-btn').forEach(b => b.disabled = true);
   pickedBtnEl.classList.add('picked');
@@ -1720,8 +1741,16 @@ async function sendReaction(id, type, rowEl, pickedBtnEl){
     const res = await fetch(API_BASE + `/api/graffiti/${id}/react`, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ type })
+      body: JSON.stringify({ type, accessToken: currentUser.accessToken })
     });
+    if(res.status === 401){
+      // 로그인 만료: 버튼을 다시 살려서 재로그인 후 누를 수 있게
+      rowEl.classList.remove('answered');
+      rowEl.querySelectorAll('.reaction-btn').forEach(b => b.disabled = false);
+      pickedBtnEl.classList.remove('picked');
+      handleLoginExpired(null);
+      return;
+    }
     const data = await res.json();
     if(data && data.reactions){
       REACTION_TYPES.forEach(r=>{
