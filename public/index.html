@@ -839,6 +839,8 @@
           <label class="plan-opt off" id="freePlanOpt"><input type="radio" name="plan" value="free" disabled>
             <span class="pn">무료 1일권<span class="en">Free 1-day pass</span><span class="en" id="freePlanInfo" style="display:block;">로그인하면 보유 장수가 보여요 / Log in to see your passes</span></span><span class="pp">0 Pi</span></label>
         </div>
+        <button class="btn" id="rewardAdBtn" type="button" style="margin-top:4px;">📺 광고 보고 무료 1일권 받기 (하루 1회)<span class="en">Watch an ad for a free 1-day pass (once a day)</span></button>
+        <div class="status" id="rewardAdStatus"></div>
         <p class="hint">
           연속 7일 낙서하면 무료 1일권을 1장 드려요. 유료 결제는 Pi 공식 결제(U2A)로 처리되며 앱 운영자에게 전달됩니다(네트워크 수수료 별도).
           <span class="en">Write graffiti 7 days in a row to earn a free 1-day pass. Paid plans use Pi's official U2A payment (network fee may apply).</span>
@@ -847,8 +849,8 @@
         <button class="btn btn-promo" id="submitPromo">0.5 Pi 내고 7일 홍보하기<span class="en">Pay 0.5 Pi &amp; Promote for 7 Days</span></button>
         <div class="status" id="promoStatus"></div>
         <p class="hint">
-          이 기능은 Pi 공식 "Pi Ad Network"와는 별개의, 개발자 간 자율 홍보 마켓입니다. 별도의 Ad Network 승인 없이도 표준 U2A 결제만으로 운영됩니다.
-          <span class="en">This is a separate developer-to-developer promotion market, not the official Pi Ad Network. It runs on standard U2A payments without needing separate Ad Network approval.</span>
+          이 홍보 마켓은 Pi 공식 "Pi Ad Network" 광고와는 별개의, 개발자 간 자율 홍보 공간입니다. 결제는 표준 U2A로 처리됩니다.
+          <span class="en">This is a separate developer-to-developer promotion market, not the official Pi Ad Network. Payments use standard U2A.</span>
         </p>
       </div>
 
@@ -1298,10 +1300,90 @@ function initPi(){
     console.warn('Pi SDK가 로드되지 않았습니다. Pi Browser 안에서 열어야 정상 동작합니다.');
     return;
   }
-  // sandbox: true 는 테스트넷 개발 중에만 사용, 메인넷 배포 시 false 로 변경
-  Pi.init({ version: "2.0", sandbox: true });
+  // sandbox: true 는 PC 브라우저 샌드박스 테스트 전용. Pi Browser(메인넷·광고)에서는 false 여야 함
+  Pi.init({ version: "2.0", sandbox: false });
 }
 initPi();
+
+// ---------- Pi 광고 (Pi Ad Network) ----------
+// 광고는 Pi Browser 안에서만 동작합니다. 지원하지 않는 환경이면 조용히 건너뜁니다.
+let adsSupportedCache = null;
+async function adsSupported(){
+  if(adsSupportedCache !== null) return adsSupportedCache;
+  try{
+    if(typeof Pi === 'undefined' || !Pi.nativeFeaturesList || !Pi.Ads){ adsSupportedCache = false; return false; }
+    const features = await Pi.nativeFeaturesList();
+    adsSupportedCache = Array.isArray(features) && features.includes('ad_network');
+  }catch(e){ adsSupportedCache = false; }
+  return adsSupportedCache;
+}
+
+// 광고가 준비 안 됐으면 한 번 요청해서 불러옴. 준비되면 true
+async function ensureAdReady(adType){
+  const ready = await Pi.Ads.isAdReady(adType);
+  if(ready && ready.ready) return true;
+  const req = await Pi.Ads.requestAd(adType);
+  return !!req && req.result === 'AD_LOADED';
+}
+
+// 전면 광고: 낙서를 남긴 직후 같은 자연스러운 전환 시점에만, 너무 자주 뜨지 않게 호출
+const INTERSTITIAL_EVERY_N_POSTS = 3; // 이 세션에서 낙서 3번마다 1번
+let postsThisSession = 0;
+async function maybeShowInterstitialAfterPost(){
+  postsThisSession++;
+  if(postsThisSession % INTERSTITIAL_EVERY_N_POSTS !== 0) return;
+  try{
+    if(!(await adsSupported())) return;
+    if(!(await ensureAdReady('interstitial'))) return;
+    await Pi.Ads.showAd('interstitial'); // 결과(AD_CLOSED 등)와 관계없이 앱은 그대로 진행
+  }catch(e){ console.warn('interstitial ad skipped:', e); }
+}
+
+// 보상형 광고: 끝까지 보면 서버 검증 후 무료 1일권 1장 (하루 1회)
+async function watchRewardedAdForTicket(){
+  const statusId = 'rewardAdStatus';
+  if(!currentUser){
+    showStatus(statusId,'err','먼저 Pi로 로그인해주세요.','Please log in with Pi first.');
+    return;
+  }
+  const btn = document.getElementById('rewardAdBtn');
+  btn.disabled = true;
+  try{
+    if(!(await adsSupported())){
+      showStatus(statusId,'err','이 환경에서는 광고를 볼 수 없어요. Pi Browser를 최신 버전으로 업데이트해주세요.','Ads are not supported here. Please update Pi Browser.');
+      return;
+    }
+    if(!(await ensureAdReady('rewarded'))){
+      showStatus(statusId,'err','지금은 보여줄 광고가 없어요. 잠시 뒤 다시 시도해주세요.','No ad available right now. Please try again later.');
+      return;
+    }
+    const shown = await Pi.Ads.showAd('rewarded');
+    if(!shown || shown.result !== 'AD_REWARDED' || !shown.adId){
+      showStatus(statusId,'err','광고를 끝까지 봐야 1일권을 받을 수 있어요.','Watch the full ad to receive the pass.');
+      return;
+    }
+    const res = await fetch(API_BASE + '/api/ads/rewarded/verify', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ adId: shown.adId, accessToken: currentUser.accessToken })
+    });
+    const d = await res.json().catch(()=>({}));
+    if(d.rewarded){
+      showStatus(statusId,'ok','🎟️ 무료 1일권 1장을 받았어요!','You received a free 1-day pass!');
+      loadMyTickets();
+    }else if(d.reason === 'daily_limit'){
+      showStatus(statusId,'err','오늘은 이미 광고 보상을 받았어요. 내일 다시 만나요!','You already got today\'s ad reward. See you tomorrow!');
+    }else{
+      showStatus(statusId,'err','광고 보상 확인에 실패했어요. 잠시 뒤 다시 시도해주세요.','Could not verify the ad reward. Please try again later.');
+    }
+  }catch(e){
+    console.error(e);
+    showStatus(statusId,'err','광고를 불러오지 못했어요: ' + e.message, 'Failed to load ad: ' + e.message);
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('rewardAdBtn').addEventListener('click', watchRewardedAdForTicket);
 
 async function loginWithPi(){
   if(typeof Pi === 'undefined'){
@@ -1393,6 +1475,7 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
     document.getElementById('writeStatus').className = 'status show ok';
     if(typeof loadLiveFeed==='function') loadLiveFeed();
     playSosoJourney(); // 낙서를 남긴 반가운 순간에 한 번 더 인사
+    maybeShowInterstitialAfterPost(); // 등록이 끝난 뒤의 자연스러운 전환 시점에만 전면 광고
   }catch(e){
     showStatus('writeStatus','err','등록에 실패했습니다: ' + e.message, 'Failed to post: ' + e.message);
   }
