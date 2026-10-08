@@ -21,6 +21,7 @@
 const express = require('express');
 const path = require('path');
 const { put, get } = require('@vercel/blob');
+const crypto = require('crypto');
 
 const app = express();
 app.get('/validation-key.txt', (req, res) => {
@@ -138,6 +139,35 @@ function isAllowedPiAppUrl(url){
   return /^pi:\/\//i.test(url) || /^https:\/\/([a-z0-9-]+\.)*pinet\.com(\/|$)/i.test(url);
 }
 
+// ---------- 로그인 검증 (1단계 보안 보완) ----------
+// 프론트가 보낸 username을 그대로 믿지 않고, Pi 액세스 토큰을 Pi 서버(/me)에 물어
+// 진짜 로그인한 사용자 이름만 사용합니다. 같은 토큰은 5분간 캐시해 Pi API 호출을 줄입니다.
+const tokenCache = new Map(); // accessToken -> { username, exp }
+const TOKEN_CACHE_MS = 5 * 60 * 1000;
+async function verifyUser(accessToken){
+  if(!accessToken || typeof accessToken !== 'string') return null;
+  const hit = tokenCache.get(accessToken);
+  if(hit && hit.exp > Date.now()) return hit.username;
+  try{
+    const me = await getPiUser(accessToken);
+    const username = String(me.username || '').trim();
+    if(!username) return null;
+    tokenCache.set(accessToken, { username, exp: Date.now() + TOKEN_CACHE_MS });
+    if(tokenCache.size > 1000) tokenCache.clear(); // 메모리 보호
+    return username;
+  }catch(e){
+    return null; // 만료·위조된 토큰
+  }
+}
+const LOGIN_EXPIRED = { error: 'login required', message: '로그인이 만료되었어요. 다시 Pi로 로그인해주세요.' };
+
+// 조회수 중복 방지용: 비로그인 방문자는 IP를 그대로 저장하지 않고 해시값 일부만 씁니다.
+function viewerKey(req, username){
+  if(username) return 'u:' + username.toLowerCase();
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  return 'a:' + crypto.createHash('sha256').update('dibutades:' + ip).digest('hex').slice(0, 16);
+}
+
 function generateId(){
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -228,11 +258,7 @@ function updateStreak(data, username, now){
 
 // ---------- 낙서 (일반, 결제 없음) ----------
 app.post('/api/graffiti', async (req, res) => {
-  const { author, message } = req.body;
-  // 로그인한 Pi 계정만 낙서를 남길 수 있음 (익명 게시 차단)
-  if(!author || typeof author !== 'string' || !author.trim()){
-    return res.status(401).json({ error: 'login required' });
-  }
+  const { accessToken, message } = req.body || {};
   if(!message || typeof message !== 'string' || !message.trim()){
     return res.status(400).json({ error: 'message is required' });
   }
@@ -245,6 +271,9 @@ app.post('/api/graffiti', async (req, res) => {
   if(looksLikeSpam(message)){
     return res.status(400).json({ error: 'spam_detected', message: '도배성 게시물로 감지되었어요.' });
   }
+  // 로그인한 Pi 계정만 낙서 가능 — 작성자 이름은 Pi 서버가 확인해준 값만 사용 (사칭 차단)
+  const author = await verifyUser(accessToken);
+  if(!author) return res.status(401).json(LOGIN_EXPIRED);
   try{
     const data = await loadData();
     const authorKey = author.trim().toLowerCase();
@@ -279,19 +308,28 @@ app.post('/api/graffiti', async (req, res) => {
 // ---------- 낙서에 반응(하트/엄지척/기도/기쁨/슬픔) 남기기 ----------
 const REACTION_TYPES = ['heart', 'thumbsup', 'pray', 'happy', 'sad'];
 app.post('/api/graffiti/:id/react', async (req, res) => {
-  const { type } = req.body || {};
+  const { type, accessToken } = req.body || {};
   if(!REACTION_TYPES.includes(type)){
     return res.status(400).json({ error: 'invalid reaction type' });
   }
+  // 반응은 로그인한 파이오니어만, 낙서 하나당 한 사람 한 번
+  const username = await verifyUser(accessToken);
+  if(!username) return res.status(401).json(LOGIN_EXPIRED);
   try{
     const data = await loadData();
     const item = data.graffiti.find(g => g.id === req.params.id);
     if(!item) return res.status(404).json({ error: 'not found' });
     // 예전에 등록된 낙서에는 reactions 필드가 없을 수 있으므로 채워줌
     item.reactions = item.reactions || { heart: 0, thumbsup: 0, pray: 0, happy: 0, sad: 0 };
+    item.reactedBy = item.reactedBy || {};
+    const userKey = username.toLowerCase();
+    if(item.reactedBy[userKey]){
+      return res.status(409).json({ error: 'already_reacted', reactions: item.reactions, mine: item.reactedBy[userKey] });
+    }
+    item.reactedBy[userKey] = type;
     item.reactions[type] = (item.reactions[type] || 0) + 1;
     await saveData(data);
-    res.json({ ok: true, reactions: item.reactions });
+    res.json({ ok: true, reactions: item.reactions, mine: type });
   }catch(e){
     console.error(e);
     res.status(500).json({ error: e.message });
@@ -299,11 +337,17 @@ app.post('/api/graffiti/:id/react', async (req, res) => {
 });
 
 // ---------- 낙서 조회수 올리기 (사용자가 낙서를 실제로 눌러서 볼 때 호출) ----------
+// 같은 사람(로그인 계정 또는 비로그인 방문자)의 반복 클릭은 한 번만 셉니다.
 app.post('/api/graffiti/:id/view', async (req, res) => {
   try{
+    const username = await verifyUser((req.body || {}).accessToken);
+    const key = viewerKey(req, username);
     const data = await loadData();
     const item = data.graffiti.find(g => g.id === req.params.id);
     if(!item) return res.status(404).json({ error: 'not found' });
+    item.viewedBy = item.viewedBy || {};
+    if(item.viewedBy[key]) return res.json({ ok: true, views: item.views || 0 });
+    item.viewedBy[key] = 1;
     item.views = (item.views || 0) + 1;
     await saveData(data);
     res.json({ ok: true, views: item.views });
@@ -356,7 +400,7 @@ app.get('/api/wall', async (req, res) => {
     const activePromos = data.promos
       .filter(p => now < promoExpiresAt(p)) // 요금제별 노출 기간(7일/30일/무료 1일)
       .map(p => ({ type: 'promo', ...p }));
-    const graffiti = data.graffiti.map(g => ({ type: 'graffiti', ...g }));
+    const graffiti = data.graffiti.map(({ reactedBy, viewedBy, ...g }) => ({ type: 'graffiti', ...g }));
 
     const combined = [...activePromos, ...graffiti].sort((a, b) => b.createdAt - a.createdAt);
     res.json(combined.slice(0, 100));
@@ -369,7 +413,8 @@ app.get('/api/wall', async (req, res) => {
 // ---------- 내 스트릭 / 무료 홍보권 조회 ----------
 app.get('/api/tickets', async (req, res) => {
   try{
-    const user = String(req.query.user || '').trim().toLowerCase();
+    const verified = await verifyUser(req.get('x-pi-token'));
+    const user = String(verified || '').trim().toLowerCase();
     if(!user) return res.json({ tickets: 0, streak: 0 });
     const data = await loadData();
     const st = data.streaks[user];
@@ -381,8 +426,9 @@ app.get('/api/tickets', async (req, res) => {
 
 // ---------- 무료 홍보권 사용 (결제 없음, 1일 노출) ----------
 app.post('/api/promo/free', async (req, res) => {
-  const { appName, appUrl, message, author } = req.body;
-  if(!author || !String(author).trim()) return res.status(401).json({ error: 'login required' });
+  const { appName, appUrl, message, accessToken } = req.body || {};
+  const author = await verifyUser(accessToken);
+  if(!author) return res.status(401).json(LOGIN_EXPIRED);
   if(!appName || !message) return res.status(400).json({ error: '모든 항목을 입력해주세요.' });
   if(!isAllowedPiAppUrl(appUrl)){
     return res.status(400).json({ error: 'Pi 생태계 앱 URL만 등록할 수 있습니다.' });
@@ -521,7 +567,9 @@ app.post('/api/payments/approve', async (req, res) => {
 
 // ---------- Pi 결제: 서버 완료 처리 + 홍보 등록 ----------
 app.post('/api/payments/complete', async (req, res) => {
-  const { paymentId, txid, appName, appUrl, message, author } = req.body;
+  const { paymentId, txid, appName, appUrl, message, accessToken } = req.body;
+  // 결제는 Pi 서버가 이미 검증하므로 막지는 않되, 표시 이름은 확인된 계정명만 사용
+  const author = (await verifyUser(accessToken)) || '개발자';
   if(!paymentId || !txid) return res.status(400).json({ error: 'paymentId, txid required' });
 
   if(!isAllowedPiAppUrl(appUrl)){
@@ -550,7 +598,7 @@ app.post('/api/payments/complete', async (req, res) => {
       appName: String(appName || '').slice(0, 40),
       appUrl: appUrl.slice(0, 200),
       message: String(message || '').slice(0, 120),
-      author: String(author || '개발자').slice(0, 40),
+      author: String(author).slice(0, 40),
       paymentId,
       createdAt: now,
       expiresAt: now + plan.days * DAY_MS
