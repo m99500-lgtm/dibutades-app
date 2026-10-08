@@ -11,9 +11,11 @@
  *  3) 사용자가 Pi Browser에서 결제 확인
  *  4) onReadyForServerCompletion → 서버가 /v2/payments/{id}/complete 호출 (txid 포함)
  *
- * 참고: 이 마켓플레이스는 Pi 공식 "Pi Ad Network"(제3자 광고주 대상, 별도 승인 필요)와는
- * 다른, "개발자가 다른 개발자에게 직접 Pi를 지불하고 홍보 슬롯을 사는" 구조입니다.
- * 표준 U2A 결제만 사용하므로 Ad Network 별도 승인 없이 운영 가능합니다.
+ * 참고: 앱 홍보 마켓은 "개발자가 다른 개발자에게 직접 Pi를 지불하고 홍보 슬롯을 사는" 구조로
+ * 표준 U2A 결제만 사용합니다. 이와 별개로 Pi 공식 광고(Pi Ad Network)를 연동했습니다:
+ *  - 전면 광고(interstitial): 프론트에서만 처리
+ *  - 보상형 광고(rewarded): 프론트가 받은 adId를 /api/ads/rewarded/verify 로 보내면
+ *    서버가 Pi Platform API(/v2/ads_network/status/{adId})로 확인 후 'granted'일 때만 보상 지급
  */
 
 const express = require('express');
@@ -116,6 +118,8 @@ async function loadData(){
   data.lastPostAt = data.lastPostAt || {};   // 도배 방지: { username: timestamp }
   data.streaks = data.streaks || {};         // 연속 작성: { username: { count, lastDate } }
   data.tickets = data.tickets || {};         // 무료 홍보권(1일): { username: 장수 }
+  data.rewardedAds = data.rewardedAds || {}; // 보상형 광고 사용 기록: { adId: { user, at } } (같은 adId 재사용 방지)
+  data.adRewardDays = data.adRewardDays || {}; // 보상형 광고 하루 지급 횟수: { username: { date, count } }
   return data;
 }
 
@@ -415,6 +419,68 @@ app.post('/api/promo/free', async (req, res) => {
   }catch(e){
     console.error(e);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- Pi 광고(Ad Network): 보상형 광고 서버 검증 ----------
+// 클라이언트(SDK) 결과는 조작될 수 있으므로, 반드시 서버에서 Pi Platform API로 확인한 뒤에만 보상합니다.
+const AD_REWARD_DAILY_LIMIT = 1; // 한 사람이 하루(KST)에 광고로 받을 수 있는 무료 1일권 최대 장수
+
+// accessToken으로 실제 로그인한 Pi 사용자를 확인 (클라이언트가 보낸 username을 그대로 믿지 않음)
+async function getPiUser(accessToken){
+  const r = await fetch(`${PI_API_BASE}/me`, {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+  if(!r.ok) throw new Error(`Pi API /me failed: ${r.status}`);
+  return r.json(); // { uid, username }
+}
+
+async function getRewardedAdStatus(adId){
+  const r = await fetch(`${PI_API_BASE}/ads_network/status/${encodeURIComponent(adId)}`, {
+    headers: { 'Authorization': `Key ${PI_API_KEY}` }
+  });
+  if(!r.ok) throw new Error(`Pi API ad status failed: ${r.status}`);
+  return r.json(); // { identifier, mediator_ack_status: 'granted'|'revoked'|'failed'|null, ... }
+}
+
+app.post('/api/ads/rewarded/verify', async (req, res) => {
+  const { adId, accessToken } = req.body || {};
+  if(!adId || typeof adId !== 'string') return res.status(400).json({ rewarded: false, error: 'adId required' });
+  if(!accessToken) return res.status(401).json({ rewarded: false, error: 'login required' });
+  if(!PI_API_KEY) return res.status(500).json({ rewarded: false, error: 'server not configured' });
+
+  try{
+    const me = await getPiUser(accessToken);
+    const userKey = String(me.username || '').trim().toLowerCase();
+    if(!userKey) return res.status(401).json({ rewarded: false, error: 'invalid user' });
+
+    const status = await getRewardedAdStatus(adId);
+    if(status.mediator_ack_status !== 'granted'){
+      return res.json({ rewarded: false, reason: 'not_granted', status: status.mediator_ack_status });
+    }
+
+    const data = await loadData();
+    if(data.rewardedAds[adId]){
+      return res.json({ rewarded: false, reason: 'already_used' });
+    }
+
+    const today = kstDateString(Date.now());
+    const day = data.adRewardDays[userKey];
+    const usedToday = (day && day.date === today) ? day.count : 0;
+    // 한도 초과여도 이 adId는 사용 처리해서 나중에 다시 쓰지 못하게 함
+    data.rewardedAds[adId] = { user: userKey, at: Date.now() };
+    if(usedToday >= AD_REWARD_DAILY_LIMIT){
+      await saveData(data);
+      return res.json({ rewarded: false, reason: 'daily_limit' });
+    }
+
+    data.adRewardDays[userKey] = { date: today, count: usedToday + 1 };
+    data.tickets[userKey] = (data.tickets[userKey] || 0) + 1;
+    await saveData(data);
+    res.json({ rewarded: true, tickets: data.tickets[userKey] });
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ rewarded: false, error: e.message });
   }
 });
 
