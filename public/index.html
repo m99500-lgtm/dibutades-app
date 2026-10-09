@@ -278,7 +278,7 @@
     text-shadow:none;
     margin-top:2px;
   }
-  /* 만남(셀-로흐) 미니 작품 상자: 이 안에서만 움직이고, 낙서를 쓰는 순간 멈춤 */
+  /* 외계 시각 연작 5점 미니 상자: 이 안에서만 순환하며 움직이고, 낙서를 쓰는 순간 멈춤 */
   .meet-box{
     display:block;
     width:160px; height:48px;
@@ -289,7 +289,15 @@
     background:#07080d;
     transition: box-shadow .4s, filter .4s;
   }
+  .meet-box{ position:relative; text-decoration:none; }
   .meet-box canvas{ display:block; width:100%; height:100%; }
+  .meet-label{
+    position:absolute; right:18px; bottom:3px;
+    font-family:'Noto Sans KR', sans-serif; font-size:10px; font-weight:600; letter-spacing:0.5px;
+    color:rgba(255,255,255,0.8); text-shadow:0 0 4px #07080d, 0 0 2px #07080d;
+    transition:opacity .5s; pointer-events:none;
+  }
+  .meet-label.hide{ opacity:0; }
   .meet-box.frozen{ filter:saturate(0.6) brightness(0.85); box-shadow: inset 0 0 10px rgba(255,255,255,0.12); }
   @media (max-width:600px){
     header .logo{ font-size:30px; }
@@ -834,7 +842,7 @@
 
     <header>
       <button id="themeToggle" aria-label="화면 밝기 전환">🌙</button>
-      <h1 class="logo"><span class="logo-text">디부타데스</span><a class="meet-box" id="meetBox" href="/gallery.html#w1" aria-label="갤러리 첫 작품 만남(셀-로흐) 보기" title="만남 · 셀-로흐"><canvas id="meetCanvas"></canvas></a><span class="en">DIBUTADES</span></h1>
+      <h1 class="logo"><span class="logo-text">디부타데스</span><a class="meet-box" id="meetBox" href="/gallery.html#w1" aria-label="갤러리 외계 시각 연작 보기" title="외계 시각 연작"><canvas id="meetCanvas"></canvas><span class="meet-label" id="meetLabel">만남</span></a><span class="en">DIBUTADES</span></h1>
       <p>느낌 오면 낙서하면 돼~
         <span class="en">Feel something? Just scribble it.</span>
       </p>
@@ -1061,22 +1069,156 @@ themeToggleBtn.addEventListener('click', ()=>{
   toggleTheme();
 });
 
-// ---------- 만남(셀-로흐) 미니 작품: 상자 안에서만 움직이고, 낙서를 쓰는 순간 정지 ----------
-// 왼쪽 푸른 질량은 공간을 밀어내고, 오른쪽 붉은 질량은 끌어당기며 서로 다가갔다 물러남
+// ---------- 외계 시각 연작 5점: 상자 안에서만 차례로 순환 (만남 → 혼돈 → 폭발 → 침묵 → 새로운 탄생 → 다시 만남)
+// 낙서를 쓰는 순간 그 장면 그대로 정지 ----------
 let sosoWriteTabActive = true; // 다른 탭 코드와의 호환용
 const meetBox = document.getElementById('meetBox');
 const meetCanvas = document.getElementById('meetCanvas');
 const mctx = meetCanvas.getContext('2d');
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-let meetW = 0, meetH = 0, meetRaf = 0, meetT = 0, meetLast = 0, meetFrozen = false;
+let meetW = 0, meetH = 0, meetRaf = 0, meetT = 0, meetLast = 0, meetFrozen = false, meetIdx = -1;
+const SCENE_SEC = 8, FADE_SEC = 1.2;
 
 function rnd(a, b){ return a + Math.random() * (b - a); }
-const BLUE = ['#5ad0ff', '#3a4fd0', '#6fdcff', '#2c3fb8', '#fff2b8'];
-const RED  = ['#ff3b4f', '#ff8a2a', '#e8203a', '#ffb02e'];
-const ring = Array.from({length: 90}, () => ({ a: rnd(0, Math.PI*2), r: rnd(0.78, 1.18), s: rnd(0.25, 0.6),
-  z: rnd(0.5, 1.5), c: BLUE[Math.random()*BLUE.length|0] }));
-const ember = Array.from({length: 16}, () => ({ a: rnd(0, Math.PI*2), r: rnd(0.2, 1), s: rnd(0.9, 1.8) * (Math.random()<.5?-1:1),
-  z: rnd(0.6, 1.4), c: RED[Math.random()*RED.length|0] }));
+function pick(arr){ return arr[Math.random() * arr.length | 0]; }
+function makeDots(n, colors, extra){ return Array.from({length: n}, () => Object.assign(
+  { a: rnd(0, Math.PI*2), r: rnd(0.75, 1.2), s: rnd(0.25, 0.7) * (Math.random() < .5 ? -1 : 1), z: rnd(0.5, 1.5), c: pick(colors), ph: Math.random() }, extra ? extra() : {})); }
+function dot(x, y, r, c){ mctx.fillStyle = c; mctx.beginPath(); mctx.arc(x, y, r, 0, Math.PI*2); mctx.fill(); }
+
+// 휘어진 공간선. k>0 밀어냄, k<0 끌어당김
+function field(t, masses, stops, opt){
+  const W = meetW, H = meetH, o = Object.assign({ n: 11, alpha: 1, wob: 0, lw: 0.7 }, opt || {});
+  const g = mctx.createLinearGradient(0, 0, W, 0);
+  stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c));
+  mctx.strokeStyle = g; mctx.lineWidth = o.lw;
+  const ga = mctx.globalAlpha; mctx.globalAlpha = ga * o.alpha;
+  for(let i = 0; i < o.n; i++){
+    const y0 = (i + 0.5) / o.n * H;
+    mctx.beginPath();
+    for(let x = 0; x <= W; x += 3){
+      let y = y0 + o.wob * Math.sin(x * 0.06 + t * 0.8 + i);
+      for(const m of masses){
+        const f = Math.exp(-((x - m.x) ** 2) / (2 * m.sx * m.sx)), dy = y0 - m.y;
+        y += m.k > 0 ? m.k * H * f * Math.sign(dy) * Math.exp(-Math.abs(dy) / (0.9 * H))
+                     : m.k * H * f * dy / (Math.abs(dy) + 0.12 * H);
+      }
+      x === 0 ? mctx.moveTo(x, y) : mctx.lineTo(x, y);
+    }
+    mctx.stroke();
+  }
+  mctx.globalAlpha = ga;
+}
+function glow(x, y, r, rgb, a){
+  const g = mctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`);
+  mctx.fillStyle = g; mctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+// ---- 1. 만남 · 셀-로흐: 푸른 고리(밀어냄)와 붉은 불씨(끌어당김)가 다가갔다 물러남
+const m1ring = makeDots(90, ['#5ad0ff', '#3a4fd0', '#6fdcff', '#2c3fb8', '#fff2b8']);
+const m1ember = makeDots(16, ['#ff3b4f', '#ff8a2a', '#e8203a', '#ffb02e'], () => ({ r: rnd(0.2, 1), s: rnd(0.9, 1.8) * (Math.random()<.5?-1:1) }));
+function sceneMeet(t){
+  const W = meetW, H = meetH;
+  const bx = W * 0.36 + Math.sin(t * 0.7) * W * 0.04, by = H * 0.5 + Math.sin(t * 1.1) * H * 0.08;
+  const meet = (Math.sin(t * 0.9) + 1) / 2;
+  const rx = W * (0.80 - 0.22 * meet), ry = H * 0.5 + Math.cos(t * 1.3) * H * 0.12;
+  const R = H * 0.33 * (1 + 0.08 * Math.sin(t * 2.2));
+  field(t, [{ x: bx, y: by, k: 0.32, sx: W * 0.2 }, { x: rx, y: ry, k: -0.45 * (0.6 + 0.4 * meet), sx: W * 0.09 }],
+        ['rgba(70,80,190,0.55)', 'rgba(120,50,160,0.55)', 'rgba(210,40,80,0.6)']);
+  for(const p of m1ring){
+    const a = p.a + t * Math.abs(p.s);
+    const wob = 1 + 0.12 * Math.sin(a * 3 + t * 1.7) + 0.25 * meet * Math.max(0, Math.cos(a));
+    dot(bx + Math.cos(a) * R * p.r * wob * 1.15, by + Math.sin(a) * R * p.r * wob, p.z, p.c);
+  }
+  for(const p of m1ember){
+    const a = p.a + t * p.s, rr = H * 0.16 * p.r * (1 + 0.3 * Math.sin(t * 3 + p.a));
+    dot(rx + Math.cos(a) * rr, ry + Math.sin(a) * rr * 1.4, p.z, p.c);
+  }
+  if(meet > 0.75) glow((bx + R * 1.1 + rx) / 2, (by + ry) / 2, H * 0.5, '255,240,200', 0.35 * (meet - 0.75) / 0.25);
+}
+
+// ---- 2. 혼돈: 에메랄드·금빛·보라 세 질량이 제각각 공간을 비틀며 엉킴
+const m2g = makeDots(42, ['#3fd8a0', '#2fbf8a', '#7ff0c4', '#ffffff']);
+const m2y = makeDots(30, ['#f2b632', '#ffcf4a', '#e09a1c']);
+const m2p = makeDots(36, ['#a46bff', '#8b55f0', '#c49bff', '#ffffff']);
+const m2w = makeDots(12, ['#7fa0c8', '#9fb3d0']);
+function sceneChaos(t){
+  const W = meetW, H = meetH;
+  const G = { x: W * 0.22 + Math.sin(t * 0.9) * W * 0.05, y: H * 0.42 + Math.sin(t * 1.3) * H * 0.15 };
+  const Y = { x: W * 0.48 + Math.cos(t * 1.1) * W * 0.06, y: H * 0.62 + Math.cos(t * 0.8) * H * 0.15 };
+  const P = { x: W * 0.75 + Math.sin(t * 0.7 + 1) * W * 0.06, y: H * 0.45 + Math.sin(t * 1.6) * H * 0.18 };
+  field(t, [{ x: G.x, y: G.y, k: 0.35, sx: W * 0.09 }, { x: Y.x, y: Y.y, k: -0.4, sx: W * 0.06 }, { x: P.x, y: P.y, k: 0.45, sx: W * 0.05 }],
+        ['rgba(63,216,160,0.55)', 'rgba(242,182,50,0.5)', 'rgba(164,107,255,0.6)']);
+  for(const p of m2g){ const a = p.a + t * p.s; dot(G.x + Math.cos(a) * H * 0.3 * p.r * 1.2, G.y + Math.sin(a) * H * 0.3 * p.r, p.z, p.c); }
+  for(const p of m2y){ const a = p.a + t * p.s * 1.6, rr = H * 0.22 * p.r * (0.7 + 0.3 * Math.sin(t * 2 + p.a)); dot(Y.x + Math.cos(a) * rr * 1.3, Y.y + Math.sin(a) * rr, p.z, p.c); }
+  for(const p of m2p){ const a = p.a + t * p.s * 1.2; dot(P.x + Math.cos(a) * H * 0.28 * p.r, P.y + Math.sin(a * 2) * H * 0.28 * p.r, p.z, p.c); }
+  for(const p of m2w){ // 세 질량 사이를 떠도는 먼지
+    const k = (p.ph + t * 0.07 * Math.abs(p.s)) % 1, A = k < 0.5 ? G : Y, B = k < 0.5 ? Y : P, u = (k % 0.5) * 2;
+    dot(A.x + (B.x - A.x) * u, A.y + (B.y - A.y) * u + Math.sin(t * 2 + p.a) * H * 0.12, p.z * 0.8, p.c);
+  }
+}
+
+// ---- 3. 폭발: 하얀 중심에서 열세 갈래 줄기가 뿜어지고 주황 충격파가 퍼져 나감
+const m3stream = Array.from({length: 13 * 9}, (_, i) => ({ arm: i % 13, ph: Math.random(), j: rnd(-0.025, 0.025), z: rnd(0.6, 1.3) }));
+const m3ring = makeDots(90, ['#ff7a1a', '#ff5a1f', '#ff9a3c', '#e8481c'], () => ({ r: rnd(0.95, 1.06) }));
+function sceneBurst(t, local){
+  const W = meetW, H = meetH, cx = W * 0.5, cy = H * 0.5;
+  const R = H * (0.3 + 0.12 * Math.max(0, Math.min(1, local / SCENE_SEC))) * (1 + 0.04 * Math.sin(t * 6)), S = 2.2; // S: 가로로 넓은 상자에 맞춘 비율
+  field(t, [{ x: cx, y: cy, k: 0.25, sx: W * 0.18 }], ['rgba(200,60,40,0.35)', 'rgba(255,140,60,0.4)', 'rgba(200,60,40,0.35)'], { alpha: 0.8 });
+  glow(cx, cy, H * 0.28, '255,244,194', 0.45 + 0.15 * Math.sin(t * 5));
+  for(const p of m3stream){
+    const ang = p.arm / 13 * Math.PI * 2 + t * 0.15 + p.j, d = ((t * 0.55 + p.ph) % 1) * R * 0.95;
+    const c = d < R * 0.4 ? '#fff4c2' : (d < R * 0.7 ? '#ffd86a' : '#ffb02e');
+    dot(cx + Math.cos(ang) * d * S, cy + Math.sin(ang) * d, p.z * (1.1 - d / R * 0.5), c);
+  }
+  for(const p of m3ring){
+    const a = p.a + t * 0.12, rr = R * (1 + 0.1 * Math.sin(p.a * 5 + t * 3)) * p.r;
+    dot(cx + Math.cos(a) * rr * S, cy + Math.sin(a) * rr, p.z, p.c);
+  }
+}
+
+// ---- 4. 침묵: 거의 곧게 펴진 선, 작은 흰 점 하나, 떠도는 회청색 먼지
+const m4dust = makeDots(46, ['#7f8fb0', '#5d6b88', '#9aa8c4', '#8a5c74'], () => ({ x: Math.random(), y: Math.random(), v: rnd(0.004, 0.015) }));
+function sceneSilence(t){
+  const W = meetW, H = meetH, cx = W * 0.5, cy = H * 0.5;
+  field(t, [{ x: cx, y: cy, k: 0.04, sx: W * 0.05 }], ['rgba(110,130,170,0.25)', 'rgba(130,140,180,0.25)'], { wob: 0.4, lw: 0.5 });
+  for(const p of m4dust){
+    const x = ((p.x + t * p.v) % 1) * W, y = p.y * H + Math.sin(t * 0.4 + p.a) * 2;
+    dot(x, y, p.z * 0.55, p.c);
+  }
+  const pulse = (Math.sin(t * 0.8) + 1) / 2;
+  mctx.strokeStyle = `rgba(255,255,255,${0.15 + 0.2 * pulse})`; mctx.lineWidth = 0.6;
+  mctx.beginPath(); mctx.arc(cx, cy, H * (0.1 + 0.04 * pulse), 0, Math.PI * 2); mctx.stroke();
+  dot(cx, cy, 1.3, '#ffffff');
+}
+
+// ---- 5. 새로운 탄생: 흰 핵으로 앞선 작품들의 색이 섞인 두 갈래 나선 팔이 감겨 듦
+const m5arm = Array.from({length: 150}, (_, i) => ({ arm: i % 2, u0: Math.random(), z: rnd(0.6, 1.4), j: rnd(-0.05, 0.05) }));
+const m5core = makeDots(14, ['#ffffff', '#f4f0ff', '#fff6e0'], () => ({ r: rnd(0, 1) }));
+function sceneRebirth(t){
+  const W = meetW, H = meetH, cx = W * 0.5, cy = H * 0.5;
+  field(t, [{ x: cx, y: cy, k: -0.35, sx: W * 0.14 }],
+        ['rgba(63,216,160,0.4)', 'rgba(164,107,255,0.45)', 'rgba(255,154,60,0.45)', 'rgba(90,180,255,0.4)'], { alpha: 0.9 });
+  const base = mctx.globalAlpha;
+  for(const p of m5arm){
+    const u = ((p.u0 - t * 0.06) % 1 + 1) % 1;  // 바깥에서 핵 쪽으로 천천히 흘러듦
+    const r = H * (0.07 + 0.43 * u), th = p.arm * Math.PI + u * 4.2 + t * 0.6 + p.j;
+    const hue = (u * 300 + p.arm * 160) % 360;
+    mctx.globalAlpha = base * (u > 0.75 ? (1 - u) * 4 : 1); // 가장 바깥 끝은 희미하게
+    dot(cx + Math.cos(th) * r * 1.8, cy + Math.sin(th) * r, p.z * (0.6 + u * 0.6), `hsl(${hue},85%,62%)`);
+  }
+  mctx.globalAlpha = base;
+  glow(cx, cy, H * 0.22, '255,255,255', 0.6);
+  for(const p of m5core){ const a = p.a + t * 2 * Math.sign(p.s); dot(cx + Math.cos(a) * H * 0.07 * p.r * 1.4, cy + Math.sin(a) * H * 0.07 * p.r, p.z * 0.8, p.c); }
+}
+
+const SCENES = [
+  { title: '만남', en: 'Sel-roch', draw: sceneMeet },
+  { title: '혼돈', en: 'Chaos', draw: sceneChaos },
+  { title: '폭발', en: 'Burst', draw: sceneBurst },
+  { title: '침묵', en: 'Silence', draw: sceneSilence },
+  { title: '새로운 탄생', en: 'Rebirth', draw: sceneRebirth },
+];
 
 function meetResize(){
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1088,53 +1230,24 @@ function meetResize(){
 }
 
 function meetDraw(t){
-  const W = meetW, H = meetH;
-  // 두 질량의 위치: 붉은 쪽이 푸른 고리로 다가갔다가 밀려남 (만남의 순간 반복)
-  const bx = W * 0.36 + Math.sin(t * 0.7) * W * 0.04, by = H * 0.5 + Math.sin(t * 1.1) * H * 0.08;
-  const meet = (Math.sin(t * 0.9) + 1) / 2;           // 0: 멀리 · 1: 맞닿음
-  const rx = W * (0.80 - 0.22 * meet), ry = H * 0.5 + Math.cos(t * 1.3) * H * 0.12;
-  const R = H * 0.33 * (1 + 0.08 * Math.sin(t * 2.2)); // 푸른 고리 반지름(숨쉬듯)
+  const W = meetW, H = meetH, n = SCENES.length;
+  const idx = Math.floor(t / SCENE_SEC) % n, local = t % SCENE_SEC;
+  mctx.fillStyle = 'rgba(7,8,13,0.38)'; mctx.fillRect(0, 0, W, H); // 잔상 → 꼬리
 
-  // 잔상을 남기며 지우기 → 움직임에 꼬리가 생겨 역동적으로 보임
-  mctx.fillStyle = 'rgba(7,8,13,0.38)'; mctx.fillRect(0, 0, W, H);
+  const fade = Math.max(0, (local - (SCENE_SEC - FADE_SEC)) / FADE_SEC); // 장면 끝 무렵 다음 작품으로 스며듦
+  mctx.globalAlpha = 1 - fade; SCENES[idx].draw(t, local);
+  if(fade > 0){ mctx.globalAlpha = fade; SCENES[(idx + 1) % n].draw(t, local - SCENE_SEC); }
+  mctx.globalAlpha = 1;
 
-  // 휘어진 공간선
-  const lines = 11, sx = W * 0.20, sy = H * 0.9;
-  for(let i = 0; i < lines; i++){
-    const y0 = (i + 0.5) / lines * H;
-    const g = mctx.createLinearGradient(0, 0, W, 0);
-    g.addColorStop(0, 'rgba(70,80,190,0.55)'); g.addColorStop(0.55, 'rgba(120,50,160,0.55)'); g.addColorStop(1, 'rgba(210,40,80,0.6)');
-    mctx.strokeStyle = g; mctx.lineWidth = 0.7;
-    mctx.beginPath();
-    for(let x = 0; x <= W; x += 3){
-      const fb = Math.exp(-((x - bx) ** 2) / (2 * sx * sx));
-      const fr = Math.exp(-((x - rx) ** 2) / (2 * (sx * 0.45) ** 2));
-      const db = y0 - by, dr = y0 - ry;
-      let y = y0 + fb * H * 0.32 * Math.sign(db) * Math.exp(-Math.abs(db) / sy)          // 밀어냄
-                 - fr * H * 0.45 * dr / (Math.abs(dr) + H * 0.12) * (0.6 + 0.4 * meet); // 끌어당김
-      x === 0 ? mctx.moveTo(x, y) : mctx.lineTo(x, y);
-    }
-    mctx.stroke();
-  }
-
-  // 푸른 입자 고리
-  for(const p of ring){
-    const a = p.a + t * p.s;
-    const wob = 1 + 0.12 * Math.sin(a * 3 + t * 1.7) + 0.25 * meet * Math.max(0, Math.cos(a)); // 붉은 쪽으로 살짝 끌려감
-    const x = bx + Math.cos(a) * R * p.r * wob * 1.15, y = by + Math.sin(a) * R * p.r * wob;
-    mctx.fillStyle = p.c; mctx.beginPath(); mctx.arc(x, y, p.z, 0, Math.PI*2); mctx.fill();
-  }
-  // 붉은 불씨
-  for(const p of ember){
-    const a = p.a + t * p.s, rr = H * 0.16 * p.r * (1 + 0.3 * Math.sin(t * 3 + p.a));
-    mctx.fillStyle = p.c; mctx.beginPath(); mctx.arc(rx + Math.cos(a) * rr, ry + Math.sin(a) * rr * 1.4, p.z, 0, Math.PI*2); mctx.fill();
-  }
-  // 맞닿는 순간 가운데에 번지는 빛
-  if(meet > 0.75){
-    const k = (meet - 0.75) / 0.25, mx = (bx + R * 1.1 + rx) / 2;
-    const glow = mctx.createRadialGradient(mx, (by + ry) / 2, 0, mx, (by + ry) / 2, H * 0.5);
-    glow.addColorStop(0, `rgba(255,240,200,${0.35 * k})`); glow.addColorStop(1, 'rgba(255,240,200,0)');
-    mctx.fillStyle = glow; mctx.fillRect(0, 0, W, H);
+  const cur = fade > 0.5 ? (idx + 1) % n : idx;
+  if(cur !== meetIdx){ // 누르면 지금 보이는 작품으로 이동
+    meetIdx = cur;
+    const lab = document.getElementById('meetLabel');
+    lab.classList.add('hide'); // 이름도 살짝 사라졌다가 바뀌어 나타남
+    setTimeout(() => { lab.textContent = SCENES[cur].title; lab.classList.remove('hide'); }, 450);
+    meetBox.href = '/gallery.html#w' + (cur + 1);
+    meetBox.setAttribute('aria-label', `갤러리 외계 시각 연작 ${cur + 1}번 ${SCENES[cur].title} 보기`);
+    meetBox.title = `외계 시각 · ${SCENES[cur].title} (${SCENES[cur].en})`;
   }
 }
 
