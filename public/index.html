@@ -456,6 +456,29 @@
     50%{ text-shadow:0 0 14px rgba(234,179,8,1); }
   }
 
+  /* ---------- 추천 앱(유료/무료 홍보) 띠 ---------- */
+  .promo-strip{ display:none; margin:10px 14px 0; }
+  .promo-strip.on{ display:block; }
+  .promo-strip a{
+    display:block;
+    text-decoration:none;
+    color:var(--chalk);
+    border:1px solid rgba(73,185,199,0.55);
+    border-bottom-width:3px;
+    border-radius:12px;
+    padding:7px 12px;
+    background:linear-gradient(180deg, rgba(73,185,199,0.16), rgba(73,185,199,0.05));
+    box-shadow:0 3px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18);
+    animation:ps-fade .5s ease;
+  }
+  .promo-strip a:active{ transform:translateY(2px); border-bottom-width:1px; }
+  .promo-strip .ps-top{ display:flex; justify-content:space-between; align-items:center; font-size:9px; color:var(--spray-c); letter-spacing:.3px; }
+  .promo-strip .ps-top .en{ opacity:0.85; margin-left:4px; }
+  .promo-strip .ps-top .ps-left{ opacity:0.8; color:var(--chalk-dim); white-space:nowrap; }
+  .promo-strip .ps-name{ font-size:13px; font-weight:700; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .promo-strip .ps-msg{ font-size:11px; color:var(--chalk-dim); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  @keyframes ps-fade{ from{opacity:0; transform:translateY(-3px);} to{opacity:1; transform:none;} }
+
   main{padding:16px 14px;}
   section{display:none;}
   section.active{display:block;}
@@ -706,7 +729,8 @@
 
   /* ---------- 둘러보기/홍보 완료: 헤더만 남기고 전환되는 전체 페이지 ---------- */
   .app.showing-fullpage nav,
-  .app.showing-fullpage main{ display:none; }
+  .app.showing-fullpage #promoStripMain,
+  .app.showing-fullpage main{ display:none !important; }
   .fullpage{
     display:none;
     padding:20px 14px 40px;
@@ -810,6 +834,8 @@
       <button onclick="location.href='/gallery.html'" style="background-color:rgba(56,74,170,0.45)">갤러리<span class="en">Gallery</span></button>
     </nav>
 
+    <div class="promo-strip" id="promoStripMain"></div>
+
     <main>
 
       <!-- 1. 낙서를 하자 / Write Graffiti -->
@@ -832,6 +858,7 @@
 
     <!-- 둘러보기: 낙서만 조용히 보여주는 별도 페이지 (헤더는 그대로 유지) -->
     <div id="pageBrowse" class="fullpage">
+      <div class="promo-strip" id="promoStripBrowse" style="margin:0 0 12px;"></div>
       <label class="my-posts-toggle">
         <input type="checkbox" id="myPostsOnly">
         내 글만 보기
@@ -1322,6 +1349,7 @@ document.getElementById('backFromPromo').addEventListener('click', backToMain);
 
 // 폼 제출 후에는 폼을 숨기고, 결제 진행/완료/오류 상태만 결과 영역에 표시
 function renderPromoPageBody(kind, msgKo, msgEn, preview){
+  if(kind === 'ok' && preview) setTimeout(loadPromoStrip, 1500);
   promoFormWrapEl.style.display = 'none';
   promoResultWrapEl.style.display = 'block';
   let html = `<div class="status show ${kind}" style="margin-top:0;">${msgKo}${msgEn ? `<span class="en">${msgEn}</span>` : ''}</div>`;
@@ -1608,6 +1636,45 @@ function renderWallItems(){
 }
 
 document.getElementById('myPostsOnly').addEventListener('change', renderWallItems);
+
+// ---------- 추천 앱(홍보) 띠: 메인 + 게시글 화면 상단 ----------
+let promoItems = [];
+let promoIdx = 0;
+let promoTimer = null;
+function promoLeftText(p){
+  const exp = p.expiresAt || (p.createdAt + 7*24*60*60*1000);
+  const days = Math.ceil((exp - Date.now()) / (24*60*60*1000));
+  return days > 1 ? `${days}일 남음` : '오늘까지';
+}
+function renderPromoStrip(){
+  const strips = document.querySelectorAll('.promo-strip');
+  if(!promoItems.length){ strips.forEach(el => { el.classList.remove('on'); el.innerHTML = ''; }); return; }
+  const p = promoItems[promoIdx % promoItems.length];
+  const url = isLikelyPiAppUrl(p.appUrl || '') ? p.appUrl : '';
+  const html = `<a ${url ? `href="${escapeAttr(url)}" rel="noopener"` : ''}>
+      <div class="ps-top"><span>추천 앱<span class="en">Sponsored</span></span><span class="ps-left">${escapeHtml(promoLeftText(p))}${promoItems.length>1 ? ` · ${(promoIdx % promoItems.length)+1}/${promoItems.length}` : ''}</span></div>
+      <div class="ps-name">${escapeHtml(p.appName || '')}</div>
+      <div class="ps-msg">${escapeHtml(p.message || '')}</div>
+    </a>`;
+  strips.forEach(el => { el.innerHTML = html; el.classList.add('on'); });
+}
+async function loadPromoStrip(){
+  try{
+    const res = await fetch(API_BASE + '/api/wall?_=' + Date.now());
+    const now = Date.now();
+    promoItems = (await res.json()).filter(x => x.type === 'promo' && now < (x.expiresAt || (x.createdAt + 7*24*60*60*1000)));
+    // 새로 등록된 홍보가 먼저 보이도록 최신순 정렬
+    promoItems.sort((a,b) => b.createdAt - a.createdAt);
+    if(promoIdx >= promoItems.length) promoIdx = 0;
+    renderPromoStrip();
+    if(promoTimer) clearInterval(promoTimer);
+    if(promoItems.length > 1){
+      promoTimer = setInterval(()=>{ promoIdx = (promoIdx + 1) % promoItems.length; renderPromoStrip(); }, 6000);
+    }
+  }catch(e){ /* 조용히 무시 */ }
+}
+loadPromoStrip();
+setInterval(loadPromoStrip, 60000);
 
 // ---------- 홍보 요금제 선택 / 무료권 ----------
 const PLAN_INFO = {
