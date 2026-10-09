@@ -255,6 +255,7 @@
     z-index:100;
     pointer-events:auto;
   }
+  header{ padding-right:60px; } /* 오른쪽 위 달 버튼과 겹치지 않게 */
   header .logo{
     font-family:'Nanum Pen Script', cursive;
     font-size:34px;
@@ -262,11 +263,14 @@
     color:var(--spray-y);
     text-shadow: 2px 2px 0 rgba(0,0,0,0.35), 0 0 16px rgba(255,201,60,0.35);
     margin:0;
-    transform: rotate(-1.2deg);
-    display:inline-block;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:4px 10px;
   }
+  header .logo .logo-text{ display:inline-block; transform: rotate(-1.2deg); }
   header .logo .en{
-    display:block;
+    flex-basis:100%;
     font-family:'Noto Sans KR', sans-serif;
     font-size:11px;
     letter-spacing:2px;
@@ -274,28 +278,31 @@
     text-shadow:none;
     margin-top:2px;
   }
+  /* 거울 = so SO so 글자들의 집. 평소엔 글자가 거울 안에 얌전히 들어가 있음 */
   .mirror-spot{
     display:inline-flex;
     align-items:center;
-    justify-content:center;
-    width:118px;
-    height:34px;
-    border-radius:50%;
-    margin-left:6px;
-    vertical-align:middle;
+    gap:6px;
+    padding:3px 12px 3px 8px;
+    border-radius:999px;
     background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02));
     border:1px solid rgba(255,255,255,0.35);
-    box-shadow: inset 0 0 10px rgba(255,255,255,0.25), 0 0 8px rgba(255,255,255,0.25);
-    font-size:14px;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.25), 0 0 8px rgba(255,255,255,0.2);
+    line-height:1;
   }
+  .mirror-icon{ font-size:14px; }
   .soso{
     display:inline-block;
-    margin-left:8px;
     font-family:'Black Han Sans', sans-serif;
     font-size:20px;
     letter-spacing:1px;
+    white-space:nowrap;
     position:relative;
     z-index:50;
+  }
+  @media (max-width:600px){
+    header .logo{ font-size:30px; }
+    .soso{ font-size:17px; }
   }
   .letter-move{
     display:inline-block;
@@ -869,7 +876,7 @@
 
     <header>
       <button id="themeToggle" aria-label="화면 밝기 전환">🌙</button>
-      <h1 class="logo">디부타데스<span class="mirror-spot" id="mirrorSpot">🪞</span><span class="soso" id="sosoEl"><span class="letter-move"><span class="letter-wave" style="animation-delay:0s, 0s;">s</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.08s, 0.15s;">o</span></span>&nbsp;<span class="letter-move"><span class="letter-wave" style="animation-delay:0.16s, 0.3s;">S</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.24s, 0.45s;">O</span></span>&nbsp;<span class="letter-move"><span class="letter-wave" style="animation-delay:0.32s, 0.6s;">s</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.4s, 0.75s;">o</span></span></span><span class="en">DIBUTADES</span></h1>
+      <h1 class="logo"><span class="logo-text">디부타데스</span><span class="mirror-spot" id="mirrorSpot" aria-hidden="true"><span class="mirror-icon">🪞</span><span class="soso" id="sosoEl"><span class="letter-move"><span class="letter-wave" style="animation-delay:0s, 0s;">s</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.08s, 0.15s;">o</span></span>&nbsp;<span class="letter-move"><span class="letter-wave" style="animation-delay:0.16s, 0.3s;">S</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.24s, 0.45s;">O</span></span>&nbsp;<span class="letter-move"><span class="letter-wave" style="animation-delay:0.32s, 0.6s;">s</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.4s, 0.75s;">o</span></span></span></span><span class="en">DIBUTADES</span></h1>
       <p>느낌 오면 낙서하면 돼~
         <span class="en">Feel something? Just scribble it.</span>
       </p>
@@ -1102,50 +1109,40 @@ const sosoEl = document.getElementById('sosoEl');
 const sosoLetters = Array.from(sosoEl.querySelectorAll('.letter-move'));
 const sosoWaveEls = Array.from(sosoEl.querySelectorAll('.letter-wave'));
 const mirrorEl = document.getElementById('mirrorSpot');
-let sosoOrigins = [];
 let sosoPaused = false;
 let sosoWriteTabActive = true;
 let sosoBusy = false;
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function setSosoResting(isResting){
   sosoEl.classList.toggle('resting', isResting);
 }
-setSosoResting(true); // 처음엔 완전히 정지된 채로 시작 (통통 튐/색변화 없음)
+setSosoResting(true); // 처음엔 거울 속에서 정지
 
-function captureSosoOrigins(){
-  // 정확히 측정하기 위해 트랜지션을 끄고 잠깐 원래 자리로 되돌린 뒤 측정, 다시 복구
-  sosoLetters.forEach(l => { l.style.transition = 'none'; l.style.transform = 'translate(0px, 0px)'; });
-  sosoOrigins = sosoLetters.map(l => l.getBoundingClientRect());
-  sosoLetters.forEach(l => { l.style.transition = ''; });
+// 글자의 '집' 위치(거울 속)를 매번 새로 계산 — 스크롤하거나 레이아웃이 바뀌어도 어긋나지 않음
+function homeRect(letter){
+  const base = sosoEl.getBoundingClientRect();
+  return { left: base.left + letter.offsetLeft, top: base.top + letter.offsetTop,
+           width: letter.offsetWidth, height: letter.offsetHeight };
 }
-captureSosoOrigins(); // 즉시 한 번 계산 (레이아웃은 이미 준비되어 있음)
+function moveLetterTo(letter, targetRect){
+  const h = homeRect(letter);
+  const dx = (targetRect.left + targetRect.width/2) - (h.left + h.width/2);
+  const dy = (targetRect.top + targetRect.height/2) - (h.top + h.height/2);
+  letter.style.transform = `translate(${dx}px, ${dy}px)`;
+}
+function sendHome(letter){ letter.style.transform = 'translate(0px, 0px)'; }
+function restInMirror(){
+  sosoLetters.forEach(sendHome);
+  setSosoResting(true);
+}
 window.addEventListener('load', () => {
-  captureSosoOrigins(); // 폰트 로딩 후 위치 재보정
-  restInMirror();       // 재보정된 좌표 기준으로 다시 거울 위치로
-  delay(600).then(playSosoJourney); // 잠시 뒤 첫 인사 한 번
+  restInMirror();
+  if(!reduceMotion) delay(600).then(playSosoJourney); // 잠시 뒤 첫 인사 한 번
 });
 
 function delay(ms){ return new Promise(res => setTimeout(res, ms)); }
 function sosoShouldStop(){ return sosoPaused || !sosoWriteTabActive; }
-
-function moveLetterTo(letter, origin, targetRect){
-  if(!origin) return;
-  const dx = (targetRect.left + targetRect.width/2) - (origin.left + origin.width/2);
-  const dy = (targetRect.top + targetRect.height/2) - (origin.top + origin.height/2);
-  letter.style.transform = `translate(${dx}px, ${dy}px)`;
-}
-function moveLetterToMirror(letter, origin, index){
-  const r = mirrorEl.getBoundingClientRect();
-  // 6글자가 거울 폭 안에 나란히 자리 잡도록 인덱스별로 다른 지점을 목표로 삼음
-  const slot = (index + 0.5) / sosoLetters.length;
-  const spot = { left: r.left + r.width * slot, top: r.top + r.height / 2, width: 0, height: 0 };
-  moveLetterTo(letter, origin, spot);
-}
-function restInMirror(){
-  sosoLetters.forEach((l, i) => moveLetterToMirror(l, sosoOrigins[i], i));
-  setSosoResting(true); // 거울 속에 있을 땐 완전히 멈춤
-}
-restInMirror(); // 처음엔 거울 속에서 대기하는 상태로 시작
 
 function spawnPurpleDrop(x, y){
   const d = document.createElement('div');
@@ -1161,11 +1158,12 @@ async function visitTarget(targetEl){
   if(sosoShouldStop() || !targetEl) return;
   const r = targetEl.getBoundingClientRect();
   if(!r || (r.width === 0 && r.height === 0)) return; // 안 보이는 탭이면 이동하지 않음
+  if(r.bottom < 0 || r.top > window.innerHeight) return; // 화면 밖이면 이동하지 않음
   const dropX = r.left + r.width / 2;
   const dropY = r.top + 6;
   for(let i = 0; i < sosoLetters.length; i++){
     if(sosoShouldStop()) return;
-    moveLetterTo(sosoLetters[i], sosoOrigins[i], r);
+    moveLetterTo(sosoLetters[i], r);
     setTimeout(() => { if(!sosoShouldStop()) spawnPurpleDrop(dropX, dropY); }, 500);
     await delay(260); // 다음 글자가 출발하기 전 텀 (한 글자씩 순서대로 이동)
   }
@@ -1175,7 +1173,7 @@ async function visitTarget(targetEl){
 // 한 글자씩 차례대로 거울 속으로 되돌아감
 async function returnToMirrorSequential(){
   for(let i = 0; i < sosoLetters.length; i++){
-    moveLetterToMirror(sosoLetters[i], sosoOrigins[i], i);
+    sendHome(sosoLetters[i]);
     await delay(120);
   }
   await delay(600);
@@ -1183,7 +1181,7 @@ async function returnToMirrorSequential(){
 
 // 인사 여정을 딱 한 번만 재생: 거울 → 오늘의 질문 → 입력창 → 다시 거울(정지)
 async function playSosoJourney(){
-  if(sosoBusy) return; // 이미 재생 중이면 중복 실행 방지
+  if(sosoBusy || reduceMotion) return; // 이미 재생 중이면 중복 실행 방지
   sosoBusy = true;
   try{
     if(sosoShouldStop()){ restInMirror(); return; }
