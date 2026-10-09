@@ -278,64 +278,22 @@
     text-shadow:none;
     margin-top:2px;
   }
-  /* 거울 = so SO so 글자들의 집. 평소엔 글자가 거울 안에 얌전히 들어가 있음 */
-  .mirror-spot{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    padding:3px 12px 3px 8px;
+  /* 만남(셀-로흐) 미니 작품 상자: 이 안에서만 움직이고, 낙서를 쓰는 순간 멈춤 */
+  .meet-box{
+    display:block;
+    width:160px; height:48px;
     border-radius:999px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02));
+    overflow:hidden;
     border:1px solid rgba(255,255,255,0.35);
-    box-shadow: inset 0 0 10px rgba(255,255,255,0.25), 0 0 8px rgba(255,255,255,0.2);
-    line-height:1;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 10px rgba(90,180,255,0.25);
+    background:#07080d;
+    transition: box-shadow .4s, filter .4s;
   }
-  .mirror-icon{ font-size:14px; }
-  .soso{
-    display:inline-block;
-    font-family:'Black Han Sans', sans-serif;
-    font-size:20px;
-    letter-spacing:1px;
-    white-space:nowrap;
-    position:relative;
-    z-index:50;
-  }
+  .meet-box canvas{ display:block; width:100%; height:100%; }
+  .meet-box.frozen{ filter:saturate(0.6) brightness(0.85); box-shadow: inset 0 0 10px rgba(255,255,255,0.12); }
   @media (max-width:600px){
     header .logo{ font-size:30px; }
-    .soso{ font-size:17px; }
-  }
-  .letter-move{
-    display:inline-block;
-    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  .letter-wave{
-    display:inline-block;
-    color:#4dd679; /* Pi 실시간 가치 상승 표시와 같은 초록색 */
-    animation: soso-wave 1.8s ease-in-out infinite;
-  }
-  .soso.resting .letter-wave{
-    animation-play-state: paused;
-  }
-  @keyframes soso-wave{
-    0%, 100%{ transform: translateY(0); }
-    50%{ transform: translateY(-4px); }
-  }
-
-  /* ---------- 글자가 목표 지점에 닿을 때마다 떨어지는 보라색 물방울 ---------- */
-  .purple-drop{
-    position:fixed;
-    width:9px; height:13px;
-    background:radial-gradient(circle at 50% 30%, #c9a2ff, #7c3aed);
-    border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
-    pointer-events:none;
-    z-index:200;
-    animation: drop-fall 0.65s ease-in forwards;
-  }
-  @keyframes drop-fall{
-    0%{ opacity:0; transform: translate(-50%,-100%) scale(0.5); }
-    28%{ opacity:1; transform: translate(-50%,-10%) scale(1); }
-    70%{ opacity:1; transform: translate(-50%,45%) scale(1.15,0.85); }
-    100%{ opacity:0; transform: translate(-50%,80%) scale(1.7,0.35); }
+    .meet-box{ width:200px; height:46px; }
   }
   header p{
     margin:8px 0 0;
@@ -876,7 +834,7 @@
 
     <header>
       <button id="themeToggle" aria-label="화면 밝기 전환">🌙</button>
-      <h1 class="logo"><span class="logo-text">디부타데스</span><span class="mirror-spot" id="mirrorSpot" aria-hidden="true"><span class="mirror-icon">🪞</span><span class="soso" id="sosoEl"><span class="letter-move"><span class="letter-wave" style="animation-delay:0s, 0s;">s</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.08s, 0.15s;">o</span></span>&nbsp;<span class="letter-move"><span class="letter-wave" style="animation-delay:0.16s, 0.3s;">S</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.24s, 0.45s;">O</span></span>&nbsp;<span class="letter-move"><span class="letter-wave" style="animation-delay:0.32s, 0.6s;">s</span></span><span class="letter-move"><span class="letter-wave" style="animation-delay:0.4s, 0.75s;">o</span></span></span></span><span class="en">DIBUTADES</span></h1>
+      <h1 class="logo"><span class="logo-text">디부타데스</span><a class="meet-box" id="meetBox" href="/gallery.html#w1" aria-label="갤러리 첫 작품 만남(셀-로흐) 보기" title="만남 · 셀-로흐"><canvas id="meetCanvas"></canvas></a><span class="en">DIBUTADES</span></h1>
       <p>느낌 오면 낙서하면 돼~
         <span class="en">Feel something? Just scribble it.</span>
       </p>
@@ -1103,107 +1061,116 @@ themeToggleBtn.addEventListener('click', ()=>{
   toggleTheme();
 });
 
-// ---------- "so SO so" 글자: 평소엔 거울 속에서 조용히 잠들어 있다가,
-// 페이지를 열었을 때 한 번, 그리고 낙서를 성공적으로 남겼을 때 한 번만 인사하러 나옴 ----------
-const sosoEl = document.getElementById('sosoEl');
-const sosoLetters = Array.from(sosoEl.querySelectorAll('.letter-move'));
-const sosoWaveEls = Array.from(sosoEl.querySelectorAll('.letter-wave'));
-const mirrorEl = document.getElementById('mirrorSpot');
-let sosoPaused = false;
-let sosoWriteTabActive = true;
-let sosoBusy = false;
+// ---------- 만남(셀-로흐) 미니 작품: 상자 안에서만 움직이고, 낙서를 쓰는 순간 정지 ----------
+// 왼쪽 푸른 질량은 공간을 밀어내고, 오른쪽 붉은 질량은 끌어당기며 서로 다가갔다 물러남
+let sosoWriteTabActive = true; // 다른 탭 코드와의 호환용
+const meetBox = document.getElementById('meetBox');
+const meetCanvas = document.getElementById('meetCanvas');
+const mctx = meetCanvas.getContext('2d');
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let meetW = 0, meetH = 0, meetRaf = 0, meetT = 0, meetLast = 0, meetFrozen = false;
 
-function setSosoResting(isResting){
-  sosoEl.classList.toggle('resting', isResting);
-}
-setSosoResting(true); // 처음엔 거울 속에서 정지
+function rnd(a, b){ return a + Math.random() * (b - a); }
+const BLUE = ['#5ad0ff', '#3a4fd0', '#6fdcff', '#2c3fb8', '#fff2b8'];
+const RED  = ['#ff3b4f', '#ff8a2a', '#e8203a', '#ffb02e'];
+const ring = Array.from({length: 90}, () => ({ a: rnd(0, Math.PI*2), r: rnd(0.78, 1.18), s: rnd(0.25, 0.6),
+  z: rnd(0.5, 1.5), c: BLUE[Math.random()*BLUE.length|0] }));
+const ember = Array.from({length: 16}, () => ({ a: rnd(0, Math.PI*2), r: rnd(0.2, 1), s: rnd(0.9, 1.8) * (Math.random()<.5?-1:1),
+  z: rnd(0.6, 1.4), c: RED[Math.random()*RED.length|0] }));
 
-// 글자의 '집' 위치(거울 속)를 매번 새로 계산 — 스크롤하거나 레이아웃이 바뀌어도 어긋나지 않음
-function homeRect(letter){
-  const base = sosoEl.getBoundingClientRect();
-  return { left: base.left + letter.offsetLeft, top: base.top + letter.offsetTop,
-           width: letter.offsetWidth, height: letter.offsetHeight };
-}
-function moveLetterTo(letter, targetRect){
-  const h = homeRect(letter);
-  const dx = (targetRect.left + targetRect.width/2) - (h.left + h.width/2);
-  const dy = (targetRect.top + targetRect.height/2) - (h.top + h.height/2);
-  letter.style.transform = `translate(${dx}px, ${dy}px)`;
-}
-function sendHome(letter){ letter.style.transform = 'translate(0px, 0px)'; }
-function restInMirror(){
-  sosoLetters.forEach(sendHome);
-  setSosoResting(true);
-}
-window.addEventListener('load', () => {
-  restInMirror();
-  if(!reduceMotion) delay(600).then(playSosoJourney); // 잠시 뒤 첫 인사 한 번
-});
-
-function delay(ms){ return new Promise(res => setTimeout(res, ms)); }
-function sosoShouldStop(){ return sosoPaused || !sosoWriteTabActive; }
-
-function spawnPurpleDrop(x, y){
-  const d = document.createElement('div');
-  d.className = 'purple-drop';
-  d.style.left = x + 'px';
-  d.style.top = y + 'px';
-  document.body.appendChild(d);
-  d.addEventListener('animationend', () => d.remove());
+function meetResize(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const r = meetBox.getBoundingClientRect();
+  meetW = Math.max(1, r.width); meetH = Math.max(1, r.height);
+  meetCanvas.width = Math.round(meetW * dpr); meetCanvas.height = Math.round(meetH * dpr);
+  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  mctx.fillStyle = '#07080d'; mctx.fillRect(0, 0, meetW, meetH);
 }
 
-// 거울에서 나와 한 글자씩 차례대로 목표 지점까지 가서 터치, 닿을 때마다 물방울 이펙트
-async function visitTarget(targetEl){
-  if(sosoShouldStop() || !targetEl) return;
-  const r = targetEl.getBoundingClientRect();
-  if(!r || (r.width === 0 && r.height === 0)) return; // 안 보이는 탭이면 이동하지 않음
-  if(r.bottom < 0 || r.top > window.innerHeight) return; // 화면 밖이면 이동하지 않음
-  const dropX = r.left + r.width / 2;
-  const dropY = r.top + 6;
-  for(let i = 0; i < sosoLetters.length; i++){
-    if(sosoShouldStop()) return;
-    moveLetterTo(sosoLetters[i], r);
-    setTimeout(() => { if(!sosoShouldStop()) spawnPurpleDrop(dropX, dropY); }, 500);
-    await delay(260); // 다음 글자가 출발하기 전 텀 (한 글자씩 순서대로 이동)
+function meetDraw(t){
+  const W = meetW, H = meetH;
+  // 두 질량의 위치: 붉은 쪽이 푸른 고리로 다가갔다가 밀려남 (만남의 순간 반복)
+  const bx = W * 0.36 + Math.sin(t * 0.7) * W * 0.04, by = H * 0.5 + Math.sin(t * 1.1) * H * 0.08;
+  const meet = (Math.sin(t * 0.9) + 1) / 2;           // 0: 멀리 · 1: 맞닿음
+  const rx = W * (0.80 - 0.22 * meet), ry = H * 0.5 + Math.cos(t * 1.3) * H * 0.12;
+  const R = H * 0.33 * (1 + 0.08 * Math.sin(t * 2.2)); // 푸른 고리 반지름(숨쉬듯)
+
+  // 잔상을 남기며 지우기 → 움직임에 꼬리가 생겨 역동적으로 보임
+  mctx.fillStyle = 'rgba(7,8,13,0.38)'; mctx.fillRect(0, 0, W, H);
+
+  // 휘어진 공간선
+  const lines = 11, sx = W * 0.20, sy = H * 0.9;
+  for(let i = 0; i < lines; i++){
+    const y0 = (i + 0.5) / lines * H;
+    const g = mctx.createLinearGradient(0, 0, W, 0);
+    g.addColorStop(0, 'rgba(70,80,190,0.55)'); g.addColorStop(0.55, 'rgba(120,50,160,0.55)'); g.addColorStop(1, 'rgba(210,40,80,0.6)');
+    mctx.strokeStyle = g; mctx.lineWidth = 0.7;
+    mctx.beginPath();
+    for(let x = 0; x <= W; x += 3){
+      const fb = Math.exp(-((x - bx) ** 2) / (2 * sx * sx));
+      const fr = Math.exp(-((x - rx) ** 2) / (2 * (sx * 0.45) ** 2));
+      const db = y0 - by, dr = y0 - ry;
+      let y = y0 + fb * H * 0.32 * Math.sign(db) * Math.exp(-Math.abs(db) / sy)          // 밀어냄
+                 - fr * H * 0.45 * dr / (Math.abs(dr) + H * 0.12) * (0.6 + 0.4 * meet); // 끌어당김
+      x === 0 ? mctx.moveTo(x, y) : mctx.lineTo(x, y);
+    }
+    mctx.stroke();
   }
-  await delay(700); // 다 도착한 뒤 잠깐 머무름
-}
 
-// 한 글자씩 차례대로 거울 속으로 되돌아감
-async function returnToMirrorSequential(){
-  for(let i = 0; i < sosoLetters.length; i++){
-    sendHome(sosoLetters[i]);
-    await delay(120);
+  // 푸른 입자 고리
+  for(const p of ring){
+    const a = p.a + t * p.s;
+    const wob = 1 + 0.12 * Math.sin(a * 3 + t * 1.7) + 0.25 * meet * Math.max(0, Math.cos(a)); // 붉은 쪽으로 살짝 끌려감
+    const x = bx + Math.cos(a) * R * p.r * wob * 1.15, y = by + Math.sin(a) * R * p.r * wob;
+    mctx.fillStyle = p.c; mctx.beginPath(); mctx.arc(x, y, p.z, 0, Math.PI*2); mctx.fill();
   }
-  await delay(600);
-}
-
-// 인사 여정을 딱 한 번만 재생: 거울 → 오늘의 질문 → 입력창 → 다시 거울(정지)
-async function playSosoJourney(){
-  if(sosoBusy || reduceMotion) return; // 이미 재생 중이면 중복 실행 방지
-  sosoBusy = true;
-  try{
-    if(sosoShouldStop()){ restInMirror(); return; }
-    setSosoResting(false); // 움직이는 동안엔 통통 튐/은은한 색변화 재생
-    await visitTarget(document.querySelector('#tab-write .today-q'));
-    if(sosoShouldStop()){ restInMirror(); return; }
-    await visitTarget(document.getElementById('writeMsg'));
-    if(sosoShouldStop()){ restInMirror(); return; }
-    await returnToMirrorSequential();
-    restInMirror(); // 도착 후 완전히 멈춤
-  }finally{
-    sosoBusy = false;
+  // 붉은 불씨
+  for(const p of ember){
+    const a = p.a + t * p.s, rr = H * 0.16 * p.r * (1 + 0.3 * Math.sin(t * 3 + p.a));
+    mctx.fillStyle = p.c; mctx.beginPath(); mctx.arc(rx + Math.cos(a) * rr, ry + Math.sin(a) * rr * 1.4, p.z, 0, Math.PI*2); mctx.fill();
+  }
+  // 맞닿는 순간 가운데에 번지는 빛
+  if(meet > 0.75){
+    const k = (meet - 0.75) / 0.25, mx = (bx + R * 1.1 + rx) / 2;
+    const glow = mctx.createRadialGradient(mx, (by + ry) / 2, 0, mx, (by + ry) / 2, H * 0.5);
+    glow.addColorStop(0, `rgba(255,240,200,${0.35 * k})`); glow.addColorStop(1, 'rgba(255,240,200,0)');
+    mctx.fillStyle = glow; mctx.fillRect(0, 0, W, H);
   }
 }
 
-// 낙서를 쓰기 시작하면 즉시 거울 속으로 돌아가 멈추고, 다 지우면 다시 깨어날 수 있게
+function meetLoop(now){
+  if(meetFrozen){ meetRaf = 0; return; }
+  const dt = meetLast ? Math.min(0.05, (now - meetLast) / 1000) : 0;
+  meetLast = now; meetT += dt;
+  meetDraw(meetT);
+  meetRaf = requestAnimationFrame(meetLoop);
+}
+function meetStart(){
+  if(reduceMotion || meetFrozen || meetRaf || document.hidden) return;
+  meetLast = 0; meetRaf = requestAnimationFrame(meetLoop);
+}
+function meetStop(){ if(meetRaf){ cancelAnimationFrame(meetRaf); meetRaf = 0; } }
+function meetFreeze(on){
+  meetFrozen = on;
+  meetBox.classList.toggle('frozen', on);
+  on ? meetStop() : meetStart();
+}
+
+meetResize();
+// 처음 한 장면을 꽉 채워 그려 둠 (동작 줄이기 설정이면 이 정지 화면만 보임)
+for(let i = 0; i < 20; i++) meetDraw(meetT += 0.03);
+meetStart();
+window.addEventListener('resize', () => { meetResize(); meetDraw(meetT); });
+document.addEventListener('visibilitychange', () => document.hidden ? meetStop() : meetStart());
+
+// 낙서를 남긴 뒤 호출되던 인사 함수: 이제는 멈춰 있던 작품을 다시 깨움
+function playSosoJourney(){ meetFreeze(false); }
+
+// 낙서를 쓰는 순간 정지, 입력창을 비우고 나가면 다시 움직임
 const writeMsgEl = document.getElementById('writeMsg');
-writeMsgEl.addEventListener('focus', ()=>{ sosoPaused = true; restInMirror(); });
-writeMsgEl.addEventListener('input', ()=>{ sosoPaused = true; restInMirror(); });
-writeMsgEl.addEventListener('blur', ()=>{
-  if(!writeMsgEl.value.trim()) sosoPaused = false;
-});
+writeMsgEl.addEventListener('focus', () => meetFreeze(true));
+writeMsgEl.addEventListener('input', () => meetFreeze(true));
+writeMsgEl.addEventListener('blur', () => { if(!writeMsgEl.value.trim()) meetFreeze(false); });
 
 // ---------- 인기 낙서 TOP5 ("낙서를 보자" 탭 안, 목록 아래) ----------
 async function loadTopBoard(){
