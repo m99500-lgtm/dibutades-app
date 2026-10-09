@@ -522,13 +522,34 @@
     font-size:14px;
   }
   textarea{min-height:90px; resize:vertical;}
-  /* 낙서 입력칸: 점들이 무지개색으로 이어지는 테두리 */
+  /* 낙서 입력칸: 얇은 무지개 선 테두리 (둥근 모서리) */
   #writeMsg{
-    border:6px solid transparent;
-    border-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='68'%20height='68'%20viewBox='0%200%2068%2068'%3E%3Ccircle%20cx='10'%20cy='3'%20r='2'%20fill='%23ff4d4d'/%3E%3Ccircle%20cx='10'%20cy='65'%20r='2'%20fill='%23ff4d4d'/%3E%3Ccircle%20cx='3'%20cy='10'%20r='2'%20fill='%23ff4d4d'/%3E%3Ccircle%20cx='65'%20cy='10'%20r='2'%20fill='%23ff4d4d'/%3E%3Ccircle%20cx='18'%20cy='3'%20r='2'%20fill='%23ff9f1c'/%3E%3Ccircle%20cx='18'%20cy='65'%20r='2'%20fill='%23ff9f1c'/%3E%3Ccircle%20cx='3'%20cy='18'%20r='2'%20fill='%23ff9f1c'/%3E%3Ccircle%20cx='65'%20cy='18'%20r='2'%20fill='%23ff9f1c'/%3E%3Ccircle%20cx='26'%20cy='3'%20r='2'%20fill='%23ffd93d'/%3E%3Ccircle%20cx='26'%20cy='65'%20r='2'%20fill='%23ffd93d'/%3E%3Ccircle%20cx='3'%20cy='26'%20r='2'%20fill='%23ffd93d'/%3E%3Ccircle%20cx='65'%20cy='26'%20r='2'%20fill='%23ffd93d'/%3E%3Ccircle%20cx='34'%20cy='3'%20r='2'%20fill='%234dd679'/%3E%3Ccircle%20cx='34'%20cy='65'%20r='2'%20fill='%234dd679'/%3E%3Ccircle%20cx='3'%20cy='34'%20r='2'%20fill='%234dd679'/%3E%3Ccircle%20cx='65'%20cy='34'%20r='2'%20fill='%234dd679'/%3E%3Ccircle%20cx='42'%20cy='3'%20r='2'%20fill='%233ea6ff'/%3E%3Ccircle%20cx='42'%20cy='65'%20r='2'%20fill='%233ea6ff'/%3E%3Ccircle%20cx='3'%20cy='42'%20r='2'%20fill='%233ea6ff'/%3E%3Ccircle%20cx='65'%20cy='42'%20r='2'%20fill='%233ea6ff'/%3E%3Ccircle%20cx='50'%20cy='3'%20r='2'%20fill='%235b6cff'/%3E%3Ccircle%20cx='50'%20cy='65'%20r='2'%20fill='%235b6cff'/%3E%3Ccircle%20cx='3'%20cy='50'%20r='2'%20fill='%235b6cff'/%3E%3Ccircle%20cx='65'%20cy='50'%20r='2'%20fill='%235b6cff'/%3E%3Ccircle%20cx='58'%20cy='3'%20r='2'%20fill='%23b967ff'/%3E%3Ccircle%20cx='58'%20cy='65'%20r='2'%20fill='%23b967ff'/%3E%3Ccircle%20cx='3'%20cy='58'%20r='2'%20fill='%23b967ff'/%3E%3Ccircle%20cx='65'%20cy='58'%20r='2'%20fill='%23b967ff'/%3E%3Ccircle%20cx='3'%20cy='3'%20r='2'%20fill='%23b967ff'/%3E%3Ccircle%20cx='65'%20cy='3'%20r='2'%20fill='%23ff4d4d'/%3E%3Ccircle%20cx='3'%20cy='65'%20r='2'%20fill='%23ff4d4d'/%3E%3Ccircle%20cx='65'%20cy='65'%20r='2'%20fill='%23b967ff'/%3E%3C/svg%3E") 6 round;
-    border-radius:4px;
+    border:2px solid transparent;
+    border-radius:12px;
+    background:
+      linear-gradient(var(--wall), var(--wall)) padding-box,
+      linear-gradient(90deg, #ff4d4d, #ff9f1c, #ffd93d, #4dd679, #3ea6ff, #5b6cff, #b967ff) border-box;
     margin-top:8px;
   }
+  /* 낙서 남기기 버튼: 로그인 버튼보다 조금 큰 크기, 한 줄, 입체감 */
+  #submitGraffiti{
+    width:auto;
+    display:inline-block;
+    padding:8px 20px;
+    font-size:13px;
+    margin-top:14px;
+    border-bottom:3px solid #b8890f;
+    border-radius:10px;
+    box-shadow:0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+    transition:transform .08s, box-shadow .08s, border-bottom-width .08s;
+  }
+  #submitGraffiti .en{ display:inline; font-size:11px; margin-left:4px; margin-top:0; }
+  #submitGraffiti:active{
+    transform:translateY(2px);
+    border-bottom-width:1px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+
 
   .btn{
     display:inline-block;
