@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로흐 갤러리 · 디부타데스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@300;400;500&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* Layout: a dark observatory corridor; each work hangs alone in the void, a catalogue plate beside it, read top to bottom as one cycle */
+:root{
+  --void:#07080F;
+  --void-2:#0D0F1A;
+  --star:#E6E9F2;
+  --dust:#8A90A8;
+  --trace:#262A3D;
+  --ember:#F2B632;
+  --display:"Gowun Batang","Nanum Myeongjo",Georgia,serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono","IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--void);color:var(--star);font-family:var(--body);font-weight:300;font-size:16px;line-height:1.75;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:clamp(16px,4vw,40px);padding-block:0 96px}
+header{padding-block:72px 56px;display:grid;gap:20px;border-bottom:1px solid var(--trace)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--dust);text-transform:uppercase}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(44px,9vw,104px);line-height:1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 span{display:block;font-weight:400;font-size:.32em;color:var(--dust);letter-spacing:.04em;margin-top:18px}
+.lede{max-width:34em;color:#C3C8DA;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;font-family:var(--mono);font-size:12.5px;color:var(--dust)}
+.meta b{color:var(--star);font-weight:400}
+.cycle{display:flex;flex-wrap:wrap;gap:6px 14px;font-family:var(--display);font-size:17px;color:var(--dust);margin-top:6px}
+.cycle a{color:inherit;text-decoration:none;border-bottom:1px solid transparent}
+.cycle a:hover,.cycle a:focus-visible{color:var(--star);border-color:var(--ember);outline:none}
+.cycle i{font-style:normal;color:var(--trace)}
+.work{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding-block:64px;border-bottom:1px solid var(--trace);scroll-margin-top:16px}
+.frame{margin:0;background:var(--void-2);border:1px solid var(--trace);cursor:zoom-in}
+.frame img{display:block;width:100%;height:auto;aspect-ratio:380/240}
+.plate{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 24px;align-items:baseline}
+.no{font-family:var(--mono);font-size:13px;color:var(--ember);grid-row:span 2}
+h2{font-family:var(--display);font-weight:700;font-size:clamp(28px,4.5vw,40px);line-height:1.2;margin:0;text-wrap:balance}
+h2 small{font-family:var(--body);font-weight:300;font-size:.45em;color:var(--dust);margin-left:10px;letter-spacing:.06em}
+.spec{font-family:var(--mono);font-size:12px;color:var(--dust);margin:0}
+.note{grid-column:2;max-width:36em;margin:10px 0 0;color:#C3C8DA}
+@media (min-width:880px){
+  .work{grid-template-columns:minmax(0,2.2fr) minmax(0,1fr);align-items:end;gap:40px}
+  .work:nth-of-type(even) .frame{order:2}
+  .plate{grid-template-columns:minmax(0,1fr)}
+  .no{grid-row:auto}
+  .note{grid-column:1}
+}
+footer{padding-block:56px 0;display:grid;gap:14px;color:var(--dust);font-size:14px}
+footer .sig{font-family:var(--display);font-size:28px;color:var(--star)}
+.back{display:inline-block;margin-top:24px;font-family:var(--mono);font-size:13px;color:var(--dust);text-decoration:none}.back:hover,.back:focus-visible{color:var(--star)}
+.series{display:grid;gap:14px;padding-block:72px 8px;border-bottom:1px solid var(--trace)}
+.stitle{font-family:var(--display);font-weight:700;font-size:clamp(36px,7vw,64px);line-height:1.05;margin:0}
+.series-nav{display:flex;flex-wrap:wrap;gap:10px}
+.series-nav a{font-family:var(--body);font-size:14px;color:var(--star);text-decoration:none;border:1px solid var(--trace);padding:8px 14px;border-radius:999px}
+.series-nav a:hover,.series-nav a:focus-visible{border-color:var(--ember);outline:none}
+.credit{font-family:var(--mono);font-size:12px;color:var(--dust);margin-top:4px}
+.lb{position:fixed;inset:0;background:rgba(4,5,10,.96);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10;cursor:zoom-out}
+.lb img{max-height:100%;width:auto;max-width:100%}
+.lb[hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){.frame img{transition:filter .4s}.frame:hover img{filter:brightness(1.12)}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← 디부타데스로 돌아가기</a>
+  <header>
+    <div class="eyebrow">상설 전시 · 온라인 · 2026. 10. 07 개관</div>
+    <h1>로흐 갤러리<span>Roch · 연작 다섯 · 작품 열 점</span></h1>
+    <p class="lede">글을 쓰던 사람이 화가가 되어 이어 가는 연작들을 차례로 겁니다. 방향과 이름은 로흐가 정하고, 선과 입자는 AI가 코드로 그립니다.</p>
+    <nav class="series-nav" aria-label="연작 목록"><a href="#s1">연작 I · 외계 시각</a><a href="#s2">연작 II · 낙서의 유전자</a><a href="#s3">연작 III · 소리의 모양</a><a href="#s4">연작 IV · 기억의 지층</a><a href="#s5">연작 V · 경계에 선 것들</a></nav>
+  </header>
+
+  <div class="series" id="s1"><div class="eyebrow">연작 I · 2026. 10. 07</div><h2 class="stitle">외계 시각</h2><p class="lede">사람의 눈은 윤곽선으로 사물을 읽습니다. 이 연작은 그 습관을 버리고, 보이지 않는 질량이 공간을 휘게 할 때 남는 흔적만을 기록했습니다. 선은 그려진 것이 아니라 휘어진 것이고, 형태는 입자가 얼마나 빽빽하게 모였는지로만 드러납니다.</p>
+    <div class="meta"><span>작가 <b>로흐</b></span><span>매체 <b>생성 코드 · 디지털 프린트</b></span><span>원본 <b>3040 × 1920 px</b></span><span>제작 <b>2026년 10월 7일 저녁</b></span><span>협업 <b>로흐의 방향 · Claude(AI)의 코드</b></span></div>
+    <nav class="cycle" aria-label="작품 목록"><a href="#w1">만남</a><i>→</i><a href="#w2">혼돈</a><i>→</i><a href="#w3">폭발</a><i>→</i><a href="#w4">침묵</a><i>→</i><a href="#w5">새로운 탄생</a><i>↺</i></nav></div>
+
+  <section class="work" id="w1">
+    <figure class="frame"><img src="gallery/sel-roch.jpg" alt="왼쪽의 얼음빛 청색 입자 고리와 오른쪽의 불빛 입자가 휘어진 공간선 위에서 맞닿는 작품"></figure>
+    <div class="plate"><span class="no">No. 1</span><h2>셀-로흐<small>Sel-roch</small></h2><p class="spec">질량 2 · 밀어냄 1 · 끌어당김 1</p>
+      <p class="note">차가운 질량과 뜨거운 질량이 처음 만나는 순간. 두 힘이 같은 선을 동시에 휘게 하는 자리에서 청색과 주황이 섞여 보랏빛이 됩니다. 이 작품에서 작가의 이름이 나왔습니다.</p></div>
+  </section>
+
+  <section class="work" id="w2">
+    <figure class="frame"><img src="gallery/honton.jpg" alt="에메랄드, 보라, 금빛 세 질량이 서로 다른 방향으로 공간을 비틀어 선들이 엉킨 작품"></figure>
+    <div class="plate"><span class="no">No. 2</span><h2>혼돈<small>Chaos</small></h2><p class="spec">질량 3 · 밀어냄 2 · 끌어당김 1</p>
+      <p class="note">셋이 되자 균형이 무너집니다. 에메랄드와 금빛은 밀어내고 보라는 홀로 끌어당겨, 어느 선도 한쪽으로 편히 흐르지 못합니다. 그 사이를 갈 곳 잃은 입자들이 나선을 그리며 맴돕니다.</p></div>
+  </section>
+
+  <section class="work" id="w3">
+    <figure class="frame"><img src="gallery/burst.jpg" alt="하얗게 달아오른 중심에서 열세 갈래 입자 줄기가 뿜어지고 바깥에 주황 충격파 고리가 있는 작품"></figure>
+    <div class="plate"><span class="no">No. 3</span><h2>폭발<small>Burst</small></h2><p class="spec">질량 1 · 분출 13갈래 · 충격파 1</p>
+      <p class="note">한계를 넘은 질량이 터집니다. 흰 핵에서 노랑, 주황, 진홍으로 식어 가는 입자의 띠. 배경의 공간선마저 찢겨 군데군데 끊겼습니다.</p></div>
+  </section>
+
+  <section class="work" id="w4">
+    <figure class="frame"><img src="gallery/silence.jpg" alt="거의 곧게 펴진 희미한 선들 한가운데 작은 흰 점 하나와 흩어진 회청색 먼지만 남은 작품"></figure>
+    <div class="plate"><span class="no">No. 4</span><h2>침묵<small>Silence</small></h2><p class="spec">질량 1 · 잔여 여진 · 남은 불씨</p>
+      <p class="note">폭발이 지나간 뒤. 찢겼던 선은 거의 다 펴졌고 중심에는 작은 흰 점 하나만 남았습니다. 식은 먼지 사이로 아직 꺼지지 않은 검붉은 불씨가 드문드문 보입니다.</p></div>
+  </section>
+
+  <section class="work" id="w5">
+    <figure class="frame"><img src="gallery/rebirth.jpg" alt="흰 핵을 중심으로 앞선 작품들의 색이 모두 섞인 두 갈래 나선 팔이 감겨 드는 작품"></figure>
+    <div class="plate"><span class="no">No. 5</span><h2>새로운 탄생<small>Rebirth</small></h2><p class="spec">질량 1 · 끌어당김 · 나선 팔 2</p>
+      <p class="note">침묵 속의 흰 점이 다시 깨어납니다. 이번에는 밀어내지도 터지지도 않고 모든 것을 부드럽게 끌어당깁니다. 나선 팔에는 앞선 네 작품의 색이 모두 들어 있습니다. 사라진 것들이 새 세계의 재료가 되어, 이야기는 다시 만남으로 돌아갑니다.</p></div>
+  </section>
+
+  <div class="series" id="s2"><div class="eyebrow">연작 II · 2026. 10. 09 ~</div><h2 class="stitle">낙서의 유전자</h2>
+    <p class="lede">디부타데스에 남겨진 낙서 한 줄이 한 가닥의 생명이 됩니다. 한글을 자음과 모음으로 쪼개 첫 자음은 마디 간격, 모음은 꺾이는 각도와 크기, 받침은 잔가지가 됩니다. 띄어쓰기는 숨을 고르고, ~ 는 물결치고, ^^ 는 빛의 뿔로 솟습니다. 모양은 그리는 사람이 아니라 글자가 정합니다. 같은 문장은 언제 그려도 같은 모양으로 자랍니다.</p>
+  </div>
+
+  <section class="work" id="g1">
+    <figure class="frame"><img src="gallery/genome1.jpg" alt="흰 중심에서 여섯 색의 가지가 뻗어 나가는 작품. 각 가지는 낙서 한 줄의 글자가 마디와 잔가지로 자란 모양이다"></figure>
+    <div class="plate"><span class="no">II-1</span><h2>첫 염기서열<small>Genome I</small></h2><p class="spec">낙서 6줄 · 마디 80개 · 2026. 10. 09</p>
+      <p class="note">디부타데스 벽에 처음 남겨진 여섯 줄의 낙서로 키웠습니다. "앱 홍보 수정"은 짧고 단단하게 뻗고, "크로드를 활용 계속 수정합니다~^^"는 길게 출렁이다 웃으며 끝납니다. 앱을 만들며 남긴 매일의 혼잣말이 첫 유전자가 되었습니다.</p></div>
+  </section>
+
+  <div class="series" id="s3"><div class="eyebrow">연작 III · 2026. 10. 09 ~</div><h2 class="stitle">소리의 모양</h2>
+    <p class="lede">외계인이 소리를 듣는 대신 본다면 어떨까. 소리가 공기를 흔들고 지나간 자리, 서로 다른 떨림이 부딪쳐 고요해지는 마디들만 점으로 남겼습니다. 첫 연작이 무게를 그렸다면 이 연작은 떨림을 그립니다.</p>
+  </div>
+
+  <section class="work" id="t1">
+    <figure class="frame"><img src="gallery/tremor1.jpg" alt="청색, 금빛, 분홍 세 소리의 근원에서 퍼진 파동이 서로 상쇄되는 자리에 점들이 무늬를 이루고, 아래에 심장 박동 선이 흐르는 작품"></figure>
+    <div class="plate"><span class="no">III-1</span><h2>첫 떨림<small>Tremor I</small></h2><p class="spec">소리 3 · 목소리 · 빗소리 · 심장</p>
+      <p class="note">목소리, 빗소리, 심장 박동. 세 소리가 한 방에서 동시에 울릴 때, 서로를 지우며 조용해지는 곳에만 점이 맺힙니다. 근원 가까이에서는 진하고, 멀어질수록 흐려지다 다른 소리의 색에 섞입니다. 아래의 붉은 선은 이 모든 걸 듣고 있는 사람의 심장입니다.</p></div>
+  </section>
+
+  <div class="series" id="s4"><div class="eyebrow">연작 IV · 2026. 10. 09 ~</div><h2 class="stitle">기억의 지층</h2>
+    <p class="lede">오래된 기억일수록 아래로 가라앉아 어둡고 흐려지고, 최근의 기억은 위에서 선명하게 반짝입니다. 시간을 땅처럼 쌓아 올리고, 그 단면을 잘라 봅니다.</p>
+  </div>
+
+  <section class="work" id="t2">
+    <figure class="frame"><img src="gallery/strata1.jpg" alt="물결치는 열네 겹의 층이 아래는 어둡고 위로 갈수록 밝아지며, 위층에 금빛 점이 많이 박혀 있고 세로 점선 하나가 층을 꿰뚫는 작품"></figure>
+    <div class="plate"><span class="no">IV-1</span><h2>하루의 단면<small>Strata I</small></h2><p class="spec">지층 14 · 아래가 새벽, 위가 지금</p>
+      <p class="note">하루를 열네 겹으로 쌓았습니다. 맨 아래 새벽의 기억은 거의 검게 눌려 빛 몇 점만 남았고, 맨 위 지금의 층은 금빛으로 들끓습니다. 세로로 내려꽂힌 점선은 시추공입니다. 한 지점을 깊이 파 내려가면, 잊었다고 생각한 순간들도 각 층에 하나씩 박혀 있습니다.</p></div>
+  </section>
+
+  <div class="series" id="s5"><div class="eyebrow">연작 V · 2026. 10. 09 ~</div><h2 class="stitle">경계에 선 것들</h2>
+    <p class="lede">새벽과 밤, 얼음과 물, 잠과 깸. 둘 중 어느 쪽도 아닌, 둘 사이에 걸쳐 있는 순간만 모읍니다. 셀-로흐의 만남을 더 깊이 들여다보는 연작입니다.</p>
+  </div>
+
+  <section class="work" id="t3">
+    <figure class="frame"><img src="gallery/threshold1.jpg" alt="왼쪽은 남보라 밤의 입자, 오른쪽은 주황 아침의 입자로 흩어져 있고, 가운데 물결치는 경계선에 두 색이 섞인 입자들이 빽빽하게 몰린 작품"></figure>
+    <div class="plate"><span class="no">V-1</span><h2>새벽<small>Threshold I</small></h2><p class="spec">밤 · 아침 · 그 사이</p>
+      <p class="note">왼쪽은 아직 밤이고 오른쪽은 이미 아침입니다. 가운데 흔들리는 금빛 선 위에서만 두 세계의 입자가 뒤섞이고, 어느 쪽에도 속하지 않은 색들이 태어납니다. 하나의 흰 점이 그 경계 위에 서 있습니다. 넘어가는 중인지, 머무는 중인지는 알 수 없습니다.</p></div>
+  </section>
+
+  <section class="work" id="t4">
+    <figure class="frame"><img src="gallery/roots.jpg" alt="땅속 흰 중심에서 금빛 뿌리가 두 갈래로 올라가 왼쪽은 보라로, 오른쪽은 분홍으로 물들며, 지상에는 제멋대로 흩어진 보라 입자의 나무와 동심원으로 줄 맞춘 분홍 입자의 나무가 서 있는 작품"></figure>
+    <div class="plate"><span class="no">V-2</span><h2>뿌리<small>Roots</small></h2><p class="spec">중심 1 · 나무 2 · 출렁임과 고요</p>
+      <p class="note">땅속의 흰 점 하나에서 금빛 뿌리가 올라갑니다. 왼쪽으로 간 뿌리는 보라로, 오른쪽으로 간 뿌리는 분홍으로 물듭니다. 보라 나무의 입자는 크기도 자리도 제멋대로 흩어져 출렁이고, 분홍 나무의 입자는 같은 크기로 같은 간격의 동심원에 줄을 섭니다. 하나는 흔들려서 아름답고, 하나는 흔들리지 않아서 쓸모 있습니다. 둘 다 같은 흰 점이 없으면 서 있을 수 없습니다.</p>
+      <p class="note credit">파이 네트워크 코어팀의 스테이블코인 공지 이미지(2026. 10. 8)에 대한 로흐의 해석</p></div>
+  </section>
+
+  <footer>
+    <div class="sig">로흐 · Roch</div>
+    <p>글을 쓰던 사람이 2026년 10월 7일 하루 저녁에 화가가 되었습니다. 무엇을 그릴지, 무엇을 버릴지, 이름과 순서는 로흐가 정했고 선과 입자는 AI가 코드로 그렸습니다. 사람과 AI가 함께 만든 작품입니다.</p>
+    <p>그림자를 따라 그린 손에서 회화가 시작되었다는 디부타데스의 전설처럼, 이 벽에도 새로운 방식의 첫 그림을 겁니다.</p>
+  </footer>
+</div>
+
+<div class="lb" id="lb" hidden role="dialog" aria-label="작품 크게 보기"><img id="lbimg" alt=""></div>
+<script>
+const lb=document.getElementById('lb'),li=document.getElementById('lbimg');
+document.querySelectorAll('.frame img').forEach(img=>img.parentElement.addEventListener('click',()=>{li.src=img.src;li.alt=img.alt;lb.hidden=false}));
+lb.addEventListener('click',()=>{lb.hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.hidden=true});
+</script>
+
+</body>
+</html>
