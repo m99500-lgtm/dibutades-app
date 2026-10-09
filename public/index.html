@@ -798,6 +798,58 @@
     .rank-item .metric{ font-size:7.5px; }
     .pi-price .amount{ font-size:13px; }
   }
+  /* ---------- [폰 화면 개선] 600px 이하: 3단 → 위아래 한 줄 배치 ---------- */
+  /* 1) 시계·시세는 맨 위 가로 띠, 실시간 낙서는 그 아래 가로로 넘기는 카드 띠, 그다음 메인 앱 */
+  @media (max-width:600px){
+    .layout{ flex-direction:column; }
+    #rightpanel{
+      order:0; width:auto; flex:0 0 auto;
+      flex-direction:row; align-items:center; justify-content:center; gap:18px;
+      border-left:none; border-bottom:1px solid var(--line);
+      padding:8px 12px;
+    }
+    #rightpanel .rp-block .rp-title{ margin-bottom:2px; }
+    .top-clock{ border-bottom:none; padding-bottom:0; }
+    .top-clock .tc-date{ font-size:10px; }
+    .top-clock .tc-time{ font-size:15px; }
+    .pi-price .amount{ font-size:15px; }
+    .pi-price .updated{ display:none; }
+
+    #livefeed{
+      order:1; width:auto; flex:0 0 auto;
+      flex-direction:row; align-items:stretch; gap:8px;
+      overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      border-right:none; border-bottom:1px solid var(--line);
+      padding:8px 12px;
+    }
+    #livefeed::-webkit-scrollbar{ display:none; }
+    #livefeed .lf-title{ display:none; }
+    .lf-count{ flex:0 0 64px; display:flex; flex-direction:column; justify-content:center; margin-bottom:0; }
+    #lfList{ display:flex; gap:8px; }
+    .lf-item{
+      flex:0 0 150px; border-top:none;
+      border:1px dashed var(--line); border-radius:10px;
+      padding:6px 8px; background:rgba(0,0,0,0.15);
+    }
+    .lf-item .who{ font-size:11px; }
+    .lf-item .msg{ font-size:12px; -webkit-line-clamp:2; word-break:keep-all; overflow-wrap:anywhere; }
+    .lf-item .ago{ font-size:10px; }
+    .lf-empty{ font-size:12px; align-self:center; padding-top:0; }
+
+    .app{ order:2; }
+
+    /* 2) 탭 버튼: 2×2 배치, 한글·영문을 한 줄로 → 글자가 테두리에 닿지 않게 */
+    nav{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    nav button{
+      flex-direction:row; gap:6px; min-height:42px; padding:6px 8px;
+      overflow:hidden; text-overflow:ellipsis;
+    }
+    nav button .en{ margin:0; }
+  }
+
+  /* 3) 런치패드·스테이킹: 데이터가 들어오기 전까지 블록 전체를 숨김 */
+  .rp-rank{ display:none; }
+  .rp-rank.has-data{ display:block; }
 </style>
 </head>
 <body>
@@ -943,13 +995,13 @@
       <div class="updated" id="piUpdated"></div>
     </div>
 
-    <div class="rp-block">
+    <div class="rp-block rp-rank">
       <div class="rp-title">런치패드 TOP5<span class="en">Launchpad Top 5</span></div>
       <div id="launchpadList"></div>
       <div class="rp-empty" id="launchpadEmpty" style="display:none;">데이터 준비 중<span class="en">Data coming soon</span></div>
     </div>
 
-    <div class="rp-block">
+    <div class="rp-block rp-rank">
       <div class="rp-title">스테이킹 TOP5<span class="en">Staking Top 5</span></div>
       <div id="stakingList"></div>
       <div class="rp-empty" id="stakingEmpty" style="display:none;">데이터 준비 중<span class="en">Data coming soon</span></div>
@@ -1208,9 +1260,12 @@ async function loadRankList(url, listId, emptyId){
     const items = await res.json();
     const listEl = document.getElementById(listId);
     const emptyEl = document.getElementById(emptyId);
+    const blockEl = listEl.closest('.rp-block');
     listEl.innerHTML = '';
-    if(!items.length){ emptyEl.style.display = 'block'; return; }
     emptyEl.style.display = 'none';
+    // 데이터가 없으면 '데이터 준비 중' 대신 블록 자체를 숨김
+    if(!Array.isArray(items) || !items.length){ blockEl.classList.remove('has-data'); return; }
+    blockEl.classList.add('has-data');
     items.forEach((item, i)=>{
       const div = document.createElement('div');
       div.className = 'rank-item';
