@@ -110,6 +110,12 @@
   .lf-count .num{ font-size:20px; font-weight:900; color:var(--spray-y); font-variant-numeric:tabular-nums; }
   .lf-count .lbl{ font-size:8.5px; color:var(--chalk-dim); line-height:1.3; }
   .lf-count .lbl .en{ display:block; font-size:7.5px; opacity:0.75; }
+  /* 오늘 방문 통계: 방문 / 낙서함 / 구경만 */
+  .lf-visits{ margin-top:8px; padding-top:6px; border-top:1px dashed var(--line); }
+  .lf-visits .vrow{ display:flex; justify-content:space-between; align-items:baseline; gap:4px; font-size:9px; color:var(--chalk-dim); line-height:1.6; }
+  .lf-visits .vrow b{ color:var(--spray-y); font-size:11px; font-variant-numeric:tabular-nums; }
+  .lf-visits .vnote{ font-size:7.5px; color:var(--chalk-dim); opacity:0.75; text-align:center; margin-top:2px; line-height:1.3; }
+  .lf-visits .vnote .en{ display:block; }
   .lf-item{
     border-top:1px dashed var(--line);
     padding:7px 0 2px;
@@ -797,7 +803,12 @@
     }
     #livefeed::-webkit-scrollbar{ display:none; }
     #livefeed .lf-title{ display:none; }
-    .lf-count{ flex:0 0 64px; display:flex; flex-direction:column; justify-content:center; margin-bottom:0; }
+    .lf-count{ flex:0 0 auto; display:flex; flex-direction:column; justify-content:center; margin-bottom:0; }
+    .lf-count:has(.lf-visits:not([hidden])){ flex-direction:row; align-items:center; gap:10px; }
+    .lf-visits{ margin-top:0; padding:0 0 0 10px; border-top:none; border-left:1px dashed var(--line); min-width:78px; }
+    .lf-visits .vrow{ font-size:10.5px; }
+    .lf-visits .vrow b{ font-size:12.5px; }
+    .lf-visits .vnote{ display:none; }
     #lfList{ display:flex; gap:8px; }
     .lf-item{
       flex:0 0 150px; border-top:none;
@@ -832,7 +843,13 @@
   <!-- 왼쪽: 실시간 낙서 피드 / Live graffiti feed -->
   <aside id="livefeed">
     <div class="lf-title">실시간 낙서<span class="en">Live Graffiti</span></div>
-    <div class="lf-count"><div class="num" id="lfNum">-</div><div class="lbl">오늘의 낙서<span class="en">Today's scribbles</span></div></div>
+    <div class="lf-count"><div class="num" id="lfNum">-</div><div class="lbl">오늘의 낙서<span class="en">Today's scribbles</span></div>
+      <div class="lf-visits" id="lfVisits" hidden>
+        <div class="vrow"><span>방문</span><b id="vVisitors">-</b></div>
+        <div class="vrow"><span>낙서함</span><b id="vWriters">-</b></div>
+        <div class="vrow"><span>구경만</span><b id="vLookers">-</b></div>
+        <div class="vnote">오늘 · 명<span class="en">Visitors · Wrote · Just looked</span></div>
+      </div></div>
     <div id="lfList"></div>
     <div class="lf-empty" id="lfEmpty" style="display:none;">첫 낙서를 남겨보세요<span class="en" style="display:block;">Be the first</span></div>
   </aside>
@@ -1010,6 +1027,40 @@ function agoText(ts){
   if(h < 24) return h + '시간 전';
   return Math.floor(h/24) + '일 전';
 }
+// ---------- 오늘 방문 통계 (방문 / 낙서함 / 구경만) ----------
+// 방문자 구분용 무작위 번호: 이 브라우저에만 저장되고, 이름·계정과 연결되지 않음
+const visitorId = (() => {
+  try{
+    let id = localStorage.getItem('dbtVid');
+    if(!id || !/^[a-z0-9]{8,32}$/.test(id)){
+      id = (Date.now().toString(36) + Math.random().toString(36).slice(2, 12)).slice(0, 20);
+      localStorage.setItem('dbtVid', id);
+    }
+    return id;
+  }catch(e){ return undefined; } // 저장소를 못 쓰면 서버가 대신 구분
+})();
+function showVisitStats(s){
+  if(!s || typeof s.visitors !== 'number') return;
+  document.getElementById('vVisitors').textContent = s.visitors;
+  document.getElementById('vWriters').textContent = s.writers;
+  document.getElementById('vLookers').textContent = s.lookers;
+  document.getElementById('lfVisits').hidden = false;
+}
+async function sendVisit(){
+  try{
+    const res = await fetch(API_BASE + '/api/visit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ visitorId }) });
+    if(res.ok) showVisitStats(await res.json());
+  }catch(e){ /* 조용히 무시 */ }
+}
+async function loadVisitStats(){
+  try{
+    const res = await fetch(API_BASE + '/api/visit/today?_=' + Date.now());
+    if(res.ok) showVisitStats(await res.json());
+  }catch(e){ /* 조용히 무시 */ }
+}
+sendVisit();
+setInterval(loadVisitStats, 60000);
+
 async function loadLiveFeed(){
   try{
     const res = await fetch(API_BASE + '/api/wall?_=' + Date.now());
@@ -1666,7 +1717,8 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         accessToken: currentUser.accessToken,
-        message: msg
+        message: msg,
+        visitorId
       })
     });
     const data = await res.json().catch(()=>({}));
@@ -1678,6 +1730,7 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
       return;
     }
     document.getElementById('writeMsg').value = '';
+    loadVisitStats(); // 방금 낙서한 것을 통계에 반영
     document.getElementById('selfCertCheck').checked = false;
     const streakLine = data.streak
       ? `<div class="streak-badge">🔥 ${data.streak}일 연속 작성 중이에요<span class="en">${data.streak}-day streak!</span></div>`
