@@ -256,9 +256,73 @@ function updateStreak(data, username, now){
   return { count, ticketEarned };
 }
 
+// ---------- 방문 통계: 오늘 방문한 사람 / 낙서한 사람 / 구경만 한 사람 ----------
+// 낙서·결제 데이터(dibutades-data.json)와 섞이지 않도록 별도 파일에 저장합니다.
+// (방문 기록 저장이 낙서·결제 저장과 동시에 일어나도 서로 덮어쓰지 않게 하기 위함)
+// 방문자 구분: 브라우저가 만든 무작위 번호(visitorId), 없으면 IP를 해시한 값 일부. 원래 IP는 저장하지 않음.
+const VISITS_BLOB_NAME = 'dibutades-visits.json';
+const VISIT_KEEP_DAYS = 14;
+async function loadVisits(){
+  try{
+    const response = await get(VISITS_BLOB_NAME, { access: 'private' });
+    const v = JSON.parse(await new Response(response.stream).text());
+    v.days = v.days || {};
+    return v;
+  }catch(e){
+    if(!(e && (e.name === 'BlobNotFoundError' || /not.*found/i.test(e.message || '')))) console.error('loadVisits error:', e);
+    return { days: {} };
+  }
+}
+async function saveVisits(v){
+  const keep = Object.keys(v.days).sort().slice(-VISIT_KEEP_DAYS); // 최근 14일만 보관
+  const days = {}; keep.forEach(d => { days[d] = v.days[d]; });
+  await put(VISITS_BLOB_NAME, JSON.stringify({ days }), {
+    access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true
+  });
+}
+function visitorKey(req, visitorId){
+  if(typeof visitorId === 'string' && /^[a-z0-9]{8,32}$/.test(visitorId)) return 'c:' + visitorId;
+  return viewerKey(req, null); // 브라우저 저장소를 못 쓰는 경우: IP 해시 일부
+}
+function visitStats(day){
+  const v = day ? Object.keys(day.v || {}) : [];
+  const w = day ? day.w || {} : {};
+  const writers = Object.keys(w).length;
+  return { visitors: v.length, writers, lookers: v.filter(k => !w[k]).length };
+}
+// kind: 'v' = 방문, 'w' = 낙서 작성 (작성자는 방문자로도 함께 기록)
+async function recordVisit(key, kind){
+  const v = await loadVisits();
+  const today = kstDateString(Date.now());
+  const day = v.days[today] = v.days[today] || { v: {}, w: {} };
+  const changed = !day.v[key] || (kind === 'w' && !day.w[key]);
+  day.v[key] = 1;
+  if(kind === 'w') day.w[key] = 1;
+  if(changed) await saveVisits(v); // 이미 오늘 기록된 사람이면 저장하지 않음
+  return { date: today, ...visitStats(day) };
+}
+app.post('/api/visit', async (req, res) => {
+  try{
+    res.json(await recordVisit(visitorKey(req, (req.body || {}).visitorId), 'v'));
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+app.get('/api/visit/today', async (req, res) => {
+  try{
+    const v = await loadVisits();
+    const today = kstDateString(Date.now());
+    res.json({ date: today, ...visitStats(v.days[today]) });
+  }catch(e){
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---------- 낙서 (일반, 결제 없음) ----------
 app.post('/api/graffiti', async (req, res) => {
-  const { accessToken, message } = req.body || {};
+  const { accessToken, message, visitorId } = req.body || {};
   if(!message || typeof message !== 'string' || !message.trim()){
     return res.status(400).json({ error: 'message is required' });
   }
@@ -298,6 +362,8 @@ app.post('/api/graffiti', async (req, res) => {
       createdAt: now
     });
     await saveData(data);
+    // 방문 통계에 '낙서한 사람'으로 표시 (실패해도 낙서 등록에는 영향 없음)
+    try{ await recordVisit(visitorKey(req, visitorId), 'w'); }catch(e){ console.error('recordVisit error:', e); }
     res.json({ ok: true, streak, ticketEarned });
   }catch(e){
     console.error(e);
