@@ -692,6 +692,8 @@ app.post('/api/payments/complete-existing', async (req, res) => {
   }
 });
 
+   require('./cosmos')(app, { put, get, verifyUser, kstDateString, LOGIN_EXPIRED });
+
 app.listen(PORT, () => {
   console.log(`디부타데스 서버 실행 중: http://localhost:${PORT}`);
   if(!PI_API_KEY){
