@@ -63,6 +63,13 @@ footer .sig{font-family:var(--display);font-size:28px;color:var(--star)}
 .series-nav{display:flex;flex-wrap:wrap;gap:10px}
 .series-nav a{font-family:var(--body);font-size:14px;color:var(--star);text-decoration:none;border:1px solid var(--trace);padding:8px 14px;border-radius:999px}
 .series-nav a:hover,.series-nav a:focus-visible{border-color:var(--ember);outline:none}
+.live{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--star);border:1px solid rgba(242,182,50,.55);border-radius:14px;padding:14px 16px;background:rgba(242,182,50,.05);box-shadow:0 0 28px rgba(242,182,50,.08)}
+.live span{display:grid;gap:4px;min-width:0}
+.live b{font-family:var(--display);font-size:19px;font-weight:700}
+.live small{font-size:13.5px;color:var(--dust);line-height:1.6}
+.live i{font-style:normal;color:var(--ember);margin-left:auto}
+.live .dot{width:10px;height:10px;flex:none;border-radius:50%;background:var(--ember);box-shadow:0 0 12px var(--ember)}
+@media (prefers-reduced-motion:no-preference){.live .dot{animation:pulse 2.4s ease-in-out infinite}@keyframes pulse{50%{opacity:.35}}}
 .credit{font-family:var(--mono);font-size:12px;color:var(--dust);margin-top:4px}
 .lb{position:fixed;inset:0;background:rgba(4,5,10,.96);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10;cursor:zoom-out}
 .lb img{max-height:100%;width:auto;max-width:100%}
@@ -79,6 +86,7 @@ footer .sig{font-family:var(--display);font-size:28px;color:var(--star)}
     <h1>로흐 갤러리<span>Roch · 연작 일곱 · 작품 스물세 점</span></h1>
     <p class="lede">글을 쓰던 사람이 화가가 되어 이어 가는 연작들을 차례로 겁니다. 방향과 이름은 로흐가 정하고, 선과 입자는 AI가 코드로 그립니다.</p>
     <nav class="series-nav" aria-label="연작 목록"><a href="#s1">연작 I · 외계 시각</a><a href="#s2">연작 II · 낙서의 유전자</a><a href="#s3">연작 III · 소리의 모양</a><a href="#s4">연작 IV · 기억의 지층</a><a href="#s5">연작 V · 경계에 선 것들</a><a href="#s6">연작 VI · 새로운 금융의 풍경</a><a href="#s7">연작 VII · 다섯 번의 열</a></nav>
+    <a class="live" href="/cosmos.html"><span class="dot"></span><span><b>함께 그리는 작품 · 손들의 은하</b><small>이곳에 들른 사람이 하루에 한 획씩 남겨, 모두가 함께 그려 가는 살아 있는 작품입니다. 당신의 한 획을 남겨 주세요.</small></span><i>→</i></a>
   </header>
 
   <div class="series" id="s1"><div class="eyebrow">연작 I · 2026. 10. 07</div><h2 class="stitle">외계 시각</h2><p class="lede">사람의 눈은 윤곽선으로 사물을 읽습니다. 이 연작은 그 습관을 버리고, 보이지 않는 질량이 공간을 휘게 할 때 남는 흔적만을 기록했습니다. 선은 그려진 것이 아니라 휘어진 것이고, 형태는 입자가 얼마나 빽빽하게 모였는지로만 드러납니다.</p>
