@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>손들의 은하 · 로흐</title>
+<meta name="description" content="로흐 Roch — 관람객이 하루에 한 획씩 남겨 함께 그리는 작품">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@300;400;500&family=IBM+Plex+Mono:wght@400&display=swap">
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<style>
+:root{
+  --void:#07080F; --star:#E6E9F2; --dust:#8A90A8; --trace:#262A3D; --ember:#F2B632;
+  --display:"Gowun Batang","Nanum Myeongjo",Georgia,serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--void);color:var(--star);font-family:var(--body);font-weight:300;overflow:hidden;-webkit-user-select:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none}
+.top > *{pointer-events:auto}
+.title{display:grid;gap:2px}
+.title h1{font-family:var(--display);font-weight:700;font-size:clamp(22px,5vw,32px);line-height:1.15;margin:0;letter-spacing:-.01em}
+.title h1 small{font-family:var(--body);font-weight:300;font-size:.5em;color:var(--dust);margin-left:8px;letter-spacing:.06em}
+.title .by{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--dust);text-transform:uppercase}
+.stats{font-family:var(--mono);font-size:12px;color:var(--dust);margin-top:6px;font-variant-numeric:tabular-nums}
+.stats b{color:var(--star);font-weight:400}
+.back{font-family:var(--mono);font-size:12px;color:var(--dust);text-decoration:none;border:1px solid var(--trace);padding:6px 10px;border-radius:999px;background:rgba(7,8,15,.6);white-space:nowrap}
+.bottom{position:fixed;left:0;right:0;bottom:0;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 18px);display:grid;justify-items:center;gap:10px;pointer-events:none}
+.bottom > *{pointer-events:auto}
+.msg{font-size:14px;line-height:1.6;color:#C3C8DA;text-align:center;max-width:30em;min-height:1.6em;text-shadow:0 0 12px #07080F,0 0 4px #07080F}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+button{font-family:var(--body);font-size:15px;font-weight:400;color:var(--star);background:rgba(13,15,26,.82);border:1px solid #3A3F5C;border-radius:999px;padding:11px 22px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.main{border-color:rgba(242,182,50,.7);box-shadow:0 0 22px rgba(242,182,50,.18)}
+button.quiet{color:var(--dust);font-size:13px;padding:8px 14px}
+button:disabled{opacity:.45}
+.about{position:fixed;inset:0;background:rgba(4,5,10,.94);display:flex;align-items:center;justify-content:center;padding:24px 16px;z-index:5}
+.about .card{max-width:30em;display:grid;gap:14px;line-height:1.75;color:#C3C8DA;font-size:15px}
+.about h2{font-family:var(--display);font-size:26px;color:var(--star);margin:0}
+.about .spec{font-family:var(--mono);font-size:12px;color:var(--dust)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="cv" aria-label="관람객들이 남긴 획이 입자가 되어 모인 우주"></canvas>
+
+<div class="top">
+  <div class="title">
+    <span class="by">로흐 Roch · 함께 그리는 작품</span>
+    <h1>손들의 은하<small>Galaxy of Hands</small></h1>
+    <div class="stats" id="stats">우주를 여는 중…</div>
+  </div>
+  <a class="back" href="/gallery.html">← 갤러리</a>
+</div>
+
+<div class="bottom">
+  <div class="msg" id="msg"></div>
+  <div class="row" id="rowIdle">
+    <button class="main" id="btnDraw">한 획 남기기</button>
+    <button class="quiet" id="btnAbout">이 작품은</button>
+    <button class="quiet" id="btnAdmin" hidden>관리</button>
+  </div>
+  <div class="row" id="rowConfirm" hidden>
+    <button class="main" id="btnSend">우주에 띄우기</button>
+    <button class="quiet" id="btnRedo">다시 그리기</button>
+    <button class="quiet" id="btnCancel">그만두기</button>
+  </div>
+  <div class="row" id="rowAdmin" hidden>
+    <button class="main" id="btnRemove" disabled>이 획 지우기</button>
+    <button class="quiet" id="btnAdminDone">관리 끝내기</button>
+  </div>
+</div>
+
+<div class="about" id="about" hidden>
+  <div class="card">
+    <h2>손들의 은하</h2>
+    <p class="spec">로흐 Roch · 2026. 10. 14 개관 · 생성 코드, 관람객 참여</p>
+    <p>이 작품은 로흐 혼자 그리지 않습니다. 이곳에 들른 사람이 하루에 한 번, 손가락으로 한 획을 긋습니다. 그 획은 선으로 남지 않고 입자로 흩어져, 앞서 다녀간 사람들의 흔적 곁에 영원히 떠 있게 됩니다.</p>
+    <p>같은 사람의 획은 늘 같은 빛을 띱니다. 오래된 획은 조금씩 어두워지지만 사라지지 않고, 획이 쌓일수록 그 무게가 배경의 공간선을 휘게 합니다. 오늘 본 우주와 내일 볼 우주는 같지 않습니다.</p>
+    <p>누가 그었는지는 이 우주에 남지 않습니다. 남는 것은 손이 지나간 자리뿐입니다.</p>
+    <div class="row" style="justify-content:flex-start"><button class="quiet" id="btnAboutClose">닫기</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ---------- 설정 ----------
+const API = '/api/cosmos';
+const WORLD = 1000;                 // 서버와 같은 좌표 범위
+const MAX_POINTS = 140;             // 서버와 같은 최대 점 수
+const PAL = [[90,216,255],[168,139,255],[255,154,60],[79,227,165],[255,111,168],[255,214,107]];
+const DAY = 86400000;
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+const msg = t => { $('msg').textContent = t || ''; };
+
+let W = 0, H = 0, DPR = 1, S = 0, OX = 0, OY = 0;   // 화면 크기, 우주(정사각형) 크기와 위치
+let strokes = [], hands = 0;
+let fieldLayer = null, partLayer = null;   // 배경 공간선 / 모든 획의 입자 (데이터가 바뀔 때만 다시 그림)
+let sparks = [];              // 반짝이는 입자들
+let comets = [];              // 최근 획을 따라 흐르는 빛
+let arrivals = [];            // 막 도착한 획의 입자들
+let me = null, user = null;   // me: {drewToday, admin, h}, user: {username, accessToken}
+let mode = 'view';            // view | draw | confirm | admin
+let trail = [];               // 그리는 중인 획 (우주 좌표)
+let selected = null;          // 관리 모드에서 고른 획
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- 난수 (같은 획은 늘 같은 모양으로 흩어지도록 획 id로 씨앗을 정함) ----------
+function seeded(str){
+  let s = 0; for(let i = 0; i < str.length; i++) s = (s * 31 + str.charCodeAt(i)) % 2147483647;
+  if(s <= 0) s += 2147483646;
+  return () => (s = s * 16807 % 2147483647) / 2147483647;
+}
+function gauss(r){ return Math.sqrt(-2 * Math.log(r() + 1e-9)) * Math.cos(6.2832 * r()); }
+
+// ---------- 좌표 변환 ----------
+// 우주는 원반. 천천히 돌기 때문에, 손가락 위치는 지금 돈 각도만큼 되돌려서 저장함
+let ROT = 0;
+const R = WORLD / 2;
+const sx = x => OX + x / WORLD * S;
+const sy = y => OY + y / WORLD * S;
+function toWorld(px, py){
+  const x = (px - OX) / S * WORLD - R, y = (py - OY) / S * WORLD - R;
+  const c = Math.cos(-ROT), s = Math.sin(-ROT);
+  return [x * c - y * s + R, x * s + y * c + R];
+}
+function inDisc(x, y){ return Math.hypot(x - R, y - R) <= R; }
+function clampDisc(x, y){
+  const d = Math.hypot(x - R, y - R);
+  return d <= R ? [x, y] : [R + (x - R) / d * R, R + (y - R) / d * R];
+}
+
+// 획을 일정 간격의 점들로 다시 나눔
+function resample(p, step){
+  const out = [];
+  for(let i = 2; i < p.length; i += 2){
+    const x0 = p[i-2], y0 = p[i-1], x1 = p[i], y1 = p[i+1];
+    const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / step));
+    for(let k = 0; k < n; k++) out.push([x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n]);
+  }
+  out.push([p[p.length-2], p[p.length-1]]);
+  return out;
+}
+function strokeLen(p){ let l = 0; for(let i = 2; i < p.length; i += 2) l += Math.hypot(p[i]-p[i-2], p[i+1]-p[i-1]); return l; }
+
+// 한 획의 입자들 (우주 좌표). 같은 획은 늘 같은 입자 배치
+function particlesOf(s){
+  if(s._parts) return s._parts;
+  const r = seeded(s.id), pts = resample(s.p, 3.2), out = [];
+  for(const [x, y] of pts){
+    const n = 2 + (r() < .5 ? 1 : 0);
+    for(let k = 0; k < n; k++){
+      const spread = r() < .2 ? 13 : 2.6;          // 대부분은 획 가까이, 일부는 멀리 흩어짐
+      out.push([x + gauss(r) * spread, y + gauss(r) * spread, .5 + r() * .9, r()]);
+    }
+  }
+  return (s._parts = out);
+}
+function edgeFade(x, y){ const d = Math.hypot(x - R, y - R) / R; return d < .7 ? 1 : Math.max(0, 1 - (d - .7) / .32); }
+function ageAlpha(t){
+  const days = Math.max(0, (Date.now() - t) / DAY);
+  return .32 + .68 * Math.exp(-days / 10);
+}
+
+// ---------- 정적 층 그리기 ----------
+function buildStatic(){
+  const c = document.createElement('canvas');
+  c.width = Math.round(W * DPR); c.height = Math.round(H * DPR);
+  const g = c.getContext('2d');
+  g.scale(DPR, DPR);
+  g.fillStyle = '#07080F'; g.fillRect(0, 0, W, H);
+
+  // 1) 질량: 획들을 거친 칸으로 모아 무게중심과 무게를 구함 (획이 많아도 빠르게)
+  const G = 10, cells = new Map();
+  for(const s of strokes){
+    const p = s.p; let cx = 0, cy = 0, n = p.length / 2;
+    for(let i = 0; i < p.length; i += 2){ cx += p[i]; cy += p[i+1]; }
+    cx /= n; cy /= n;
+    const m = Math.min(1, strokeLen(p) / 700) * ageAlpha(s.t);
+    const key = Math.min(G-1, cx / WORLD * G | 0) + ',' + Math.min(G-1, cy / WORLD * G | 0);
+    const e = cells.get(key) || { x: 0, y: 0, m: 0 };
+    e.x += cx * m; e.y += cy * m; e.m += m; cells.set(key, e);
+  }
+  const masses = [...cells.values()].filter(e => e.m > 0).map(e => ({ x: sx(e.x / e.m), y: sy(e.y / e.m), m: Math.sqrt(e.m) }));
+
+  // 2) 배경 공간선: 보이지 않는 질량 쪽으로 휘어짐
+  const lines = Math.round(H / 15), k = S * 9;
+  g.lineWidth = .7;
+  for(let j = 0; j <= lines; j++){
+    const y0 = j / lines * H;
+    g.beginPath();
+    for(let x = -10; x <= W + 10; x += 6){
+      let dy = 0;
+      for(const ms of masses){
+        const ddx = x - ms.x, ddy = y0 - ms.y;
+        dy -= k * ms.m * ddy / (ddx * ddx + ddy * ddy + S * S * .012);
+      }
+      dy = Math.max(-S * .08, Math.min(S * .08, dy * .08));
+      x === -10 ? g.moveTo(x, y0 + dy) : g.lineTo(x, y0 + dy);
+    }
+    g.strokeStyle = 'rgba(120,138,200,0.11)';
+    g.stroke();
+  }
+
+  // 3) 획들 → 입자 (따로 그린 뒤, 흐린 빛을 한 번 더 얹음)
+  fieldLayer = c;
+  const pc = document.createElement('canvas');
+  pc.width = c.width; pc.height = c.height;
+  const pg = pc.getContext('2d');
+  pg.scale(DPR, DPR);
+  pg.globalCompositeOperation = 'lighter';
+  const scale = S / WORLD;
+  // 가운데의 흰 점: 로흐가 처음 찍은 점. 획이 많아질수록 조금씩 밝아짐
+  {
+    const core = S * (.035 + .03 * Math.min(1, strokes.length / 800));
+    const gr = pg.createRadialGradient(sx(R), sy(R), 0, sx(R), sy(R), core * 3);
+    gr.addColorStop(0, 'rgba(255,248,235,.95)'); gr.addColorStop(.12, 'rgba(255,240,215,.55)'); gr.addColorStop(1, 'rgba(255,240,215,0)');
+    pg.fillStyle = gr; pg.fillRect(sx(R) - core * 3, sy(R) - core * 3, core * 6, core * 6);
+  }
+  for(const s of strokes){
+    const [r, gg, b] = PAL[s.h % PAL.length], a = ageAlpha(s.t);
+    for(const [x, y, rad, v] of particlesOf(s)){
+      const al = a * (.35 + .55 * v) * edgeFade(x, y);
+      pg.fillStyle = `rgba(${r},${gg},${b},${al.toFixed(3)})`;
+      const rr = Math.max(.45, rad * scale * 1.1);
+      pg.fillRect(sx(x) - rr, sy(y) - rr, rr * 2, rr * 2);
+    }
+  }
+  // 입자 층 = 흐린 빛 + 선명한 입자 (투명 바탕)
+  const lc = document.createElement('canvas');
+  lc.width = c.width; lc.height = c.height;
+  const lg = lc.getContext('2d');
+  lg.globalCompositeOperation = 'lighter';
+  try{ lg.filter = `blur(${Math.max(3, S / 150) * DPR}px)`; lg.globalAlpha = .6; lg.drawImage(pc, 0, 0); }catch(e){}
+  lg.filter = 'none'; lg.globalAlpha = 1;
+  lg.drawImage(pc, 0, 0);
+  partLayer = lc;
+
+  // 반짝임: 전체 입자 중 일부를 골라 깜빡이게
+  sparks = [];
+  const all = [];
+  for(const s of strokes) for(const q of particlesOf(s)) all.push([q, s.h]);
+  const want = Math.min(900, all.length);
+  for(let i = 0; i < want; i++){
+    const [q, h] = all[(Math.random() * all.length) | 0];
+    sparks.push({ x: q[0], y: q[1], h, ph: Math.random() * 6.283, sp: .6 + Math.random() * 1.6 });
+  }
+  // 혜성: 가장 최근 획 12개를 따라 흐르는 빛
+  comets = strokes.slice(-12).map(s => ({ path: resample(s.p, 2), h: s.h, u: Math.random(), sp: .05 + Math.random() * .06 }));
+}
+
+// ---------- 크기 ----------
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  // 우주는 정사각형. 위 제목·아래 버튼 자리를 조금 비워 둠
+  S = Math.min(W - 24, H - 200);
+  S = Math.max(240, S);
+  OX = (W - S) / 2; OY = Math.max(110, (H - S) / 2 + 10);
+  if(OY + S > H - 90) OY = Math.max(96, (H - S) / 2);
+  for(const s of strokes) delete s._parts;
+  buildStatic();
+}
+
+// ---------- 매 장면 ----------
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if(fieldLayer) ctx.drawImage(fieldLayer, 0, 0, W, H);
+  // 은하가 아주 천천히 돈다 (그리는 동안은 멈춤)
+  if(!reduceMotion && mode !== 'draw' && mode !== 'confirm' && mode !== 'admin') ROT = (ROT + dt * .012) % 6.2832;
+  const cx0 = sx(R), cy0 = sy(R);
+  ctx.translate(cx0, cy0); ctx.rotate(ROT); ctx.translate(-cx0, -cy0);
+  ctx.globalCompositeOperation = 'lighter';
+  if(partLayer) ctx.drawImage(partLayer, 0, 0, W, H);
+  const t = now / 1000;
+
+  // 반짝임
+  if(!reduceMotion){
+    for(const p of sparks){
+      const v = Math.sin(t * p.sp + p.ph);
+      if(v < .6) continue;
+      const [r, g, b] = PAL[p.h % PAL.length], a = (v - .6) * 2;
+      ctx.fillStyle = `rgba(${r},${g},${b},${(a * .9).toFixed(3)})`;
+      ctx.fillRect(sx(p.x) - 1.2, sy(p.y) - 1.2, 2.4, 2.4);
+      ctx.fillStyle = `rgba(255,255,255,${(a * .5).toFixed(3)})`;
+      ctx.fillRect(sx(p.x) - .5, sy(p.y) - .5, 1, 1);
+    }
+    // 혜성
+    for(const c of comets){
+      c.u = (c.u + c.sp * dt) % 1.25;
+      if(c.u > 1) continue;
+      const n = c.path.length, head = c.u * (n - 1);
+      const [r, g, b] = PAL[c.h % PAL.length];
+      for(let k = 0; k < 26; k++){
+        const i = Math.round(head - k * 1.5);
+        if(i < 0 || i >= n) continue;
+        const a = (1 - k / 26) * .55, rr = 2.2 * (1 - k / 30);
+        ctx.fillStyle = `rgba(${r},${g},${b},${a.toFixed(3)})`;
+        ctx.fillRect(sx(c.path[i][0]) - rr, sy(c.path[i][1]) - rr, rr * 2, rr * 2);
+      }
+      const hp = c.path[Math.min(n - 1, Math.round(head))];
+      ctx.fillStyle = 'rgba(255,255,255,.8)';
+      ctx.fillRect(sx(hp[0]) - 1, sy(hp[1]) - 1, 2, 2);
+    }
+  }
+
+  // 막 도착한 획: 흩어졌다가 제자리로
+  if(arrivals.length){
+    let done = true;
+    for(const a of arrivals){
+      a.vx += (a.hx - a.x) * 9 * dt; a.vy += (a.hy - a.y) * 9 * dt;
+      a.vx *= Math.pow(.18, dt); a.vy *= Math.pow(.18, dt);
+      a.x += a.vx * dt; a.y += a.vy * dt;
+      if(Math.abs(a.hx - a.x) + Math.abs(a.hy - a.y) > 1.2 || Math.abs(a.vx) + Math.abs(a.vy) > 6) done = false;
+      const [r, g, b] = PAL[a.h % PAL.length];
+      ctx.fillStyle = `rgba(${r},${g},${b},.9)`;
+      ctx.fillRect(sx(a.x) - 1.3, sy(a.y) - 1.3, 2.6, 2.6);
+    }
+    if(done || now - arrivals.t0 > 4000){ arrivals = []; buildStatic(); }
+  }
+
+  // 그리는 중인 획
+  if((mode === 'draw' || mode === 'confirm') && trail.length > 1){
+    const [r, g, b] = PAL[(me ? me.h : 0) % PAL.length];
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for(const [w, a] of [[10, .08], [4, .25], [1.6, .95]]){
+      ctx.beginPath();
+      trail.forEach(([x, y], i) => i ? ctx.lineTo(sx(x), sy(y)) : ctx.moveTo(sx(x), sy(y)));
+      ctx.strokeStyle = `rgba(${r},${g},${b},${a})`; ctx.lineWidth = w; ctx.stroke();
+    }
+  }
+  ctx.globalCompositeOperation = 'source-over';
+
+  // 그리기 모드: 우주의 테두리(원)를 아주 희미하게 보여 줌
+  if(mode === 'draw' || mode === 'confirm'){
+    ctx.strokeStyle = 'rgba(242,182,50,.25)'; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 6]); ctx.beginPath(); ctx.arc(cx0, cy0, S / 2, 0, 6.2832); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 관리 모드: 고른 획 표시
+  if(mode === 'admin' && selected){
+    ctx.strokeStyle = 'rgba(255,90,90,.9)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(let i = 0; i < selected.p.length; i += 2) i ? ctx.lineTo(sx(selected.p[i]), sy(selected.p[i+1])) : ctx.moveTo(sx(selected.p[0]), sy(selected.p[1]));
+    ctx.stroke();
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  requestAnimationFrame(frame);
+}
+
+// ---------- 데이터 ----------
+function setStats(){
+  $('stats').innerHTML = strokes.length
+    ? `획 <b>${strokes.length.toLocaleString()}</b> · 손 <b>${hands.toLocaleString()}</b>`
+    : '아직 아무도 긋지 않은 우주';
+}
+async function loadCosmos(quiet){
+  try{
+    const r = await fetch(API, { cache: 'no-store' });
+    if(!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    const changed = d.strokes.length !== strokes.length || (d.strokes.length && strokes.length && d.strokes[d.strokes.length-1].id !== strokes[strokes.length-1].id);
+    hands = d.hands || 0;
+    if(changed || !quiet){ strokes = d.strokes; if(!arrivals.length) buildStatic(); }
+    setStats();
+    if(!quiet && !strokes.length) msg('첫 획의 주인이 되어 주세요.');
+  }catch(e){
+    if(!quiet){ $('stats').textContent = '우주를 불러오지 못했어요'; msg('잠시 후 다시 열어 주세요.'); }
+  }
+}
+
+// ---------- Pi 로그인 ----------
+let piReady = false;
+try{ if(typeof Pi !== 'undefined'){ Pi.init({ version: '2.0', sandbox: false }); piReady = true; } }catch(e){}
+async function login(){
+  if(user) return user;
+  if(!piReady) throw new Error('nopi');
+  const a = await Pi.authenticate(['username'], () => {});
+  user = { username: a.user.username, accessToken: a.accessToken };
+  const r = await fetch(API + '/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: user.accessToken }) });
+  if(!r.ok){ user = null; throw new Error('login'); }
+  me = await r.json();
+  $('btnAdmin').hidden = !me.admin;
+  return user;
+}
+
+// ---------- 모드 ----------
+function setMode(m){
+  mode = m;
+  $('rowIdle').hidden = m !== 'view';
+  $('rowConfirm').hidden = m !== 'confirm';
+  $('rowAdmin').hidden = m !== 'admin';
+}
+$('btnDraw').onclick = async () => {
+  if(!piReady){ msg('Pi Browser에서 열면 한 획을 남길 수 있어요. 여기서는 감상만 할 수 있어요.'); return; }
+  $('btnDraw').disabled = true; msg('Pi로 확인하는 중…');
+  try{
+    await login();
+    if(me.drewToday && !me.admin){ msg('오늘의 한 획은 이미 우주에 떠 있어요. 내일 또 만나요 🍀'); return; }
+    trail = []; setMode('draw'); $('rowIdle').hidden = true;
+    msg('점선 원 안 어디든, 손가락을 떼지 말고 한 번에 그어 주세요.');
+  }catch(e){
+    msg(e.message === 'nopi' ? 'Pi Browser에서 열어 주세요.' : '로그인하지 못했어요. 다시 눌러 주세요.');
+  }finally{ $('btnDraw').disabled = false; }
+};
+$('btnRedo').onclick = () => { trail = []; setMode('draw'); $('rowIdle').hidden = true; msg('다시 한 번에 그어 주세요.'); };
+$('btnCancel').onclick = () => { trail = []; setMode('view'); msg(''); };
+$('btnSend').onclick = async () => {
+  $('btnSend').disabled = true; msg('우주로 보내는 중…');
+  try{
+    let p = trail.map(([x, y]) => [Math.round(Math.max(0, Math.min(WORLD, x))), Math.round(Math.max(0, Math.min(WORLD, y)))]);
+    if(p.length > MAX_POINTS){ const step = (p.length - 1) / (MAX_POINTS - 1); p = Array.from({ length: MAX_POINTS }, (_, i) => p[Math.round(i * step)]); }
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: user.accessToken, p: p.flat() }) });
+    const d = await r.json().catch(() => ({}));
+    if(r.status === 401){ user = null; me = null; throw new Error('로그인이 만료되었어요. 다시 눌러 주세요.'); }
+    if(!r.ok) throw new Error(d.message || '보내지 못했어요.');
+    const s = d.stroke;
+    strokes.push(s); me.drewToday = true;
+    if(!strokes.slice(0, -1).some(o => o.h === s.h)) hands++;     // 대략적인 표시 (다음 새로고침에서 정확해짐)
+    // 도착 연출: 그린 선에서 입자가 흩어졌다가 제자리로
+    arrivals = particlesOf(s).map(([x, y]) => ({ x, y, hx: x, hy: y, vx: (Math.random() - .5) * 260, vy: (Math.random() - .5) * 260, h: s.h }));
+    arrivals.t0 = performance.now();
+    trail = []; setMode('view'); setStats();
+    msg(`당신의 획이 ${strokes.length.toLocaleString()}번째 빛이 되었어요. 내일 또 한 획 🍀`);
+  }catch(e){ msg(e.message); }
+  finally{ $('btnSend').disabled = false; }
+};
+
+// 관리 (COSMOS_ADMIN 계정만 버튼이 보임)
+$('btnAdmin').onclick = () => { selected = null; $('btnRemove').disabled = true; setMode('admin'); msg('지울 획 가까이를 누르세요.'); };
+$('btnAdminDone').onclick = () => { selected = null; setMode('view'); msg(''); };
+$('btnRemove').onclick = async () => {
+  if(!selected) return;
+  $('btnRemove').disabled = true;
+  try{
+    const r = await fetch(`${API}/${encodeURIComponent(selected.id)}/remove`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: user.accessToken }) });
+    if(!r.ok) throw new Error();
+    strokes = strokes.filter(s => s !== selected); selected = null; buildStatic(); setStats(); msg('지웠어요.');
+  }catch(e){ msg('지우지 못했어요.'); $('btnRemove').disabled = false; }
+};
+function pick(x, y){
+  let best = null, bd = 30;
+  for(const s of strokes) for(let i = 0; i < s.p.length; i += 2){
+    const d = Math.hypot(s.p[i] - x, s.p[i+1] - y);
+    if(d < bd){ bd = d; best = s; }
+  }
+  return best;
+}
+
+// ---------- 손가락 ----------
+let drawing = false, lastPt = null;
+cv.addEventListener('pointerdown', e => {
+  const [x, y] = toWorld(e.clientX, e.clientY);
+  if(mode === 'admin'){ selected = pick(x, y); $('btnRemove').disabled = !selected; return; }
+  if(mode !== 'draw') return;
+  if(!inDisc(x, y)){ msg('점선 원 안에서 그어 주세요.'); return; }
+  drawing = true; trail = [[x, y]]; lastPt = [x, y];
+  try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+});
+cv.addEventListener('pointermove', e => {
+  if(!drawing) return;
+  const [x, y] = clampDisc(...toWorld(e.clientX, e.clientY));
+  if(Math.hypot(x - lastPt[0], y - lastPt[1]) < 5) return;
+  trail.push([x, y]); lastPt = [x, y];
+});
+function endDraw(){
+  if(!drawing) return;
+  drawing = false;
+  const p = trail.flat();
+  if(trail.length < 3 || strokeLen(p) < 12){ trail = []; msg('조금 더 길게 그어 주세요.'); return; }
+  setMode('confirm'); msg('이 획을 우주에 띄울까요? 한 번 띄우면 오늘은 더 그을 수 없어요.');
+}
+cv.addEventListener('pointerup', endDraw);
+cv.addEventListener('pointercancel', endDraw);
+
+// ---------- 소개 ----------
+$('btnAbout').onclick = () => { $('about').hidden = false; };
+$('btnAboutClose').onclick = () => { $('about').hidden = true; };
+$('about').addEventListener('click', e => { if(e.target === $('about')) $('about').hidden = true; });
+
+// ---------- 시작 ----------
+let rt;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
+resize();
+loadCosmos(false);
+setInterval(() => { if(mode === 'view' && !arrivals.length && !document.hidden) loadCosmos(true); }, 45000);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
