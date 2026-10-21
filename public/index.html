@@ -857,9 +857,16 @@
     font-family:'Black Han Sans', sans-serif; font-size:21px; letter-spacing:0.5px;
     color:var(--chalk); text-shadow:none; display:flex; align-items:baseline; gap:6px; flex-wrap:nowrap;
   }
-  header .logo .logo-text{ transform:none; }
-  header .logo .en{ flex-basis:auto; font-size:10px; font-weight:700; letter-spacing:1.5px; margin:0; }
-  header p{ margin:2px 0 0; font-size:11px; line-height:1.35; }
+  header .logo .logo-text{ transform:none; white-space:nowrap; flex:0 0 auto; }
+  header .logo{ flex-wrap:wrap; row-gap:0; }
+  header .logo .en{ flex-basis:auto; font-size:10px; font-weight:700; letter-spacing:1.5px; margin:0; white-space:nowrap; }
+  header p{ margin:2px 0 0; font-size:11px; line-height:1.35; word-break:keep-all; }
+  .hdr-title{ flex:1 1 0; min-width:auto; }
+  .hdr-row{ flex-wrap:nowrap; gap:8px; }
+  #whoami{ margin-left:auto; flex:0 1 auto; min-width:0; }
+  #whoami #loginBtn{ flex:0 0 auto; }
+  #userChip{ min-width:0; max-width:110px; }
+  #themeToggle{ width:40px; }
   header p .en{ font-size:10px; margin-top:0; opacity:0.8; }
   #themeToggle{
     position:static; flex:0 0 auto; width:44px; height:44px; border:none; background:transparent; font-size:18px;
