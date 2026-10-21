@@ -707,7 +707,6 @@
   }
 
   /* ---------- 둘러보기/홍보 완료: 헤더만 남기고 전환되는 전체 페이지 ---------- */
-  .app.showing-fullpage nav,
   .app.showing-fullpage #promoStripMain,
   .app.showing-fullpage main{ display:none !important; }
   .fullpage{
@@ -834,6 +833,193 @@
   /* 3) 런치패드·스테이킹: 데이터가 들어오기 전까지 블록 전체를 숨김 */
   .rp-rank{ display:none; }
   .rp-rank.has-data{ display:block; }
+
+  /* =====================================================================
+     2026-10 메인 화면 개편: 한 줄 헤더 · 만남 띠 · 오늘 한 줄 · 쓰기 카드 ·
+     방금 올라온 낙서 · 하단 탭바 (폰) / 2단 + 상단 탭 (넓은 화면)
+     ===================================================================== */
+  :root{ --card:#2d2b35; --card-line:rgba(243,237,224,0.14); --bar:#1c1b22; }
+  body.light-theme{ --card:#fffaf0; --card-line:rgba(43,43,47,0.14); --bar:#efe7d4; }
+  .sr-only{ position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; margin:0; }
+
+  /* 레이아웃: 좌우 패널 숨김, 가운데 앱만 */
+  .layout{ max-width:560px; flex-direction:column; }
+  #livefeed{ display:none !important; }
+  #rightpanel{ display:none !important; }
+  .app{ order:0; padding-bottom:calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+  /* 헤더 */
+  header{ padding:10px 16px; padding-right:16px; }
+  .hdr-row{ display:flex; align-items:center; gap:10px; }
+  .hdr-logo{ flex:0 0 auto; display:block; }
+  .hdr-title{ flex:1; min-width:0; line-height:1.15; }
+  header .logo{
+    font-family:'Black Han Sans', sans-serif; font-size:21px; letter-spacing:0.5px;
+    color:var(--chalk); text-shadow:none; display:flex; align-items:baseline; gap:6px; flex-wrap:nowrap;
+  }
+  header .logo .logo-text{ transform:none; }
+  header .logo .en{ flex-basis:auto; font-size:10px; font-weight:700; letter-spacing:1.5px; margin:0; }
+  header p{ margin:2px 0 0; font-size:11px; line-height:1.35; }
+  header p .en{ font-size:10px; margin-top:0; opacity:0.8; }
+  #themeToggle{
+    position:static; flex:0 0 auto; width:44px; height:44px; border:none; background:transparent; font-size:18px;
+  }
+  #whoami{ margin:0; flex:0 0 auto; gap:0; flex-wrap:nowrap; }
+  #whoami button{
+    background:transparent; border:1px solid var(--spray-y); border-bottom-width:1px; color:var(--spray-y);
+    box-shadow:none; border-radius:22px; min-height:44px; padding:4px 12px; font-size:13px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.1;
+  }
+  #whoami button .en{ display:block; font-size:10px; font-weight:400; }
+  #whoami button:active{ transform:scale(0.97); border-bottom-width:1px; box-shadow:none; }
+  #userChip{
+    font-size:12px; font-weight:700; color:var(--spray-y); max-width:96px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .app.showing-fullpage header{ padding-bottom:10px; }
+  .app.showing-fullpage header p{ display:block; }
+  .app.showing-fullpage header #whoami{ display:flex; }
+
+  /* 만남 띠 */
+  .meet-box, .meet-box.frozen{
+    display:block; width:auto; height:46px; margin:10px 16px 0; border-radius:12px;
+  }
+  @media (max-width:600px){ .meet-box{ width:auto; height:46px; } }
+  .meet-label{ right:12px; bottom:5px; font-size:11px; }
+
+  /* 오늘 한 줄 */
+  .today-strip{
+    display:flex; align-items:center; gap:8px; margin:10px 16px 0; padding:8px 12px;
+    border:1px solid var(--line); border-radius:12px; font-size:12px; color:var(--chalk-dim);
+    background:rgba(0,0,0,0.12);
+  }
+  .today-strip b{ color:var(--chalk); font-variant-numeric:tabular-nums; }
+  .ts-item{ display:flex; align-items:center; gap:5px; white-space:nowrap; }
+  .ts-dot{ width:7px; height:7px; border-radius:4px; background:var(--spray-r); }
+  .ts-sep{ opacity:0.5; }
+  .ts-spacer{ flex:1; }
+  .ts-price{ white-space:nowrap; padding:2px 9px; border-radius:10px; background:rgba(73,185,199,0.16); color:var(--spray-c); }
+  .ts-price b{ color:var(--spray-c); }
+  #tsChange{ font-size:11px; }
+  #tsChange.up{ color:#4dd679; } #tsChange.down{ color:var(--spray-r); }
+  body.light-theme #tsChange.up{ color:#1f8a43; }
+  .app.showing-fullpage .today-strip{ display:none; }
+
+  /* 탭바: 폰에서는 화면 아래 고정 */
+  nav{
+    position:fixed; top:auto; left:0; right:0; bottom:0; z-index:50;
+    display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:0;
+    padding:0 0 env(safe-area-inset-bottom, 0px); margin:0 auto; max-width:560px;
+    background:var(--bar); border-top:1px solid var(--line); border-bottom:none;
+  }
+  nav button, nav .nav-link{
+    min-height:62px; padding:6px 2px; margin:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    background:transparent !important; background-image:none; border:none; border-radius:0; box-shadow:none;
+    color:var(--chalk-dim); font-family:'Noto Sans KR', sans-serif; font-size:11px; font-weight:500;
+    text-decoration:none; text-shadow:none !important; animation:none !important; cursor:pointer;
+  }
+  nav button:active, nav .nav-link:active{ transform:none; box-shadow:none; opacity:0.7; }
+  nav button.active{ color:var(--spray-y); font-weight:700; }
+  nav svg{ display:block; }
+
+  /* 쓰기 카드 */
+  main{ padding:14px 16px; }
+  .write-card{
+    background:var(--card); border:1px solid var(--card-line); border-radius:16px; padding:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.18);
+  }
+  .today-q{ padding:0; margin-bottom:10px; }
+  .today-q .tag{ font-size:11px; letter-spacing:1px; }
+  .today-q .qtext{ font-size:16px; font-weight:700; color:var(--chalk); margin-top:4px; line-height:1.4; }
+  .today-q .qtext .en{ font-size:11px; font-weight:400; color:var(--chalk-dim); opacity:1; }
+  #writeMsg{
+    margin-top:0; min-height:96px; height:96px; resize:none;
+    font-family:'Nanum Pen Script', cursive; font-size:23px; line-height:1.25;
+    background:
+      linear-gradient(var(--card), var(--card)) padding-box,
+      linear-gradient(90deg, #ff4d4d, #ff9f1c, #ffd93d, #4dd679, #3ea6ff, #5b6cff, #b967ff) border-box;
+  }
+  .write-row{ display:flex; align-items:center; gap:10px; margin-top:8px; }
+  .self-cert{ flex:1; margin:0; min-height:44px; font-size:12px; }
+  .self-cert input{ width:18px; height:18px; accent-color:var(--spray-y); }
+  .write-count{ font-size:11px; color:var(--chalk-dim); font-variant-numeric:tabular-nums; }
+  #submitGraffiti, #submitGraffiti:active{
+    width:auto; margin:0; min-height:44px; padding:0 22px; border:none; border-radius:22px;
+    font-size:15px; line-height:1; box-shadow:none;
+  }
+  #submitGraffiti:active{ transform:scale(0.97); }
+  .write-card .hint{ margin:10px 0 0; font-size:11px; }
+
+  /* 홍보 한 줄 */
+  #promoStripMain{ margin:12px 0 0; }
+
+  /* 방금 올라온 낙서 */
+  .recent{ margin-top:18px; }
+  .recent-head{ display:flex; align-items:center; margin-bottom:8px; }
+  .recent-title{ flex:1; font-size:14px; font-weight:700; }
+  .recent-more{
+    background:none; border:none; color:var(--spray-c); font-family:inherit; font-size:13px;
+    min-height:36px; padding:0 4px; cursor:pointer;
+  }
+  #recentList{ display:flex; flex-direction:column; gap:8px; }
+  .recent-item{
+    display:flex; flex-direction:column; gap:2px; width:100%; text-align:left; cursor:pointer;
+    padding:10px 12px; border:none; border-radius:12px; background:rgba(127,127,127,0.09); color:var(--chalk);
+    font-family:inherit;
+  }
+  .recent-item .r-msg{
+    font-family:'Nanum Pen Script', cursive; font-size:21px; line-height:1.2;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere;
+  }
+  .recent-item .r-meta{ font-size:11px; color:var(--chalk-dim); }
+  .recent-empty{ font-size:12px; color:var(--chalk-dim); padding:10px 2px; }
+
+  /* 서브화면(낙서벽·앱 홍보): 하단 탭으로 이동하므로 '돌아가기' 버튼은 숨김 */
+  .btn-back{ display:none !important; }
+  .fullpage{ padding:16px 16px 40px; }
+
+  /* 넓은 화면(데스크톱): 2단 + 상단 탭, 오른쪽에 시세·TOP5 */
+  @media (min-width:960px){
+    .layout{ max-width:1120px; flex-direction:row; align-items:flex-start; gap:24px; padding:0 24px; }
+    .app{ flex:1; padding-bottom:40px; }
+    header{ padding:14px 0; }
+    .meet-box, .meet-box.frozen{ margin:12px 0 0; height:52px; }
+    .today-strip{ margin:12px 0 0; }
+    nav{
+      position:sticky; top:0; bottom:auto; max-width:none; margin:12px 0 0; padding:6px;
+      display:flex; gap:4px; border:1px solid var(--line); border-radius:14px; background:var(--wall);
+    }
+    nav button, nav .nav-link{ flex-direction:row; gap:8px; min-height:44px; padding:0 16px; border-radius:10px; font-size:14px; }
+    nav button.active{ background:rgba(255,201,60,0.14) !important; }
+    main{ padding:18px 0; }
+    .write-card{ padding:22px; }
+    .today-q .qtext{ font-size:20px; }
+    #writeMsg{ height:110px; font-size:27px; }
+    #recentList{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .fullpage{ padding:18px 0 40px; }
+
+    #rightpanel{
+      display:flex !important; order:2; width:280px; flex:0 0 280px; position:sticky; top:16px;
+      margin-top:16px; padding:0; border:none; background:none; gap:14px; flex-direction:column;
+    }
+    #rightpanel .top-clock{ display:none; }
+    #rightpanel .rp-block{
+      background:var(--card); border:1px solid var(--card-line); border-radius:14px; padding:16px; text-align:left;
+    }
+    #rightpanel .rp-rank{ display:none; }
+    #rightpanel .rp-rank.has-data{ display:block; }
+    #rightpanel .rp-title{ font-size:12px; text-align:left; }
+    #rightpanel .rp-title .en{ display:inline; margin-left:6px; font-size:10px; }
+    #rightpanel .pi-price{ text-align:left; }
+    #rightpanel .pi-price .amount{ font-size:26px; color:var(--spray-c); }
+    #rightpanel .pi-price .change{ font-size:12px; }
+    #rightpanel .pi-price .updated{ display:block; font-size:11px; }
+    #rightpanel .rank-item{ text-align:left; display:flex; gap:8px; align-items:baseline; }
+    #rightpanel .rank-item .name{ font-size:13px; flex:1; }
+    #rightpanel .rank-item .metric{ font-size:11px; }
+    .ts-price{ display:none; }
+    .app.showing-fullpage ~ #rightpanel{ display:flex !important; }
+  }
 </style>
 </head>
 <body>
@@ -858,42 +1044,86 @@
   <div class="app">
 
     <header>
-      <button id="themeToggle" aria-label="화면 밝기 전환">🌙</button>
-      <h1 class="logo"><span class="logo-text">디부타데스</span><a class="meet-box" id="meetBox" href="/gallery.html#w1" aria-label="갤러리 외계 시각 연작 보기" title="외계 시각 연작"><canvas id="meetCanvas"></canvas><span class="meet-label" id="meetLabel">만남</span></a><span class="en">DIBUTADES</span></h1>
-      <p>느낌 오면 낙서하면 돼~
-        <span class="en">Feel something? Just scribble it.</span>
-      </p>
-      <div id="whoami">
-        <span id="whoamiText">낙서는 파이오니어만, 구경은 아무나 가능<span style="display:block;font-size:10px;opacity:.8;">Pioneers write · anyone can browse</span></span>
-        <button id="loginBtn">로그인 <span style="opacity:.8;font-weight:400;">Login</span></button>
+      <div class="hdr-row">
+        <svg class="hdr-logo" width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+          <defs><linearGradient id="hdrRb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a5a"/><stop offset="0.35" stop-color="#ffc93c"/><stop offset="0.6" stop-color="#5ad17a"/><stop offset="0.8" stop-color="#49b9c7"/><stop offset="1" stop-color="#b48cff"/></linearGradient></defs>
+          <rect width="40" height="40" rx="10" fill="#4b2a7a"/>
+          <path d="M12 14 A10 10 0 0 1 28 14" fill="none" stroke="url(#hdrRb)" stroke-width="3.2" stroke-linecap="round"/>
+          <path d="M28 26 A10 10 0 0 1 12 26" fill="none" stroke="url(#hdrRb)" stroke-width="3.2" stroke-linecap="round"/>
+          <circle cx="10" cy="20" r="1.8" fill="#ffc93c"/><circle cx="30" cy="20" r="1.8" fill="#49b9c7"/>
+        </svg>
+        <div class="hdr-title">
+          <h1 class="logo"><span class="logo-text">디부타데스</span><span class="en">DIBUTADES</span></h1>
+          <p>느낌 오면 낙서하면 돼~<span class="en">Feel something? Just scribble it.</span></p>
+        </div>
+        <button id="themeToggle" aria-label="화면 밝기 전환">🌙</button>
+        <div id="whoami">
+          <span id="userChip" hidden></span>
+          <button id="loginBtn">로그인<span class="en">Login</span></button>
+        </div>
       </div>
     </header>
 
-    <nav>
-      <button class="tab-btn active" data-tab="write">쓰기<span class="en">Write</span></button>
-      <button class="tab-btn" data-tab="wall">게시글<span class="en">Posts</span></button>
-      <button class="tab-btn" data-tab="promo">앱<span class="en">App</span></button>
-      <button onclick="location.href='/gallery.html'" style="background-color:rgba(56,74,170,0.45)">갤러리<span class="en">Gallery</span></button>
-    </nav>
+    <!-- 외계 시각 연작 5점: 헤더 아래 가로 띠 (누르면 지금 보이는 작품의 갤러리로) -->
+    <a class="meet-box" id="meetBox" href="/gallery.html#w1" aria-label="갤러리 외계 시각 연작 보기" title="외계 시각 연작"><canvas id="meetCanvas"></canvas><span class="meet-label" id="meetLabel">만남</span></a>
 
-    <div class="promo-strip" id="promoStripMain"></div>
+    <!-- 오늘 한눈에: 낙서 수 · 방문 · Pi 시세 -->
+    <div class="today-strip" id="todayStrip">
+      <span class="ts-item"><span class="ts-dot" aria-hidden="true"></span>오늘 낙서 <b id="tsNum">-</b></span>
+      <span class="ts-sep" aria-hidden="true">·</span>
+      <span class="ts-item">방문 <b id="tsVisit">-</b></span>
+      <span class="ts-spacer"></span>
+      <span class="ts-price">π <b id="tsPrice">--</b> <span id="tsChange"></span></span>
+    </div>
+
+    <nav>
+      <button class="tab-btn active" data-tab="write">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+        <span>쓰기</span></button>
+      <button class="tab-btn" data-tab="wall">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v6M15 10v5M9 15v5"/></svg>
+        <span>낙서벽</span></button>
+      <a class="nav-link" href="/gallery.html">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
+        <span>갤러리</span></a>
+      <button class="tab-btn" data-tab="promo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>
+        <span>앱 홍보</span></button>
+    </nav>
 
     <main>
 
       <!-- 1. 낙서를 하자 / Write Graffiti -->
       <section id="tab-write" class="active">
-        <div class="today-q">
-          <div class="tag">오늘의 질문<span class="en">Today's Question</span></div>
-          <div class="qtext" id="todayQText">불러오는 중...<span class="en">Loading...</span></div>
+        <div class="write-card">
+          <div class="today-q">
+            <div class="tag">오늘의 질문</div>
+            <div class="qtext" id="todayQText">불러오는 중...<span class="en">Loading...</span></div>
+          </div>
+          <label for="writeMsg" class="sr-only">낙서 내용</label>
+          <textarea id="writeMsg" maxlength="200" placeholder="한마디 남겨보세요"></textarea>
+          <div class="write-row">
+            <label class="self-cert">
+              <input type="checkbox" id="selfCertCheck">
+              <span>직접 쓴 글이에요</span>
+            </label>
+            <span class="write-count" id="writeCount">0/200</span>
+            <button class="btn btn-primary" id="submitGraffiti">남기기</button>
+          </div>
+          <div class="status" id="writeStatus"></div>
+          <p class="hint" id="whoamiText">낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.</p>
         </div>
-        <textarea id="writeMsg" maxlength="200" placeholder="한마디 남겨보세요 (200자) / Leave a line (200 chars)"></textarea>
-        <label class="self-cert">
-          <input type="checkbox" id="selfCertCheck">
-          <span>직접 쓴 글만 가능 <span class="en">/ Self-written only</span></span>
-        </label>
-        <button class="btn btn-primary" id="submitGraffiti">낙서 남기기<span class="en">Post Graffiti</span></button>
-        <div class="status" id="writeStatus"></div>
-        <p class="hint">닉네임은 Pi 계정 이름으로 자동 표시돼요. 개인정보는 쓰지 마세요.<span class="en">Your Pi username is shown automatically. No personal info, please.</span></p>
+
+        <div class="promo-strip" id="promoStripMain"></div>
+
+        <div class="recent">
+          <div class="recent-head">
+            <span class="recent-title">방금 올라온 낙서</span>
+            <button type="button" class="recent-more" id="recentMore">전체 보기</button>
+          </div>
+          <div id="recentList"></div>
+          <div class="recent-empty" id="recentEmpty" style="display:none;">첫 낙서를 남겨보세요</div>
+        </div>
       </section>
 
     </main>
@@ -1045,6 +1275,7 @@ function showVisitStats(s){
   document.getElementById('vWriters').textContent = s.writers;
   document.getElementById('vLookers').textContent = s.lookers;
   document.getElementById('lfVisits').hidden = false;
+  document.getElementById('tsVisit').textContent = s.visitors;
 }
 async function sendVisit(){
   try{
@@ -1068,6 +1299,8 @@ async function loadLiveFeed(){
     const listEl = document.getElementById('lfList');
     const today = kstDay(Date.now());
     document.getElementById('lfNum').textContent = items.filter(g => kstDay(g.createdAt) === today).length;
+    document.getElementById('tsNum').textContent = document.getElementById('lfNum').textContent;
+    renderRecent(items.slice(0, 3));
     listEl.innerHTML = '';
     document.getElementById('lfEmpty').style.display = items.length ? 'none' : 'block';
     items.slice(0, 6).forEach(g=>{
@@ -1078,6 +1311,20 @@ async function loadLiveFeed(){
       listEl.appendChild(div);
     });
   }catch(e){ /* 조용히 무시 */ }
+}
+// 메인 화면 "방금 올라온 낙서" 3개 (누르면 낙서벽으로)
+function renderRecent(items){
+  const listEl = document.getElementById('recentList');
+  listEl.innerHTML = '';
+  document.getElementById('recentEmpty').style.display = items.length ? 'none' : 'block';
+  items.forEach(g=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'recent-item';
+    b.innerHTML = `<span class="r-msg">${escapeHtml(g.message||'')}</span><span class="r-meta">@${escapeHtml(g.author||'익명')} · ${agoText(g.createdAt)}</span>`;
+    b.addEventListener('click', ()=>showBrowsePage());
+    listEl.appendChild(b);
+  });
 }
 loadLiveFeed();
 setInterval(loadLiveFeed, 30000);
@@ -1334,6 +1581,9 @@ function playSosoJourney(){ meetFreeze(false); }
 const writeMsgEl = document.getElementById('writeMsg');
 writeMsgEl.addEventListener('focus', () => meetFreeze(true));
 writeMsgEl.addEventListener('input', () => meetFreeze(true));
+const writeCountEl = document.getElementById('writeCount');
+function updateWriteCount(){ writeCountEl.textContent = writeMsgEl.value.length + '/200'; }
+writeMsgEl.addEventListener('input', updateWriteCount);
 writeMsgEl.addEventListener('blur', () => { if(!writeMsgEl.value.trim()) meetFreeze(false); });
 
 // ---------- 인기 낙서 TOP5 ("낙서를 보자" 탭 안, 목록 아래) ----------
@@ -1371,6 +1621,10 @@ async function loadPiPrice(){
     const change = info.usd_24h_change || 0;
     changeEl.textContent = (change >= 0 ? '▲ ' : '▼ ') + Math.abs(change).toFixed(2) + '%';
     changeEl.className = 'change ' + (change >= 0 ? 'up' : 'down');
+    document.getElementById('tsPrice').textContent = '$' + info.usd.toFixed(4);
+    const tsCh = document.getElementById('tsChange');
+    tsCh.textContent = (change >= 0 ? '▲' : '▼') + Math.abs(change).toFixed(2) + '%';
+    tsCh.className = change >= 0 ? 'up' : 'down';
     document.getElementById('piUpdated').textContent = new Date().toLocaleTimeString('ko-KR', { hour12:false });
   }catch(e){
     document.getElementById('piAmount').textContent = '조회 실패';
@@ -1437,6 +1691,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       showPromoPage();
       return;
     }
+    if(inFullpage){ backToMain(); return; }
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
     btn.classList.add('active');
@@ -1454,8 +1709,12 @@ const rightpanelEl = document.getElementById('rightpanel');
 const promoFormWrapEl = document.getElementById('promoFormWrap');
 const promoResultWrapEl = document.getElementById('promoResultWrap');
 
+function setActiveTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
+}
 function enterFullpage(){
   appEl.classList.add('showing-fullpage');
+  window.scrollTo(0, 0);
   worldclockEl.style.display = 'none';
   rightpanelEl.style.display = 'none';
   sosoWriteTabActive = false;
@@ -1488,6 +1747,7 @@ function showBrowsePage(){
   pushFullpageHistory();
   pagePromoEl.classList.remove('show');
   pageBrowseEl.classList.add('show');
+  setActiveTab('wall');
   loadWall();
   loadTopBoard();
 }
@@ -1497,6 +1757,7 @@ function showPromoPage(){
   pushFullpageHistory();
   pageBrowseEl.classList.remove('show');
   pagePromoEl.classList.add('show');
+  setActiveTab('promo');
   // 서브화면을 다시 열 때는 항상 폼부터 보여줌 (이전 결제 결과는 초기화)
   promoResultWrapEl.style.display = 'none';
   promoResultWrapEl.innerHTML = '';
@@ -1530,6 +1791,7 @@ function backToMain(){
 }
 document.getElementById('backFromBrowse').addEventListener('click', backToMain);
 document.getElementById('backFromPromo').addEventListener('click', backToMain);
+document.getElementById('recentMore').addEventListener('click', ()=>showBrowsePage());
 
 // 폼 제출 후에는 폼을 숨기고, 결제 진행/완료/오류 상태만 결과 영역에 표시
 function renderPromoPageBody(kind, msgKo, msgEn, preview){
@@ -1651,8 +1913,11 @@ async function loginWithPi(){
       username: authResult.user.username,
       accessToken: authResult.accessToken
     };
-    document.getElementById('whoamiText').textContent = '@' + currentUser.username + ' 로 로그인됨 / Logged in as @' + currentUser.username;
+    document.getElementById('whoamiText').textContent = '@' + currentUser.username + ' 로 로그인됨 · 개인정보는 쓰지 마세요.';
     document.getElementById('loginBtn').style.display = 'none';
+    const chip = document.getElementById('userChip');
+    chip.textContent = '@' + currentUser.username;
+    chip.hidden = false;
   }catch(e){
     console.error(e);
     showStatus('writeStatus','err','로그인에 실패했습니다: ' + e.message, 'Login failed: ' + e.message);
@@ -1663,8 +1928,9 @@ document.getElementById('loginBtn').addEventListener('click', loginWithPi);
 // 서버가 로그인을 확인하지 못했을 때(토큰 만료 등): 로그인 상태를 풀고 다시 로그인하게 안내
 function handleLoginExpired(statusId){
   currentUser = null;
-  document.getElementById('whoamiText').innerHTML = '낙서는 파이오니어만, 구경은 아무나 가능<span style="display:block;font-size:10px;opacity:.8;">Pioneers write · anyone can browse</span>';
+  document.getElementById('whoamiText').textContent = '낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.';
   document.getElementById('loginBtn').style.display = '';
+  document.getElementById('userChip').hidden = true;
   const ko = '로그인이 만료되었어요. 다시 Pi로 로그인해주세요.';
   const en = 'Your login expired. Please log in with Pi again.';
   if(statusId) showStatus(statusId, 'err', ko, en);
@@ -1730,6 +1996,7 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
       return;
     }
     document.getElementById('writeMsg').value = '';
+    updateWriteCount();
     loadVisitStats(); // 방금 낙서한 것을 통계에 반영
     document.getElementById('selfCertCheck').checked = false;
     const streakLine = data.streak
