@@ -658,7 +658,18 @@ app.post('/api/payments/complete', async (req, res) => {
     });
     if(!r.ok) throw new Error(`Pi API complete failed: ${r.status}`);
 
-    await registerPromo({ paymentId, plan, appName, appUrl, message, author });
+    const data = await loadData();
+    const now = Date.now();
+    data.promos.push({
+      appName: String(appName || '').slice(0, 40),
+      appUrl: appUrl.slice(0, 200),
+      message: String(message || '').slice(0, 120),
+      author: String(author).slice(0, 40),
+      paymentId,
+      createdAt: now,
+      expiresAt: now + plan.days * DAY_MS
+    });
+    await saveData(data);
 
     res.json({ ok: true, days: plan.days });
   }catch(e){
@@ -667,74 +678,16 @@ app.post('/api/payments/complete', async (req, res) => {
   }
 });
 
-// 홍보 등록 (같은 paymentId는 한 번만 등록 — 중복 호출돼도 안전)
-async function registerPromo({ paymentId, plan, appName, appUrl, message, author }){
-  const data = await loadData();
-  if(data.promos.some(p => p.paymentId === paymentId)) return false;
-  const now = Date.now();
-  data.promos.push({
-    appName: String(appName || '').slice(0, 40),
-    appUrl: String(appUrl || '').slice(0, 200),
-    message: String(message || '').slice(0, 120),
-    author: String(author || '개발자').slice(0, 40),
-    paymentId,
-    createdAt: now,
-    expiresAt: now + plan.days * DAY_MS
-  });
-  await saveData(data);
-  return true;
-}
-
 // 앱 재실행 시 남아있던 미완료 결제 정리용 (프론트의 onIncompletePaymentFound에서 호출)
-// - 이미 블록체인 송금(txid)이 있으면 → 취소가 아니라 "완료" 처리 + 홍보 등록
-// - 송금 전이면 → 취소
-// 클라이언트가 보낸 값은 믿지 않고, Pi 서버에서 결제 정보를 다시 조회해서 판단함
 app.post('/api/payments/complete-existing', async (req, res) => {
-  const { paymentId } = req.body || {};
-  if(!paymentId) return res.status(400).json({ error: 'paymentId required' });
-
+  const { paymentId } = req.body;
   try{
-    const payment = await getPiPayment(paymentId);
-    const status = payment.status || {};
-    const txid = payment.transaction && payment.transaction.txid;
-    const meta = payment.metadata || {};
-    const plan = planForAmount(payment.amount);
-
-    // 1) 송금까지 끝난 결제 → 완료 처리
-    if(txid){
-      if(!status.developer_completed){
-        const r = await fetch(`${PI_API_BASE}/payments/${paymentId}/complete`, {
-          method: 'POST',
-          headers: { 'Authorization': `Key ${PI_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ txid })
-        });
-        if(!r.ok) throw new Error(`Pi API complete failed: ${r.status}`);
-      }
-      // 돈은 받았으니 홍보도 등록 (금액·URL이 정상일 때만, 이미 등록됐으면 건너뜀)
-      let registered = false;
-      if(plan && isAllowedPiAppUrl(meta.appUrl)){
-        registered = await registerPromo({
-          paymentId, plan,
-          appName: meta.appName, appUrl: meta.appUrl, message: meta.message,
-          author: meta.author || '개발자'
-        });
-      }else{
-        console.warn(`⚠️ 미완료 결제 ${paymentId}: 완료는 했지만 홍보 정보가 올바르지 않아 등록 안 함`);
-      }
-      return res.json({ ok: true, action: 'completed', registered });
-    }
-
-    // 2) 송금 전 결제 → 취소
-    if(status.cancelled || status.user_cancelled){
-      return res.json({ ok: true, action: 'already_cancelled' });
-    }
     const r = await fetch(`${PI_API_BASE}/payments/${paymentId}/cancel`, {
       method: 'POST',
       headers: { 'Authorization': `Key ${PI_API_KEY}` }
     });
-    res.json({ ok: r.ok, action: 'cancelled' });
+    res.json({ ok: r.ok });
   }catch(e){
-    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
