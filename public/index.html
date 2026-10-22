@@ -2223,7 +2223,6 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
   const previewData = { appName, message, author: currentUser.username };
   renderPromoPageBody('ok', '결제를 진행해주세요...', 'Please complete the payment in Pi Browser...', previewData);
 
-  let approveError = '';
   try{
     await Pi.createPayment({
       amount: PLAN_INFO[plan].amount,
@@ -2231,21 +2230,11 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
       metadata: { appName, appUrl, message, author: currentUser.username }
     }, {
       onReadyForServerApproval: async function(paymentId){
-        try{
-          const r = await fetch(API_BASE + '/api/payments/approve', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ paymentId })
-          });
-          if(!r.ok){
-            const j = await r.json().catch(() => ({}));
-            approveError = `서버 승인 실패 (${r.status}) ${j.error || ''}`;
-            renderPromoPageBody('err', approveError, 'Server approval failed');
-          }
-        }catch(e){
-          approveError = '서버 연결 실패: ' + e.message;
-          renderPromoPageBody('err', approveError, 'Could not reach server');
-        }
+        await fetch(API_BASE + '/api/payments/approve', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ paymentId })
+        });
       },
       onReadyForServerCompletion: async function(paymentId, txid){
         await fetch(API_BASE + '/api/payments/complete', {
@@ -2259,10 +2248,6 @@ document.getElementById('submitPromo').addEventListener('click', async ()=>{
         document.getElementById('promoMsg').value = '';
       },
       onCancel: function(paymentId){
-        if(approveError){
-          renderPromoPageBody('err', '결제가 취소되었습니다 — 원인: ' + approveError, 'Payment cancelled because server approval failed.');
-          return;
-        }
         renderPromoPageBody('err', '결제가 취소되었습니다.', 'Payment was cancelled.');
       },
       onError: function(error, payment){
