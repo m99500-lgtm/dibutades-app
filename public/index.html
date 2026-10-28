@@ -1052,6 +1052,24 @@
   body.season-summer .write-card{ border-top:2px solid rgba(63,208,224,0.55); }
   body.season-autumn .write-card{ border-top:2px solid rgba(255,154,60,0.6); }
   body.season-winter .write-card{ border-top:2px solid rgba(159,212,255,0.6); }
+
+  /* 탭바: 휴대폰 하단 버튼 줄에 가리지 않도록 폰에서도 위쪽에 고정 (스크롤해도 맨 위에 붙어 있음) */
+  @media (max-width:959px){
+    nav{
+      position:-webkit-sticky; position:sticky; top:0; bottom:auto; left:auto; right:auto;
+      display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:4px;
+      margin:10px 0 0; padding:6px 10px; max-width:none;
+      background:var(--wall); border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+      -webkit-transform:none; transform:none; will-change:auto; z-index:40;
+    }
+    nav button, nav .nav-link{
+      flex-direction:row; gap:5px; min-height:44px; padding:0 4px; border-radius:10px; font-size:12px;
+    }
+    nav svg{ width:18px; height:18px; flex:0 0 auto; }
+    nav button.active{ background:rgba(255,201,60,0.14) !important; }
+    body.light-theme nav button.active{ background:rgba(184,134,11,0.14) !important; }
+    .app{ padding-bottom:40px; }
+  }
 </style>
 </head>
 <body>
