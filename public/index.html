@@ -1032,7 +1032,10 @@
      계절 분위기: 화면은 그대로, 배경 빛 색 + 글씨 뒤로 지나가는 장식만 바뀜
      (봄 꽃잎 · 여름 반딧불이 · 가을 낙엽 · 겨울 눈) — 한국 날짜 기준 자동
      ===================================================================== */
-  #seasonFx{ position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+  #seasonFx{ position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:0; pointer-events:none; }
+  /* 일부 안드로이드 웹뷰에서 고정 캔버스가 하단 탭바를 가리지 않도록 탭바를 별도 층으로 띄움 */
+  nav{ z-index:1000; -webkit-transform:translateZ(0); transform:translateZ(0); will-change:transform; }
+  @media (min-width:960px){ nav{ -webkit-transform:none; transform:none; will-change:auto; } }
   body.season-spring::before{ background:#ff9ec4; }
   body.season-spring::after { background:#8fe3b0; }
   body.season-summer::before{ background:#3fd0e0; }
@@ -2364,7 +2367,11 @@ function formatTime(ts){
   const kstMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Seoul', month:'numeric' }).format(new Date()));
   const auto = [3,4,5].includes(kstMonth) ? 'spring' : [6,7,8].includes(kstMonth) ? 'summer' : [9,10,11].includes(kstMonth) ? 'autumn' : 'winter';
   let season = auto;
-  try{ const q = new URLSearchParams(location.search).get('season'); if(['spring','summer','autumn','winter'].includes(q)) season = q; }catch(e){}
+  try{
+    const q = new URLSearchParams(location.search).get('season');
+    if(q === 'off'){ const c = document.getElementById('seasonFx'); if(c) c.remove(); return; } // ?season=off : 계절 효과 끄기
+    if(['spring','summer','autumn','winter'].includes(q)) season = q;
+  }catch(e){}
   document.body.classList.add('season-' + season);
 
   const cv = document.getElementById('seasonFx');
