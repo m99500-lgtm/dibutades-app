@@ -1027,9 +1027,32 @@
     .ts-price{ display:none; }
     .app.showing-fullpage ~ #rightpanel{ display:flex !important; }
   }
+
+  /* =====================================================================
+     계절 분위기: 화면은 그대로, 배경 빛 색 + 글씨 뒤로 지나가는 장식만 바뀜
+     (봄 꽃잎 · 여름 반딧불이 · 가을 낙엽 · 겨울 눈) — 한국 날짜 기준 자동
+     ===================================================================== */
+  #seasonFx{ position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+  body.season-spring::before{ background:#ff9ec4; }
+  body.season-spring::after { background:#8fe3b0; }
+  body.season-summer::before{ background:#3fd0e0; }
+  body.season-summer::after { background:#c8f06a; }
+  body.season-autumn::before{ background:#ff9a3c; }
+  body.season-autumn::after { background:#e3543c; }
+  body.season-winter::before{ background:#9fd4ff; }
+  body.season-winter::after { background:#c4b5ff; }
+  body.season-spring .meet-box{ box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 12px rgba(255,158,196,0.35); }
+  body.season-summer .meet-box{ box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 12px rgba(63,208,224,0.35); }
+  body.season-autumn .meet-box{ box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 12px rgba(255,154,60,0.35); }
+  body.season-winter .meet-box{ box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 12px rgba(159,212,255,0.4); }
+  body.season-spring .write-card{ border-top:2px solid rgba(255,158,196,0.55); }
+  body.season-summer .write-card{ border-top:2px solid rgba(63,208,224,0.55); }
+  body.season-autumn .write-card{ border-top:2px solid rgba(255,154,60,0.6); }
+  body.season-winter .write-card{ border-top:2px solid rgba(159,212,255,0.6); }
 </style>
 </head>
 <body>
+<canvas id="seasonFx" aria-hidden="true"></canvas>
 
 <div class="layout">
 
@@ -2335,6 +2358,86 @@ function formatTime(ts){
   const d = new Date(ts);
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
+
+// ---------- 계절 분위기 (한국 날짜 기준 자동, 주소 끝에 ?season=spring|summer|autumn|winter 로 미리보기) ----------
+(function(){
+  const kstMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Seoul', month:'numeric' }).format(new Date()));
+  const auto = [3,4,5].includes(kstMonth) ? 'spring' : [6,7,8].includes(kstMonth) ? 'summer' : [9,10,11].includes(kstMonth) ? 'autumn' : 'winter';
+  let season = auto;
+  try{ const q = new URLSearchParams(location.search).get('season'); if(['spring','summer','autumn','winter'].includes(q)) season = q; }catch(e){}
+  document.body.classList.add('season-' + season);
+
+  const cv = document.getElementById('seasonFx');
+  if(!cv || reduceMotion) return; // '동작 줄이기' 설정이면 색만 바뀌고 장식은 없음
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0, raf = 0, last = 0;
+  const COUNT = { spring:16, summer:14, autumn:20, winter:28 }[season];
+  const PAL = {
+    spring: ['#ffc1d6','#ffb0c8','#ffd6e4','#f7a1bd'],
+    summer: ['#d8ff7a','#f4ff9e','#b8ff6a'],
+    autumn: ['#ff9a3c','#e3543c','#ffc93c','#c8642a'],
+    winter: ['#ffffff','#e8f3ff','#d6e8ff']
+  }[season];
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function make(randomY){
+    return {
+      x: Math.random() * W, y: randomY ? Math.random() * H : -20 - Math.random() * 60,
+      s: season === 'winter' ? 1 + Math.random() * 2.2 : 5 + Math.random() * 5,
+      vy: season === 'summer' ? (Math.random() - 0.5) * 8 : (season === 'winter' ? 18 : 22) + Math.random() * 22,
+      vx: season === 'summer' ? (Math.random() - 0.5) * 10 : (Math.random() - 0.3) * 12,
+      a: Math.random() * Math.PI * 2, va: (Math.random() - 0.5) * 1.6,
+      ph: Math.random() * Math.PI * 2, c: PAL[Math.random() * PAL.length | 0]
+    };
+  }
+  const items = [];
+  function lightAlpha(){ return document.body.classList.contains('light-theme') ? 0.55 : 0.8; }
+  function drawPetal(p){ ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  function drawLeaf(p){ ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.moveTo(0, -p.s); ctx.quadraticCurveTo(p.s * 0.9, 0, 0, p.s); ctx.quadraticCurveTo(-p.s * 0.9, 0, 0, -p.s); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, -p.s); ctx.lineTo(0, p.s * 1.25); ctx.stroke(); ctx.restore(); }
+  function drawFirefly(p, t){ const blink = 0.35 + 0.65 * Math.max(0, Math.sin(t * 1.6 + p.ph));
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 9); g.addColorStop(0, p.c); g.addColorStop(1, 'rgba(200,255,120,0)');
+    ctx.globalAlpha *= blink; ctx.fillStyle = g; ctx.fillRect(p.x - 9, p.y - 9, 18, 18); }
+  function drawSnow(p){ ctx.fillStyle = document.body.classList.contains('light-theme') ? '#a9c3dd' : p.c;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill(); }
+  let t = 0;
+  function frame(now){
+    raf = 0;
+    if(document.hidden) return;
+    // 낙서를 쓰는 동안(만남 애니메이션이 멈춰 있을 때)은 장식도 쉼
+    if(typeof meetFrozen !== 'undefined' && meetFrozen){ setTimeout(()=>{ if(!raf) raf = requestAnimationFrame(frame); }, 400); last = 0; return; }
+    const dt = last ? Math.min(0.05, (now - last) / 1000) : 0; last = now; t += dt;
+    ctx.clearRect(0, 0, W, H);
+    for(const p of items){
+      p.a += p.va * dt;
+      if(season === 'summer'){
+        p.x += (p.vx + Math.sin(t * 0.7 + p.ph) * 6) * dt; p.y += (p.vy + Math.cos(t * 0.5 + p.ph) * 6) * dt;
+        if(p.x < -10) p.x = W + 10; if(p.x > W + 10) p.x = -10; if(p.y < -10) p.y = H + 10; if(p.y > H + 10) p.y = -10;
+      }else{
+        p.x += (p.vx + Math.sin(t + p.ph) * (season === 'winter' ? 6 : 14)) * dt; p.y += p.vy * dt;
+        if(p.y > H + 20 || p.x < -30 || p.x > W + 30) Object.assign(p, make(false));
+      }
+      ctx.globalAlpha = lightAlpha();
+      if(season === 'spring') drawPetal(p);
+      else if(season === 'autumn') drawLeaf(p);
+      else if(season === 'summer') drawFirefly(p, t);
+      else drawSnow(p);
+    }
+    ctx.globalAlpha = 1;
+    raf = requestAnimationFrame(frame);
+  }
+  resize();
+  for(let i = 0; i < COUNT; i++) items.push(make(true));
+  raf = requestAnimationFrame(frame);
+  window.addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && !raf){ last = 0; raf = requestAnimationFrame(frame); } });
+})();
 </script>
 </body>
 </html>
