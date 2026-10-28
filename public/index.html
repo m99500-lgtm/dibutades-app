@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>디부타데스 | Pi Dibutades</title>
 <!-- 일부 안드로이드 브라우저/웹뷰의 "웹사이트 강제 다크모드"가 사이트 자체 테마 전환(다크/라이트 토글)을 덮어쓰는 것을 막기 위함 -->
 <meta name="color-scheme" content="light dark">
@@ -846,7 +846,7 @@
   .layout{ max-width:560px; flex-direction:column; }
   #livefeed{ display:none !important; }
   #rightpanel{ display:none !important; }
-  .app{ order:0; padding-bottom:calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .app{ order:0; padding-bottom:calc(96px + max(env(safe-area-inset-bottom, 0px), var(--sys-bar, 0px))); }
 
   /* 헤더 */
   header{ padding:10px 16px; padding-right:16px; }
@@ -916,7 +916,7 @@
   nav{
     position:fixed; top:auto; left:0; right:0; bottom:0; z-index:50;
     display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:0;
-    padding:0 0 env(safe-area-inset-bottom, 0px); margin:0 auto; max-width:560px;
+    padding:0 0 max(env(safe-area-inset-bottom, 0px), var(--sys-bar, 0px)); margin:0 auto; max-width:560px;
     background:var(--bar); border-top:1px solid var(--line); border-bottom:none;
   }
   nav button, nav .nav-link{
@@ -2444,6 +2444,19 @@ function formatTime(ts){
   raf = requestAnimationFrame(frame);
   window.addEventListener('resize', resize);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && !raf){ last = 0; raf = requestAnimationFrame(frame); } });
+})();
+
+// ---------- 하단 탭이 휴대폰 하단 버튼 줄에 가리지 않게 (안전 영역 보조 계산) ----------
+(function(){
+  const vv = window.visualViewport;
+  if(!vv) return;
+  function fit(){
+    const hidden = Math.max(0, Math.round(window.innerHeight - (vv.height + vv.offsetTop)));
+    // 키보드가 올라온 경우(크게 줄어든 경우)는 제외
+    document.documentElement.style.setProperty('--sys-bar', (hidden > 0 && hidden < 120 ? hidden : 0) + 'px');
+  }
+  vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); window.addEventListener('resize', fit);
+  fit();
 })();
 </script>
 </body>
