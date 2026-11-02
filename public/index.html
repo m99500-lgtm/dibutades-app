@@ -1843,6 +1843,15 @@ function backToMain(){
 document.getElementById('backFromBrowse').addEventListener('click', backToMain);
 document.getElementById('backFromPromo').addEventListener('click', backToMain);
 document.getElementById('recentMore').addEventListener('click', ()=>showBrowsePage());
+(function openTabFromUrl(){
+  let tab = null;
+  try{ tab = new URLSearchParams(location.search).get('tab'); }catch(e){}
+  // 페이지의 나머지 코드(요금제 정보 등)가 모두 준비된 뒤에 열기
+  setTimeout(()=>{
+    if(tab === 'wall') showBrowsePage();
+    else if(tab === 'promo') showPromoPage();
+  }, 0);
+})();
 
 // 폼 제출 후에는 폼을 숨기고, 결제 진행/완료/오류 상태만 결과 영역에 표시
 function renderPromoPageBody(kind, msgKo, msgEn, preview){
@@ -1951,9 +1960,21 @@ async function watchRewardedAdForTicket(){
 }
 document.getElementById('rewardAdBtn').addEventListener('click', watchRewardedAdForTicket);
 
-async function loginWithPi(){
+// 갤러리 등 다른 페이지를 다녀와도 로그인이 유지되도록, 로그인한 적이 있으면 조용히 다시 로그인
+const AUTO_LOGIN_KEY = 'dbtAutoLogin';
+function rememberLogin(on){
+  try{ on ? sessionStorage.setItem(AUTO_LOGIN_KEY, '1') : sessionStorage.removeItem(AUTO_LOGIN_KEY); }catch(e){}
+  try{ on ? localStorage.setItem(AUTO_LOGIN_KEY, String(Date.now())) : localStorage.removeItem(AUTO_LOGIN_KEY); }catch(e){}
+}
+function shouldAutoLogin(){
+  try{ if(sessionStorage.getItem(AUTO_LOGIN_KEY) === '1') return true; }catch(e){}
+  try{ const t = Number(localStorage.getItem(AUTO_LOGIN_KEY) || 0); if(t && Date.now() - t < 12*60*60*1000) return true; }catch(e){}
+  return false;
+}
+async function loginWithPi(opts){
+  const silent = !!(opts && opts.silent);
   if(typeof Pi === 'undefined'){
-    alert('Pi Browser 안에서 열어주세요. / Please open this inside Pi Browser.');
+    if(!silent) alert('Pi Browser 안에서 열어주세요. / Please open this inside Pi Browser.');
     return;
   }
   try{
@@ -1969,16 +1990,22 @@ async function loginWithPi(){
     const chip = document.getElementById('userChip');
     chip.textContent = '@' + currentUser.username;
     chip.hidden = false;
+    rememberLogin(true);
+    // 앱 홍보 화면이 이미 열려 있으면 내 무료권 정보를 다시 불러옴
+    if(document.getElementById('pagePromo').classList.contains('show')) loadMyTickets();
   }catch(e){
     console.error(e);
+    if(silent){ rememberLogin(false); return; } // 조용한 재로그인 실패는 안내 없이 넘어감
     showStatus('writeStatus','err','로그인에 실패했습니다: ' + e.message, 'Login failed: ' + e.message);
   }
 }
-document.getElementById('loginBtn').addEventListener('click', loginWithPi);
+document.getElementById('loginBtn').addEventListener('click', ()=>loginWithPi());
+if(shouldAutoLogin()) loginWithPi({ silent:true });
 
 // 서버가 로그인을 확인하지 못했을 때(토큰 만료 등): 로그인 상태를 풀고 다시 로그인하게 안내
 function handleLoginExpired(statusId){
   currentUser = null;
+  rememberLogin(false);
   document.getElementById('whoamiText').textContent = '낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.';
   document.getElementById('loginBtn').style.display = '';
   document.getElementById('userChip').hidden = true;
