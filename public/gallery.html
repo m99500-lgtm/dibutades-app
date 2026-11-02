@@ -24,7 +24,7 @@
 *{box-sizing:border-box}
 body{background:var(--void);color:var(--star);font-family:var(--body);font-weight:300;font-size:16px;line-height:1.75;margin:0}
 .wrap{max-width:1120px;margin:0 auto;padding-inline:clamp(16px,4vw,40px);padding-block:0 96px}
-header{padding-block:72px 56px;display:grid;gap:20px;border-bottom:1px solid var(--trace)}
+header{padding-block:36px 56px;display:grid;gap:20px;border-bottom:1px solid var(--trace)}
 .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--dust);text-transform:uppercase}
 h1{font-family:var(--display);font-weight:700;font-size:clamp(44px,9vw,104px);line-height:1;margin:0;letter-spacing:-.01em;text-wrap:balance}
 h1 span{display:block;font-weight:400;font-size:.32em;color:var(--dust);letter-spacing:.04em;margin-top:18px}
@@ -35,7 +35,7 @@ h1 span{display:block;font-weight:400;font-size:.32em;color:var(--dust);letter-s
 .cycle a{color:inherit;text-decoration:none;border-bottom:1px solid transparent}
 .cycle a:hover,.cycle a:focus-visible{color:var(--star);border-color:var(--ember);outline:none}
 .cycle i{font-style:normal;color:var(--trace)}
-.work{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding-block:64px;border-bottom:1px solid var(--trace);scroll-margin-top:16px}
+.work{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding-block:64px;border-bottom:1px solid var(--trace);scroll-margin-top:72px}
 /* 미술관 액자: 어두운 매트 + 금빛 선 + 바깥 얇은 선 + 작품 색의 은은한 빛 */
 .frame{--glow:rgba(242,182,50,.45);margin:0;padding:12px;background:var(--void-2);border:1px solid rgba(242,182,50,.8);cursor:zoom-in;
   box-shadow:inset 0 0 0 1px rgba(242,182,50,.16),0 0 0 4px var(--void),0 0 0 5px rgba(242,182,50,.3),0 0 32px 2px var(--glow);
@@ -59,7 +59,7 @@ h2 small{font-family:var(--body);font-weight:300;font-size:.45em;color:var(--dus
 footer{padding-block:56px 0;display:grid;gap:14px;color:var(--dust);font-size:14px}
 footer .sig{font-family:var(--display);font-size:28px;color:var(--star)}
 .back{display:inline-block;margin-top:24px;font-family:var(--mono);font-size:13px;color:var(--dust);text-decoration:none}.back:hover,.back:focus-visible{color:var(--star)}
-.series{display:grid;gap:14px;padding-block:72px 8px;border-bottom:1px solid var(--trace)}
+.series{scroll-margin-top:72px;display:grid;gap:14px;padding-block:72px 8px;border-bottom:1px solid var(--trace)}
 .stitle{font-family:var(--display);font-weight:700;font-size:clamp(36px,7vw,64px);line-height:1.05;margin:0}
 .series-nav{display:flex;flex-wrap:wrap;gap:10px}
 .series-nav a{font-family:var(--body);font-size:14px;color:var(--star);text-decoration:none;border:1px solid var(--trace);padding:8px 14px;border-radius:999px}
@@ -76,12 +76,25 @@ footer .sig{font-family:var(--display);font-size:28px;color:var(--star)}
 .lb img{max-height:100%;width:auto;max-width:100%}
 .lb[hidden]{display:none!important}
 @media (prefers-reduced-motion:no-preference){.frame img{transition:filter .4s}.frame:hover img{filter:brightness(1.12)}}
+.appnav{position:-webkit-sticky;position:sticky;top:0;z-index:20;background:rgba(7,8,15,.94);border-bottom:1px solid var(--trace);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.appnav .in{max-width:1120px;margin:0 auto;padding:6px clamp(10px,4vw,40px);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.appnav a{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border-radius:10px;color:#C3C8DA;text-decoration:none;
+  font-family:var(--body);font-size:13px;font-weight:400}
+.appnav a:hover,.appnav a:focus-visible{color:var(--star);background:rgba(255,255,255,.05);outline:none}
+.appnav a[aria-current="page"]{color:var(--ember);font-weight:500;background:rgba(242,182,50,.12)}
+.appnav svg{width:18px;height:18px;flex:none}
 </style>
 
 </head>
 <body>
+<nav class="appnav" aria-label="디부타데스 메뉴"><div class="in">
+  <a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>쓰기</a>
+  <a href="/?tab=wall"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v6M15 10v5M9 15v5"/></svg>낙서벽</a>
+  <a href="/gallery.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>갤러리</a>
+  <a href="/?tab=promo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>앱 홍보</a>
+</div></nav>
 <div class="wrap">
-  <a class="back" href="/">← 디부타데스로 돌아가기</a>
   <header>
     <div class="eyebrow">상설 전시 · 온라인 · 2026. 10. 07 개관</div>
     <h1>로흐 갤러리<span>Roch · 연작 열 · 작품 마흔 점</span></h1>
