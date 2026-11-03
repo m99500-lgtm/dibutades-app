@@ -1,0 +1,2667 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>디부타데스 | Pi Dibutades</title>
+<!-- 일부 안드로이드 브라우저/웹뷰의 "웹사이트 강제 다크모드"가 사이트 자체 테마 전환(다크/라이트 토글)을 덮어쓰는 것을 막기 위함 -->
+<meta name="color-scheme" content="light dark">
+
+<!-- Pi SDK: 공식 문서 기준 CDN. 반드시 실제 배포 도메인에서 https로 로드해야 합니다. -->
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Song+Myung&family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    color-scheme: dark;
+    --wall:      #23222a;   /* 벽돌 벽, 밤 */
+    --wall-2:    #322824;   /* 벽돌 언더톤 */
+    --chalk:     #f3ede0;   /* 분필/스프레이 화이트 */
+    --chalk-dim: #cfc6b4;
+    --spray-y:   #ffc93c;   /* 스프레이 옐로우 (메인 액센트) */
+    --spray-c:   #49b9c7;   /* 스프레이 시안 (홍보/링크) */
+    --spray-r:   #e3543c;   /* 스프레이 레드 (경고/뱃지) */
+    --line:      rgba(243,237,224,0.14);
+  }
+  body.light-theme{
+    color-scheme: light;
+    --wall:      #f6f1e4;   /* 밝은 벽, 낮 */
+    --wall-2:    #e9dfc7;   /* 벽돌 언더톤 (밝은 버전) */
+    --chalk:     #2b2b2f;   /* 짙은 글자색 */
+    --chalk-dim: #6b6458;
+    --spray-y:   #b8860b;   /* 밝은 배경에서도 잘 보이는 진한 골드 */
+    --spray-c:   #0e7c88;   /* 진한 시안 */
+    --spray-r:   #c23b28;   /* 진한 레드 */
+    --line:      rgba(43,43,47,0.16);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(255,201,60,0.08), transparent 40%),
+      repeating-linear-gradient(0deg, var(--wall) 0 46px, var(--wall-2) 46px 48px),
+      repeating-linear-gradient(90deg, transparent 0 92px, rgba(0,0,0,0.18) 92px 94px);
+    color:var(--chalk);
+    font-family:'Noto Sans KR', sans-serif;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  body::before, body::after{
+    content:'';
+    position:fixed;
+    width:280px; height:280px;
+    border-radius:50%;
+    filter:blur(60px);
+    opacity:0.16;
+    z-index:0;
+    pointer-events:none;
+  }
+  body::before{
+    background:var(--spray-c);
+    top:-60px; left:-60px;
+    animation: blob-drift-a 14s ease-in-out infinite;
+  }
+  body::after{
+    background:var(--spray-r);
+    bottom:-60px; right:-60px;
+    animation: blob-drift-b 17s ease-in-out infinite;
+  }
+  @keyframes blob-drift-a{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(40px,60px) scale(1.25); }
+  }
+  @keyframes blob-drift-b{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(-30px,-50px) scale(1.2); }
+  }
+
+  /* ---------- 전체 레이아웃: 왼쪽 세계시계 + 오른쪽 앱 ---------- */
+  .layout{
+    display:flex;
+    max-width:680px;
+    margin:0 auto;
+    min-height:100vh;
+    position:relative;
+    z-index:1;
+  }
+
+  /* ---------- 왼쪽 패널: 실시간 낙서 피드 ---------- */
+  #livefeed{
+    width:92px;
+    flex:0 0 92px;
+    border-right:1px solid var(--line);
+    padding:14px 6px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    background:rgba(0,0,0,0.18);
+  }
+  .lf-title{
+    font-size:10px;
+    color:var(--chalk-dim);
+    text-align:center;
+    line-height:1.4;
+  }
+  .lf-title .en{ display:block; font-size:8px; opacity:0.75; }
+  .lf-count{ text-align:center; margin-bottom:4px; }
+  .lf-count .num{ font-size:20px; font-weight:900; color:var(--spray-y); font-variant-numeric:tabular-nums; }
+  .lf-count .lbl{ font-size:8.5px; color:var(--chalk-dim); line-height:1.3; }
+  .lf-count .lbl .en{ display:block; font-size:7.5px; opacity:0.75; }
+  /* 오늘 방문 통계: 방문 / 낙서함 / 구경만 */
+  .lf-visits{ margin-top:8px; padding-top:6px; border-top:1px dashed var(--line); }
+  .lf-visits .vrow{ display:flex; justify-content:space-between; align-items:baseline; gap:4px; font-size:9px; color:var(--chalk-dim); line-height:1.6; }
+  .lf-visits .vrow b{ color:var(--spray-y); font-size:11px; font-variant-numeric:tabular-nums; }
+  .lf-visits .vnote{ font-size:7.5px; color:var(--chalk-dim); opacity:0.75; text-align:center; margin-top:2px; line-height:1.3; }
+  .lf-visits .vnote .en{ display:block; }
+  .lf-item{
+    border-top:1px dashed var(--line);
+    padding:7px 0 2px;
+    cursor:pointer;
+  }
+  .lf-item .who{ font-size:8.5px; color:var(--spray-y); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lf-item .msg{
+    font-size:9px;
+    color:var(--chalk);
+    line-height:1.35;
+    margin-top:2px;
+    display:-webkit-box;
+    -webkit-line-clamp:3;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    word-break:break-all;
+  }
+  .lf-item .ago{ font-size:7.5px; color:var(--chalk-dim); margin-top:2px; }
+  .lf-empty{ font-size:9px; color:var(--chalk-dim); text-align:center; line-height:1.4; padding-top:6px; }
+
+  /* ---------- 오른쪽 상단 시계 (두 줄: 날짜 / 24시간) ---------- */
+  .top-clock{ text-align:center; padding-bottom:10px; border-bottom:1px dashed var(--line); }
+  .top-clock .tc-date{ font-size:7.5px;white-space:nowrap; color:var(--chalk-dim); font-variant-numeric:tabular-nums; }
+  .top-clock .tc-time{ font-size:15px; font-weight:900; color:var(--spray-y); margin-top:3px; font-variant-numeric:tabular-nums; }
+
+  /* ---------- 가운데 메인 앱 ---------- */
+  .app{
+    flex:1;
+    min-width:0;
+    padding-bottom:90px;
+  }
+
+  /* ---------- 오른쪽 패널: Pi 실시간 가치 / 런치패드 TOP5 / 스테이킹 TOP5 ---------- */
+  #rightpanel{
+    width:104px;
+    flex:0 0 104px;
+    border-left:1px solid var(--line);
+    padding:14px 6px;
+    background:rgba(0,0,0,0.18);
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .rp-block .rp-title{
+    font-size:10px;
+    color:var(--chalk-dim);
+    text-align:center;
+    line-height:1.4;
+    margin-bottom:8px;
+  }
+  .rp-block .rp-title .en{ display:block; font-size:8px; opacity:0.75; }
+
+  .pi-price{ text-align:center; }
+  .pi-price .amount{
+    font-size:15px;
+    font-weight:900;
+    color:var(--spray-y);
+  }
+  .pi-price .change{ font-size:10px; margin-top:3px; }
+  .pi-price .change.up{ color:#4dd679; }
+  .pi-price .change.down{ color:var(--spray-r); }
+  .pi-price .updated{ font-size:8px; color:var(--chalk-dim); margin-top:4px; }
+
+  .rank-item{ text-align:center; margin-bottom:10px; }
+  .rank-item .rank{ font-size:10.5px; font-weight:900; color:var(--spray-y); }
+  .rank-item .name{
+    font-size:9.5px;
+    color:var(--chalk);
+    margin-top:2px;
+    word-break:break-all;
+    line-height:1.3;
+  }
+  .rank-item .metric{ font-size:8.5px; color:var(--chalk-dim); margin-top:1px; }
+  .rp-empty{
+    font-size:9px;
+    color:var(--chalk-dim);
+    text-align:center;
+    line-height:1.5;
+  }
+  .rp-empty .en{ display:block; opacity:0.75; margin-top:2px; }
+
+  /* ---------- 인기 낙서 TOP5 (이제 "낙서를 보자" 탭 안, 낙서 목록 아래) ---------- */
+  #topboard{
+    margin-top:22px;
+    padding-top:16px;
+    border-top:1px solid var(--line);
+  }
+  #topboard .tb-title{
+    font-size:11px;
+    color:var(--chalk-dim);
+    margin-bottom:10px;
+  }
+  #topboard .tb-title .en{ display:block; font-size:9px; opacity:0.75; margin-top:1px; }
+  .tb-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .tb-item .rank{
+    font-size:12px;
+    font-weight:900;
+    color:var(--spray-y);
+    width:24px;
+    flex:0 0 24px;
+  }
+  .tb-item .author{
+    font-size:12.5px;
+    color:var(--chalk);
+    flex:1;
+  }
+  .tb-item .views{
+    font-size:10.5px;
+    color:var(--chalk-dim);
+  }
+  #topboard .tb-empty{
+    font-size:11px;
+    color:var(--chalk-dim);
+    line-height:1.5;
+  }
+  #topboard .tb-empty .en{ display:block; opacity:0.75; margin-top:2px; }
+
+  header{
+    padding:24px 16px 16px;
+    border-bottom:1px solid var(--line);
+    position:relative;
+  }
+  #themeToggle{
+    position:absolute;
+    top:16px;
+    right:16px;
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:rgba(0,0,0,0.15);
+    color:var(--chalk);
+    font-size:15px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    pointer-events:auto;
+  }
+  header{ padding-right:60px; } /* 오른쪽 위 달 버튼과 겹치지 않게 */
+  header .logo{
+    font-family:'Nanum Pen Script', cursive;
+    font-size:34px;
+    letter-spacing:2px;
+    color:var(--spray-y);
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.35), 0 0 16px rgba(255,201,60,0.35);
+    margin:0;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:4px 10px;
+  }
+  header .logo .logo-text{ display:inline-block; transform: rotate(-1.2deg); }
+  header .logo .en{
+    flex-basis:100%;
+    font-family:'Noto Sans KR', sans-serif;
+    font-size:11px;
+    letter-spacing:2px;
+    color:var(--chalk-dim);
+    text-shadow:none;
+    margin-top:2px;
+  }
+  /* 외계 시각 연작 5점 미니 상자: 이 안에서만 순환하며 움직이고, 낙서를 쓰는 순간 멈춤 */
+  .meet-box{
+    display:block;
+    width:160px; height:48px;
+    border-radius:999px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,0.35);
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 10px rgba(90,180,255,0.25);
+    background:#07080d;
+    transition: box-shadow .4s, filter .4s;
+  }
+  .meet-box{ position:relative; text-decoration:none; }
+  .meet-box canvas{ display:block; width:100%; height:100%; }
+  .meet-label{
+    position:absolute; right:18px; bottom:3px;
+    font-family:'Noto Sans KR', sans-serif; font-size:10px; font-weight:600; letter-spacing:0.5px;
+    color:rgba(255,255,255,0.8); text-shadow:0 0 4px #07080d, 0 0 2px #07080d;
+    transition:opacity .5s; pointer-events:none;
+  }
+  .meet-label.hide{ opacity:0; }
+  .meet-box.frozen{ filter:saturate(0.6) brightness(0.85); box-shadow: inset 0 0 10px rgba(255,255,255,0.12); }
+  @media (max-width:600px){
+    header .logo{ font-size:30px; }
+    .meet-box{ width:200px; height:46px; }
+  }
+  header p{
+    margin:8px 0 0;
+    font-size:12px;
+    color:var(--chalk-dim);
+    line-height:1.5;
+  }
+  header p .en{
+    display:block;
+    font-size:11px;
+    opacity:0.8;
+    margin-top:2px;
+  }
+  #whoami{
+    margin-top:14px;
+    font-size:11px;
+    color:var(--chalk-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  #whoami button{
+    background: linear-gradient(180deg, #4a9eff, #2b6fd6);
+    border:none;
+    border-bottom:2px solid #1a4a9e;
+    color:#fff;
+    padding:4px 12px;
+    border-radius:10px;
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+    line-height:1.4;
+    white-space:nowrap;
+    text-align:center;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.35);
+    transition: transform .08s, box-shadow .08s, border-bottom-width .08s;
+  }
+  #whoami button:active{
+    transform: translateY(2px);
+    border-bottom-width:1px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+
+  nav{
+    display:flex;
+    flex-direction:row;
+    flex-wrap:nowrap;
+    gap:6px;
+    padding:8px 8px 6px;
+    border-bottom:1px solid var(--line);
+    position:sticky;
+    top:0;
+    background:var(--wall);
+    z-index:10;
+  }
+  nav button{
+    flex:1 1 0;
+    min-width:0;
+    min-height:56px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    border:none;
+    color:var(--chalk);
+    font-family:'Noto Sans KR', sans-serif;
+    font-weight:700;
+    font-size:13px;
+    padding:8px 2px;
+    cursor:pointer;
+    border-bottom:3px solid rgba(0,0,0,0.4);
+    border-radius:12px;
+    white-space:nowrap;
+    word-break:keep-all;
+    background-image:linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02));
+    box-shadow:0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.35);
+    line-height:1.4;
+    transition: background .2s, transform .08s, box-shadow .08s, border-bottom-width .08s;
+  }
+  nav button:active{
+    transform:translateY(2px);
+    border-bottom-width:1px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  nav button .en{
+    display:block;
+    font-size:9px;
+    font-weight:400;
+    opacity:0.8;
+    margin-top:2px;
+  }
+  nav button[data-tab="write"]{ background:rgba(168,85,247,0.22); }
+  nav button[data-tab="wall"]{ background:rgba(34,197,94,0.20); }
+  nav button[data-tab="promo"]{ background:rgba(234,179,8,0.22); }
+
+  nav button[data-tab="write"].active{
+    background:rgba(168,85,247,0.5);
+    border-bottom-color:#a855f7;
+    text-shadow:0 0 10px rgba(168,85,247,0.8);
+    animation: tab-pulse-purple 2s ease-in-out infinite;
+  }
+  nav button[data-tab="wall"].active{
+    background:rgba(34,197,94,0.45);
+    border-bottom-color:#22c55e;
+    text-shadow:0 0 10px rgba(34,197,94,0.8);
+    animation: tab-pulse-green 2s ease-in-out infinite;
+  }
+  nav button[data-tab="promo"].active{
+    background:rgba(234,179,8,0.45);
+    border-bottom-color:#eab308;
+    text-shadow:0 0 10px rgba(234,179,8,0.8);
+    animation: tab-pulse-yellow 2s ease-in-out infinite;
+  }
+  @keyframes tab-pulse-purple{
+    0%,100%{ text-shadow:0 0 6px rgba(168,85,247,0.5); }
+    50%{ text-shadow:0 0 14px rgba(168,85,247,1); }
+  }
+  @keyframes tab-pulse-green{
+    0%,100%{ text-shadow:0 0 6px rgba(34,197,94,0.5); }
+    50%{ text-shadow:0 0 14px rgba(34,197,94,1); }
+  }
+  @keyframes tab-pulse-yellow{
+    0%,100%{ text-shadow:0 0 6px rgba(234,179,8,0.5); }
+    50%{ text-shadow:0 0 14px rgba(234,179,8,1); }
+  }
+
+  /* ---------- 추천 앱(유료/무료 홍보) 띠 ---------- */
+  .promo-strip{ display:none; margin:10px 14px 0; }
+  .promo-strip.on{ display:block; }
+  .promo-strip a{
+    display:block;
+    text-decoration:none;
+    color:var(--chalk);
+    border:1px solid rgba(73,185,199,0.55);
+    border-bottom-width:3px;
+    border-radius:12px;
+    padding:7px 12px;
+    background:linear-gradient(180deg, rgba(73,185,199,0.16), rgba(73,185,199,0.05));
+    box-shadow:0 3px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18);
+    animation:ps-fade .5s ease;
+  }
+  .promo-strip a:active{ transform:translateY(2px); border-bottom-width:1px; }
+  .promo-strip .ps-top{ display:flex; justify-content:space-between; align-items:center; font-size:9px; color:var(--spray-c); letter-spacing:.3px; }
+  .promo-strip .ps-top .en{ opacity:0.85; margin-left:4px; }
+  .promo-strip .ps-top .ps-left{ opacity:0.8; color:var(--chalk-dim); white-space:nowrap; }
+  .promo-strip .ps-name{ font-size:13px; font-weight:700; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .promo-strip .ps-msg{ font-size:11px; color:var(--chalk-dim); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  @keyframes ps-fade{ from{opacity:0; transform:translateY(-3px);} to{opacity:1; transform:none;} }
+
+  main{padding:16px 14px;}
+  section{display:none;}
+  section.active{display:block;}
+
+  .today-q{
+    background:none;
+    border:none;
+    padding:0 2px;
+    margin-bottom:4px;
+  }
+  .today-q .tag{
+    font-size:9.5px;
+    color:var(--spray-y);
+    font-weight:700;
+    letter-spacing:0.5px;
+  }
+  .today-q .tag .en{ font-weight:400; opacity:0.85; margin-left:4px; }
+  .today-q .qtext{
+    font-size:12px;
+    font-weight:500;
+    color:var(--chalk-dim);
+    margin-top:3px;
+    line-height:1.45;
+  }
+  .today-q .qtext .en{
+    display:block;
+    font-size:10.5px;
+    font-weight:400;
+    opacity:0.8;
+    margin-top:2px;
+  }
+  .self-cert{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    color:var(--chalk-dim);
+    margin-top:10px;
+    line-height:1.5;
+    cursor:pointer;
+  }
+  .self-cert input{ margin:0; flex:0 0 auto; }
+  .self-cert .en{ display:inline; font-size:11px; opacity:0.8; }
+  label{
+    display:block;
+    font-size:12px;
+    color:var(--chalk-dim);
+    margin:14px 0 6px;
+    line-height:1.5;
+  }
+  label .en{
+    display:block;
+    font-size:11px;
+    opacity:0.75;
+  }
+  input[type=text], textarea{
+    width:100%;
+    background:rgba(0,0,0,0.25);
+    border:1px solid var(--line);
+    border-radius:8px;
+    color:var(--chalk);
+    padding:11px 12px;
+    font-family:'Noto Sans KR', sans-serif;
+    font-size:14px;
+  }
+  textarea{min-height:90px; resize:vertical;}
+  /* 낙서 입력칸: 얇은 무지개 선 테두리 (둥근 모서리) */
+  #writeMsg{
+    border:2px solid transparent;
+    border-radius:12px;
+    background:
+      linear-gradient(var(--wall), var(--wall)) padding-box,
+      linear-gradient(90deg, #ff4d4d, #ff9f1c, #ffd93d, #4dd679, #3ea6ff, #5b6cff, #b967ff) border-box;
+    margin-top:8px;
+  }
+  /* 낙서 남기기 버튼: 로그인 버튼보다 조금 큰 크기, 한 줄, 입체감 */
+  #submitGraffiti{
+    width:auto;
+    display:block;
+    padding:4px 14px;
+    font-size:10.5px;
+    line-height:1.25;
+    text-align:center;
+    margin-top:14px;
+    border-bottom:3px solid #b8890f;
+    border-radius:10px;
+    box-shadow:0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+    transition:transform .08s, box-shadow .08s, border-bottom-width .08s;
+  }
+  #submitGraffiti .en{ display:block; font-size:8.5px; margin-left:0; margin-top:1px; }
+  #submitGraffiti:active{
+    transform:translateY(2px);
+    border-bottom-width:1px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+
+
+  .btn{
+    display:inline-block;
+    border:none;
+    border-radius:8px;
+    padding:12px 18px;
+    font-family:'Noto Sans KR', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+    width:100%;
+    margin-top:16px;
+    line-height:1.4;
+  }
+  .btn .en{
+    display:block;
+    font-size:11px;
+    font-weight:400;
+    opacity:0.8;
+    margin-top:2px;
+  }
+  .btn-primary{background:var(--spray-y); color:#241b04; box-shadow:0 0 0 rgba(255,201,60,0.5); transition: box-shadow .2s, transform .1s;}
+  .plan-list{ display:flex; flex-direction:column; gap:8px; margin:6px 0 4px; }
+  .plan-opt{
+    display:flex; align-items:center; gap:10px;
+    border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+    cursor:pointer; font-size:13.5px; color:var(--chalk); background:rgba(255,255,255,0.03);
+  }
+  .plan-opt input{ flex:0 0 auto; }
+  .plan-opt .pn{ flex:1; line-height:1.4; }
+  .plan-opt .pn .en{ display:block; font-size:11px; opacity:0.8; }
+  .plan-opt .pp{ font-weight:900; color:var(--spray-y); white-space:nowrap; }
+  .plan-opt.sel{ border-color:var(--spray-y); background:rgba(255,201,60,0.08); }
+  .plan-opt.off{ opacity:0.45; cursor:not-allowed; }
+  .btn-promo{background:var(--spray-c); color:#04262a; box-shadow:0 0 0 rgba(73,185,199,0.5); transition: box-shadow .2s, transform .1s;}
+  .btn-primary:active{ transform:scale(0.98); box-shadow:0 0 18px rgba(255,201,60,0.55); }
+  .btn-promo:active{ transform:scale(0.98); box-shadow:0 0 18px rgba(73,185,199,0.55); }
+  .btn:disabled{opacity:0.5; cursor:not-allowed;}
+
+  .streak-badge{
+    display:inline-block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--spray-y);
+    background:rgba(255,201,60,0.12);
+    border:1px solid rgba(255,201,60,0.3);
+    border-radius:20px;
+    padding:4px 12px;
+    margin-top:8px;
+  }
+
+  .reaction-row{
+    display:flex;
+    gap:14px;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .reaction-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    background:none;
+    border:none;
+    color:var(--chalk-dim);
+    font-size:15px;
+    cursor:pointer;
+    padding:4px 2px;
+    line-height:1;
+  }
+  .reaction-btn .reaction-count{
+    font-size:11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .reaction-btn.picked{ color:var(--spray-y); transform:scale(1.1); }
+  .reaction-row.answered .reaction-btn:not(.picked){ opacity:0.4; }
+
+
+  .hint{font-size:11.5px; color:var(--chalk-dim); margin-top:8px; line-height:1.6;}
+  .hint b{color:var(--spray-y);}
+  .hint .en{display:block; opacity:0.8; margin-top:2px;}
+
+  .card{
+    background:rgba(0,0,0,0.28);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 15px;
+    margin-bottom:12px;
+    position:relative;
+  }
+  .card.tag{ border-left:3px solid var(--spray-y); }
+  .card.promo{ border-left:3px solid var(--spray-c); }
+  .card .meta{
+    font-size:11px;
+    color:var(--chalk-dim);
+    margin-bottom:6px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .badge{
+    font-size:9px;
+    font-weight:700;
+    padding:2px 8px;
+    border-radius:10px;
+    background:var(--spray-c);
+    color:#04262a;
+  }
+  .card .msg{font-size:14px; line-height:1.55; white-space:pre-wrap;}
+  .card a.applink{
+    display:inline-block;
+    margin-top:10px;
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--spray-c);
+    text-decoration:none;
+    border:1px solid var(--spray-c);
+    padding:6px 12px;
+    border-radius:20px;
+  }
+
+  .my-posts-toggle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    font-weight:700;
+    color:var(--chalk);
+    margin-bottom:14px;
+    cursor:pointer;
+  }
+  .my-posts-toggle .en{ font-size:11px; font-weight:400; opacity:0.8; }
+
+  .status{
+    font-size:12.5px;
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:8px;
+    display:none;
+    line-height:1.5;
+  }
+  .status.show{display:block;}
+  .status.ok{background:rgba(73,185,199,0.15); color:var(--spray-c);}
+  .status.err{background:rgba(227,84,60,0.15); color:var(--spray-r);}
+  .status .en{ display:block; font-size:11px; opacity:0.85; margin-top:2px; }
+
+  .app.showing-fullpage header p,
+  .app.showing-fullpage header #whoami{
+    display:none;
+  }
+  .app.showing-fullpage header{
+    padding-bottom:14px;
+  }
+
+  /* ---------- 둘러보기/홍보 완료: 헤더만 남기고 전환되는 전체 페이지 ---------- */
+  .app.showing-fullpage #promoStripMain,
+  .app.showing-fullpage main{ display:none !important; }
+  .fullpage{
+    display:none;
+    padding:20px 14px 40px;
+  }
+  .fullpage.show{ display:block; }
+
+  .btn-back{
+    display:block;
+    width:100%;
+    margin-top:28px;
+    padding:13px 18px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:rgba(0,0,0,0.2);
+    color:var(--chalk-dim);
+    font-family:'Noto Sans KR', sans-serif;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    line-height:1.5;
+  }
+  .btn-back .en{ display:block; font-size:11px; font-weight:400; opacity:0.8; margin-top:2px; }
+
+  /* ---------- 명상 모드: 카드가 하나씩 부드럽게 떠오르며, 구분선만으로 조용히 흘러가는 목록 ---------- */
+  .meditative-list .card{
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    border-left:none;
+    border-radius:0;
+    padding:22px 4px;
+    opacity:0;
+    animation: card-rise 0.7s ease forwards;
+  }
+  .meditative-list .card:last-child{ border-bottom:none; }
+  .meditative-list .card .msg{ font-size:15px; line-height:1.8; letter-spacing:0.2px; }
+  .meditative-list .card .meta{ opacity:0.65; margin-bottom:10px; }
+  @keyframes card-rise{
+    from{ opacity:0; transform:translateY(14px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  #wallEmpty, #wallLoading{
+    text-align:center;
+    color:var(--chalk-dim);
+    font-size:12.5px;
+    padding:30px 10px;
+    line-height:1.6;
+  }
+  #wallEmpty .en, #wallLoading .en{ display:block; opacity:0.8; margin-top:4px; }
+
+  @media (max-width:360px){
+    #livefeed{ width:72px; flex-basis:72px; padding:10px 4px; }
+    #rightpanel{ width:86px; flex-basis:86px; padding:10px 4px; }
+  }
+
+  /* ---------- 일반적인 모바일 폭: 좌우 패널은 유지하되 더 좁혀서 가운데 공간 확보 ---------- */
+  @media (max-width:480px){
+    #livefeed{ width:68px; flex-basis:68px; padding:10px 3px; }
+    .lf-item .msg{ font-size:8.5px; }
+    .top-clock .tc-time{ font-size:13px; }
+    .top-clock .tc-date{ font-size:7.5px; }
+    #rightpanel{ width:78px; flex-basis:78px; padding:10px 3px; }
+    .rank-item .name{ font-size:8.5px; }
+    .rank-item .metric{ font-size:7.5px; }
+    .pi-price .amount{ font-size:13px; }
+  }
+  /* ---------- [폰 화면 개선] 600px 이하: 3단 → 위아래 한 줄 배치 ---------- */
+  /* 1) 시계·시세는 맨 위 가로 띠, 실시간 낙서는 그 아래 가로로 넘기는 카드 띠, 그다음 메인 앱 */
+  @media (max-width:600px){
+    .layout{ flex-direction:column; }
+    #rightpanel{
+      order:0; width:auto; flex:0 0 auto;
+      flex-direction:row; align-items:center; justify-content:center; gap:18px;
+      border-left:none; border-bottom:1px solid var(--line);
+      padding:8px 12px;
+    }
+    #rightpanel .rp-block .rp-title{ margin-bottom:2px; }
+    .top-clock{ border-bottom:none; padding-bottom:0; }
+    .top-clock .tc-date{ font-size:10px; }
+    .top-clock .tc-time{ font-size:15px; }
+    .pi-price .amount{ font-size:15px; }
+    .pi-price .updated{ display:none; }
+
+    #livefeed{
+      order:1; width:auto; flex:0 0 auto;
+      flex-direction:row; align-items:stretch; gap:8px;
+      overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+      border-right:none; border-bottom:1px solid var(--line);
+      padding:8px 12px;
+    }
+    #livefeed::-webkit-scrollbar{ display:none; }
+    #livefeed .lf-title{ display:none; }
+    .lf-count{ flex:0 0 auto; display:flex; flex-direction:column; justify-content:center; margin-bottom:0; }
+    .lf-count:has(.lf-visits:not([hidden])){ flex-direction:row; align-items:center; gap:10px; }
+    .lf-visits{ margin-top:0; padding:0 0 0 10px; border-top:none; border-left:1px dashed var(--line); min-width:78px; }
+    .lf-visits .vrow{ font-size:10.5px; }
+    .lf-visits .vrow b{ font-size:12.5px; }
+    .lf-visits .vnote{ display:none; }
+    #lfList{ display:flex; gap:8px; }
+    .lf-item{
+      flex:0 0 150px; border-top:none;
+      border:1px dashed var(--line); border-radius:10px;
+      padding:6px 8px; background:rgba(0,0,0,0.15);
+    }
+    .lf-item .who{ font-size:11px; }
+    .lf-item .msg{ font-size:12px; -webkit-line-clamp:2; word-break:keep-all; overflow-wrap:anywhere; }
+    .lf-item .ago{ font-size:10px; }
+    .lf-empty{ font-size:12px; align-self:center; padding-top:0; }
+
+    .app{ order:2; }
+
+    /* 2) 탭 버튼: 2×2 배치, 한글·영문을 한 줄로 → 글자가 테두리에 닿지 않게 */
+    nav{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    nav button{
+      flex-direction:row; gap:6px; min-height:42px; padding:6px 8px;
+      overflow:hidden; text-overflow:ellipsis;
+    }
+    nav button .en{ margin:0; }
+  }
+
+  /* 3) 런치패드·스테이킹: 데이터가 들어오기 전까지 블록 전체를 숨김 */
+  .rp-rank{ display:none; }
+  .rp-rank.has-data{ display:block; }
+
+  /* =====================================================================
+     2026-10 메인 화면 개편: 한 줄 헤더 · 만남 띠 · 오늘 한 줄 · 쓰기 카드 ·
+     방금 올라온 낙서 · 하단 탭바 (폰) / 2단 + 상단 탭 (넓은 화면)
+     ===================================================================== */
+  :root{ --card:#2d2b35; --card-line:rgba(243,237,224,0.14); --bar:#1c1b22; }
+  body.light-theme{ --card:#fffaf0; --card-line:rgba(43,43,47,0.14); --bar:#efe7d4; }
+  .sr-only{ position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; margin:0; }
+
+  /* 레이아웃: 좌우 패널 숨김, 가운데 앱만 */
+  .layout{ max-width:560px; flex-direction:column; }
+  #livefeed{ display:none !important; }
+  #rightpanel{ display:none !important; }
+  .app{ order:0; padding-bottom:calc(96px + max(env(safe-area-inset-bottom, 0px), var(--sys-bar, 0px))); }
+
+  /* 헤더 */
+  header{ padding:10px 16px; padding-right:16px; }
+  .hdr-row{ display:flex; align-items:center; gap:10px; }
+  .hdr-logo{ flex:0 0 auto; display:block; }
+  .hdr-title{ flex:1; min-width:0; line-height:1.15; }
+  header .logo{
+    font-family:'Black Han Sans', sans-serif; font-size:21px; letter-spacing:0.5px;
+    color:var(--chalk); text-shadow:none; display:flex; align-items:baseline; gap:6px; flex-wrap:nowrap;
+  }
+  header .logo .logo-text{ transform:none; white-space:nowrap; flex:0 0 auto; }
+  header .logo{ flex-wrap:wrap; row-gap:0; }
+  header .logo .en{ flex-basis:auto; font-size:10px; font-weight:700; letter-spacing:1.5px; margin:0; white-space:nowrap; }
+  header p{ margin:2px 0 0; font-size:11px; line-height:1.35; word-break:keep-all; }
+  .hdr-title{ flex:1 1 0; min-width:auto; }
+  .hdr-row{ flex-wrap:nowrap; gap:8px; }
+  #whoami{ margin-left:auto; flex:0 1 auto; min-width:0; }
+  #whoami #loginBtn{ flex:0 0 auto; }
+  #userChip{ min-width:0; max-width:110px; }
+  #themeToggle{ width:40px; }
+  header p .en{ font-size:10px; margin-top:0; opacity:0.8; }
+  #themeToggle{
+    position:static; flex:0 0 auto; width:44px; height:44px; border:none; background:transparent; font-size:18px;
+  }
+  #whoami{ margin:0; flex:0 0 auto; gap:0; flex-wrap:nowrap; }
+  #whoami button{
+    background:transparent; border:1px solid var(--spray-y); border-bottom-width:1px; color:var(--spray-y);
+    box-shadow:none; border-radius:22px; min-height:44px; padding:4px 12px; font-size:13px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.1;
+  }
+  #whoami button .en{ display:block; font-size:10px; font-weight:400; }
+  #whoami button:active{ transform:scale(0.97); border-bottom-width:1px; box-shadow:none; }
+  #userChip{
+    font-size:12px; font-weight:700; color:var(--spray-y); max-width:96px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .app.showing-fullpage header{ padding-bottom:10px; }
+  .app.showing-fullpage header p{ display:block; }
+  .app.showing-fullpage header #whoami{ display:flex; }
+
+  /* 만남 띠 */
+  .meet-box, .meet-box.frozen{
+    display:block; width:auto; height:46px; margin:10px 16px 0; border-radius:12px;
+  }
+  @media (max-width:600px){ .meet-box{ width:auto; height:46px; } }
+  .meet-label{ right:12px; bottom:5px; font-size:11px; }
+
+  /* 오늘 한 줄 */
+  .today-strip{
+    display:flex; align-items:center; gap:8px; margin:10px 16px 0; padding:8px 12px;
+    border:1px solid var(--line); border-radius:12px; font-size:12px; color:var(--chalk-dim);
+    background:rgba(0,0,0,0.12);
+  }
+  .today-strip b{ color:var(--chalk); font-variant-numeric:tabular-nums; }
+  .ts-item{ display:flex; align-items:center; gap:5px; white-space:nowrap; }
+  .ts-dot{ width:7px; height:7px; border-radius:4px; background:var(--spray-r); }
+  .ts-sep{ opacity:0.5; }
+  .ts-spacer{ flex:1; }
+  .ts-price{ white-space:nowrap; padding:2px 9px; border-radius:10px; background:rgba(73,185,199,0.16); color:var(--spray-c); }
+  .ts-price b{ color:var(--spray-c); }
+  #tsChange{ font-size:11px; }
+  #tsChange.up{ color:#4dd679; } #tsChange.down{ color:var(--spray-r); }
+  body.light-theme #tsChange.up{ color:#1f8a43; }
+  .app.showing-fullpage .today-strip{ display:none; }
+
+  /* 탭바: 폰에서는 화면 아래 고정 */
+  nav{
+    position:fixed; top:auto; left:0; right:0; bottom:0; z-index:50;
+    display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:0;
+    padding:0 0 max(env(safe-area-inset-bottom, 0px), var(--sys-bar, 0px)); margin:0 auto; max-width:560px;
+    background:var(--bar); border-top:1px solid var(--line); border-bottom:none;
+  }
+  nav button, nav .nav-link{
+    min-height:62px; padding:6px 2px; margin:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    background:transparent !important; background-image:none; border:none; border-radius:0; box-shadow:none;
+    color:var(--chalk-dim); font-family:'Noto Sans KR', sans-serif; font-size:11px; font-weight:500;
+    text-decoration:none; text-shadow:none !important; animation:none !important; cursor:pointer;
+  }
+  nav button:active, nav .nav-link:active{ transform:none; box-shadow:none; opacity:0.7; }
+  nav button.active{ color:var(--spray-y); font-weight:700; }
+  nav svg{ display:block; }
+
+  /* 쓰기 카드 */
+  main{ padding:14px 16px; }
+  .write-card{
+    background:var(--card); border:1px solid var(--card-line); border-radius:16px; padding:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.18);
+  }
+  .today-q{ padding:0; margin-bottom:10px; }
+  .today-q .tag{ font-size:11px; letter-spacing:1px; }
+  .today-q .qtext{ font-size:16px; font-weight:700; color:var(--chalk); margin-top:4px; line-height:1.4; }
+  .today-q .qtext .en{ font-size:11px; font-weight:400; color:var(--chalk-dim); opacity:1; }
+  #writeMsg{
+    margin-top:0; min-height:96px; height:96px; resize:none;
+    font-family:'Nanum Pen Script', cursive; font-size:23px; line-height:1.25;
+    background:
+      linear-gradient(var(--card), var(--card)) padding-box,
+      linear-gradient(90deg, #ff4d4d, #ff9f1c, #ffd93d, #4dd679, #3ea6ff, #5b6cff, #b967ff) border-box;
+  }
+  .write-row{ display:flex; align-items:center; gap:10px; margin-top:8px; }
+  .self-cert{ flex:1; margin:0; min-height:44px; font-size:12px; }
+  .self-cert input{ width:18px; height:18px; accent-color:var(--spray-y); }
+  .write-count{ font-size:11px; color:var(--chalk-dim); font-variant-numeric:tabular-nums; }
+  #submitGraffiti, #submitGraffiti:active{
+    width:auto; margin:0; min-height:44px; padding:0 22px; border:none; border-radius:22px;
+    font-size:15px; line-height:1; box-shadow:none;
+  }
+  #submitGraffiti:active{ transform:scale(0.97); }
+  .write-card .hint{ margin:10px 0 0; font-size:11px; }
+
+  /* 홍보 한 줄 */
+  #promoStripMain{ margin:12px 0 0; }
+
+  /* 방금 올라온 낙서 */
+  .recent{ margin-top:18px; }
+  .recent-head{ display:flex; align-items:center; margin-bottom:8px; }
+  .recent-title{ flex:1; font-size:14px; font-weight:700; }
+  .recent-more{
+    background:none; border:none; color:var(--spray-c); font-family:inherit; font-size:13px;
+    min-height:36px; padding:0 4px; cursor:pointer;
+  }
+  #recentList{ display:flex; flex-direction:column; gap:8px; }
+  .recent-item{
+    display:flex; flex-direction:column; gap:2px; width:100%; text-align:left; cursor:pointer;
+    padding:10px 12px; border:none; border-radius:12px; background:rgba(127,127,127,0.09); color:var(--chalk);
+    font-family:inherit;
+  }
+  .recent-item .r-msg{
+    font-family:'Nanum Pen Script', cursive; font-size:21px; line-height:1.2;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere;
+  }
+  .recent-item .r-meta{ font-size:11px; color:var(--chalk-dim); }
+  .recent-empty{ font-size:12px; color:var(--chalk-dim); padding:10px 2px; }
+
+  /* 서브화면(낙서벽·앱 홍보): 하단 탭으로 이동하므로 '돌아가기' 버튼은 숨김 */
+  .btn-back{ display:none !important; }
+  .fullpage{ padding:16px 16px 40px; }
+
+  /* 넓은 화면(데스크톱): 2단 + 상단 탭, 오른쪽에 시세·TOP5 */
+  @media (min-width:960px){
+    .layout{ max-width:1120px; flex-direction:row; align-items:flex-start; gap:24px; padding:0 24px; }
+    .app{ flex:1; padding-bottom:40px; }
+    header{ padding:14px 0; }
+    .meet-box, .meet-box.frozen{ margin:12px 0 0; height:52px; }
+    .today-strip{ margin:12px 0 0; }
+    nav{
+      position:sticky; top:0; bottom:auto; max-width:none; margin:12px 0 0; padding:6px;
+      display:flex; gap:4px; border:1px solid var(--line); border-radius:14px; background:var(--wall);
+    }
+    nav button, nav .nav-link{ flex-direction:row; gap:8px; min-height:44px; padding:0 16px; border-radius:10px; font-size:14px; }
+    nav button.active{ background:rgba(255,201,60,0.14) !important; }
+    main{ padding:18px 0; }
+    .write-card{ padding:22px; }
+    .today-q .qtext{ font-size:20px; }
+    #writeMsg{ height:110px; font-size:27px; }
+    #recentList{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .fullpage{ padding:18px 0 40px; }
+
+    #rightpanel{
+      display:flex !important; order:2; width:280px; flex:0 0 280px; position:sticky; top:16px;
+      margin-top:16px; padding:0; border:none; background:none; gap:14px; flex-direction:column;
+    }
+    #rightpanel .top-clock{ display:none; }
+    #rightpanel .rp-block{
+      background:var(--card); border:1px solid var(--card-line); border-radius:14px; padding:16px; text-align:left;
+    }
+    #rightpanel .rp-rank{ display:none; }
+    #rightpanel .rp-rank.has-data{ display:block; }
+    #rightpanel .rp-title{ font-size:12px; text-align:left; }
+    #rightpanel .rp-title .en{ display:inline; margin-left:6px; font-size:10px; }
+    #rightpanel .pi-price{ text-align:left; }
+    #rightpanel .pi-price .amount{ font-size:26px; color:var(--spray-c); }
+    #rightpanel .pi-price .change{ font-size:12px; }
+    #rightpanel .pi-price .updated{ display:block; font-size:11px; }
+    #rightpanel .rank-item{ text-align:left; display:flex; gap:8px; align-items:baseline; }
+    #rightpanel .rank-item .name{ font-size:13px; flex:1; }
+    #rightpanel .rank-item .metric{ font-size:11px; }
+    .ts-price{ display:none; }
+    .app.showing-fullpage ~ #rightpanel{ display:flex !important; }
+  }
+
+  /* =====================================================================
+     계절 분위기: 화면은 그대로, 배경 빛 색 + 글씨 뒤로 지나가는 장식만 바뀜
+     (봄 꽃잎 · 여름 반딧불이 · 가을 낙엽 · 겨울 눈) — 한국 날짜 기준 자동
+     ===================================================================== */
+  #seasonFx{ position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:0; pointer-events:none; }
+  /* 일부 안드로이드 웹뷰에서 고정 캔버스가 하단 탭바를 가리지 않도록 탭바를 별도 층으로 띄움 */
+  nav{ z-index:1000; -webkit-transform:translateZ(0); transform:translateZ(0); will-change:transform; }
+  @media (min-width:960px){ nav{ -webkit-transform:none; transform:none; will-change:auto; } }
+  body.season-spring::before{ background:#ff9ec4; }
+  body.season-spring::after { background:#8fe3b0; }
+  body.season-summer::before{ background:#3fd0e0; }
+  body.season-summer::after { background:#c8f06a; }
+  body.season-autumn::before{ background:#ff9a3c; }
+  body.season-autumn::after { background:#e3543c; }
+  body.season-winter::before{ background:#9fd4ff; }
+  body.season-winter::after { background:#c4b5ff; }
+  body.season-spring .meet-box{ box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 12px rgba(255,158,196,0.35); }
+  body.season-summer .meet-box{ box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 12px rgba(63,208,224,0.35); }
+  body.season-autumn .meet-box{ box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 12px rgba(255,154,60,0.35); }
+  body.season-winter .meet-box{ box-shadow: inset 0 0 10px rgba(255,255,255,0.18), 0 0 12px rgba(159,212,255,0.4); }
+  body.season-spring .write-card{ border-top:2px solid rgba(255,158,196,0.55); }
+  body.season-summer .write-card{ border-top:2px solid rgba(63,208,224,0.55); }
+  body.season-autumn .write-card{ border-top:2px solid rgba(255,154,60,0.6); }
+  body.season-winter .write-card{ border-top:2px solid rgba(159,212,255,0.6); }
+
+  /* 탭바: 휴대폰 하단 버튼 줄에 가리지 않도록 폰에서도 위쪽에 고정 (스크롤해도 맨 위에 붙어 있음) */
+  @media (max-width:959px){
+    nav{
+      position:-webkit-sticky; position:sticky; top:0; bottom:auto; left:auto; right:auto;
+      display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:4px;
+      margin:10px 0 0; padding:6px 10px; max-width:none;
+      background:var(--wall); border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+      -webkit-transform:none; transform:none; will-change:auto; z-index:40;
+    }
+    nav button, nav .nav-link{
+      flex-direction:row; gap:5px; min-height:44px; padding:0 4px; border-radius:10px; font-size:12px;
+    }
+    nav svg{ width:18px; height:18px; flex:0 0 auto; }
+    nav button.active{ background:rgba(255,201,60,0.14) !important; }
+    body.light-theme nav button.active{ background:rgba(184,134,11,0.14) !important; }
+    .app{ padding-bottom:40px; }
+  }
+
+  /* =====================================================================
+     2026-11 수정: 탭 색(E 디자인: 보라·초록·파랑·노랑 입체 버튼) · 오늘의 소식 · 숫자 줄은 맨 아래
+     ===================================================================== */
+  nav button, nav .nav-link{
+    color:var(--chalk) !important; font-weight:700 !important;
+    border-bottom:3px solid rgba(0,0,0,0.4) !important; border-radius:12px !important;
+    box-shadow:0 3px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+  }
+  nav button[data-tab="write"]{ background:rgba(168,85,247,0.22) !important; }
+  nav button[data-tab="wall"]{ background:rgba(34,197,94,0.20) !important; }
+  nav .nav-link{ background:rgba(56,74,170,0.32) !important; }
+  nav button[data-tab="promo"]{ background:rgba(234,179,8,0.22) !important; }
+  nav button[data-tab="write"].active{ background:rgba(168,85,247,0.5) !important; border-bottom-color:#a855f7 !important; }
+  nav button[data-tab="wall"].active{ background:rgba(34,197,94,0.45) !important; border-bottom-color:#22c55e !important; }
+  nav button[data-tab="promo"].active{ background:rgba(234,179,8,0.45) !important; border-bottom-color:#eab308 !important; }
+  nav button:active, nav .nav-link:active{ transform:translateY(2px); border-bottom-width:1px !important; }
+  body:not(.light-theme) nav button.active{ color:#ffffff !important; }
+
+  /* 오늘의 소식 */
+  .news{ margin-top:20px; }
+  .news-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .news-title{ font-size:15px; font-weight:700; flex:1; }
+  .news-time{ font-size:11px; color:var(--chalk-dim); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .news-time span[id]{ color:var(--chalk); font-weight:700; }
+  .news-sep{ opacity:0.5; margin:0 2px; }
+  .news-tabs{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
+  .news-tab{
+    min-height:58px; padding:8px 6px; border-radius:12px; cursor:pointer; text-align:center;
+    border:1px solid var(--line); border-bottom-width:3px; background:var(--card); color:var(--chalk);
+    font-family:inherit; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  }
+  .news-tab .nt-name{ font-size:14px; font-weight:700; }
+  .news-tab .nt-sub{ font-size:10px; color:var(--chalk-dim); line-height:1.3; white-space:nowrap; }
+  .news-tab.active{ border-color:var(--spray-y); background:rgba(255,201,60,0.12); }
+  body.light-theme .news-tab.active{ background:rgba(184,134,11,0.12); }
+  .news-tab.active .nt-name{ color:var(--spray-y); }
+  .news-body{ margin-top:10px; padding:14px; border-radius:14px; background:var(--card); border:1px solid var(--card-line); min-height:120px; }
+  .news-empty{ font-size:12px; color:var(--chalk-dim); padding:18px 0; text-align:center; }
+  .news-sub{ font-size:11px; font-weight:700; color:var(--chalk-dim); letter-spacing:0.5px; margin:14px 0 6px; }
+  .news-sub:first-child{ margin-top:0; }
+  .news-list{ list-style:none; margin:0; padding:0; }
+  .news-list li{ padding:9px 0; border-top:1px dashed var(--line); }
+  .news-list li:first-child{ border-top:none; padding-top:2px; }
+  .news-list a{ color:var(--chalk); text-decoration:none; font-size:13.5px; line-height:1.45; display:block; }
+  .news-list a:hover{ color:var(--spray-y); }
+  .news-meta{ display:block; font-size:10.5px; color:var(--chalk-dim); margin-top:2px; }
+  .pi-now{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .pi-now .big{ font-size:26px; font-weight:900; color:var(--spray-c); font-variant-numeric:tabular-nums; }
+  .pi-now .chg{ font-size:13px; font-weight:700; }
+  .pi-now .krw{ font-size:12px; color:var(--chalk-dim); }
+  .up{ color:#4dd679; } .down{ color:var(--spray-r); }
+  body.light-theme .up{ color:#1f8a43; }
+  .top5{ width:100%; border-collapse:collapse; font-size:12.5px; font-variant-numeric:tabular-nums; }
+  .top5 td{ padding:7px 0; border-top:1px dashed var(--line); }
+  .top5 tr:first-child td{ border-top:none; }
+  .top5 .rk{ width:22px; color:var(--spray-y); font-weight:900; }
+  .top5 .nm b{ font-weight:700; } .top5 .nm span{ color:var(--chalk-dim); font-size:11px; margin-left:4px; }
+  .top5 .pr{ text-align:right; }
+  .top5 .vl{ text-align:right; color:var(--chalk-dim); font-size:11px; width:86px; }
+  .hist li{ display:grid; grid-template-columns:52px minmax(0,1fr); gap:10px; }
+  .hist .yr{ font-weight:900; color:var(--spray-y); font-size:14px; padding-top:1px; }
+  .hist .tx{ font-size:13px; line-height:1.5; color:var(--chalk); }
+  .hist a.tx{ text-decoration:none; } .hist a.tx:hover{ color:var(--spray-y); }
+  .news-note{ font-size:10.5px; color:var(--chalk-dim); margin-top:10px; }
+
+  /* 맨 아래로 옮긴 숫자 줄 */
+  #tab-write .today-strip{ margin:18px 0 0; }
+  #tab-write .ts-price{ display:inline-block !important; }
+</style>
+</head>
+<body>
+<canvas id="seasonFx" aria-hidden="true"></canvas>
+
+<div class="layout">
+
+  <!-- 왼쪽: 실시간 낙서 피드 / Live graffiti feed -->
+  <aside id="livefeed">
+    <div class="lf-title">실시간 낙서<span class="en">Live Graffiti</span></div>
+    <div class="lf-count"><div class="num" id="lfNum">-</div><div class="lbl">오늘의 낙서<span class="en">Today's scribbles</span></div>
+      <div class="lf-visits" id="lfVisits" hidden>
+        <div class="vrow"><span>방문</span><b id="vVisitors">-</b></div>
+        <div class="vrow"><span>낙서함</span><b id="vWriters">-</b></div>
+        <div class="vrow"><span>구경만</span><b id="vLookers">-</b></div>
+        <div class="vnote">오늘 · 명<span class="en">Visitors · Wrote · Just looked</span></div>
+      </div></div>
+    <div id="lfList"></div>
+    <div class="lf-empty" id="lfEmpty" style="display:none;">첫 낙서를 남겨보세요<span class="en" style="display:block;">Be the first</span></div>
+  </aside>
+
+  <!-- 오른쪽: 메인 앱 -->
+  <div class="app">
+
+    <header>
+      <div class="hdr-row">
+        <svg class="hdr-logo" width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+          <defs><linearGradient id="hdrRb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a5a"/><stop offset="0.35" stop-color="#ffc93c"/><stop offset="0.6" stop-color="#5ad17a"/><stop offset="0.8" stop-color="#49b9c7"/><stop offset="1" stop-color="#b48cff"/></linearGradient></defs>
+          <rect width="40" height="40" rx="10" fill="#4b2a7a"/>
+          <path d="M12 14 A10 10 0 0 1 28 14" fill="none" stroke="url(#hdrRb)" stroke-width="3.2" stroke-linecap="round"/>
+          <path d="M28 26 A10 10 0 0 1 12 26" fill="none" stroke="url(#hdrRb)" stroke-width="3.2" stroke-linecap="round"/>
+          <circle cx="10" cy="20" r="1.8" fill="#ffc93c"/><circle cx="30" cy="20" r="1.8" fill="#49b9c7"/>
+        </svg>
+        <div class="hdr-title">
+          <h1 class="logo"><span class="logo-text">디부타데스</span><span class="en">DIBUTADES</span></h1>
+          <p>낙서는 왜 하는 거야?<span class="en">Why do we scribble?</span></p>
+        </div>
+        <button id="themeToggle" aria-label="화면 밝기 전환">🌙</button>
+        <div id="whoami">
+          <span id="userChip" hidden></span>
+          <button id="loginBtn">로그인<span class="en">Login</span></button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 외계 시각 연작 5점: 헤더 아래 가로 띠 (누르면 지금 보이는 작품의 갤러리로) -->
+    <a class="meet-box" id="meetBox" href="/gallery.html#w1" aria-label="갤러리 외계 시각 연작 보기" title="외계 시각 연작"><canvas id="meetCanvas"></canvas><span class="meet-label" id="meetLabel">만남</span></a>
+
+
+    <nav>
+      <button class="tab-btn active" data-tab="write">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+        <span>쓰기</span></button>
+      <button class="tab-btn" data-tab="wall">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v6M15 10v5M9 15v5"/></svg>
+        <span>낙서벽</span></button>
+      <a class="nav-link" href="/gallery.html">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
+        <span>갤러리</span></a>
+      <button class="tab-btn" data-tab="promo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>
+        <span>앱 홍보</span></button>
+    </nav>
+
+    <main>
+
+      <!-- 1. 낙서를 하자 / Write Graffiti -->
+      <section id="tab-write" class="active">
+        <div class="write-card">
+          <div class="today-q">
+            <div class="tag">오늘의 질문</div>
+            <div class="qtext" id="todayQText">불러오는 중...<span class="en">Loading...</span></div>
+          </div>
+          <label for="writeMsg" class="sr-only">낙서 내용</label>
+          <textarea id="writeMsg" maxlength="200" placeholder="한마디 남겨보세요"></textarea>
+          <div class="write-row">
+            <label class="self-cert">
+              <input type="checkbox" id="selfCertCheck">
+              <span>직접 쓴 글이에요</span>
+            </label>
+            <span class="write-count" id="writeCount">0/200</span>
+            <button class="btn btn-primary" id="submitGraffiti">남기기</button>
+          </div>
+          <div class="status" id="writeStatus"></div>
+          <p class="hint" id="whoamiText">낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.</p>
+        </div>
+
+        <div class="promo-strip" id="promoStripMain"></div>
+
+        <div class="news">
+          <div class="news-head">
+            <span class="news-title">오늘의 소식</span>
+            <span class="news-time"><span id="nowKst">--.-- --:--</span> KST <span class="news-sep">·</span> <span id="nowUtc">--:--</span> UTC</span>
+          </div>
+          <div class="news-tabs" role="tablist" aria-label="오늘의 소식 종류">
+            <button type="button" class="news-tab active" role="tab" aria-selected="true" data-topic="pi">
+              <span class="nt-name">파이</span><span class="nt-sub">소식 · 실시간 가격</span></button>
+            <button type="button" class="news-tab" role="tab" aria-selected="false" data-topic="crypto">
+              <span class="nt-name">암호화폐</span><span class="nt-sub">소식 · 거래량 TOP5</span></button>
+            <button type="button" class="news-tab" role="tab" aria-selected="false" data-topic="history">
+              <span class="nt-name">역사 속 오늘</span><span class="nt-sub">과거의 화제·사건</span></button>
+          </div>
+          <div class="news-body" id="newsBody" role="tabpanel" aria-live="polite"><div class="news-empty">불러오는 중…</div></div>
+        </div>
+
+        <!-- 오늘 한눈에: 낙서 수 · 방문 · Pi 시세 (화면 맨 아래) -->
+        <div class="today-strip" id="todayStrip">
+          <span class="ts-item"><span class="ts-dot" aria-hidden="true"></span>오늘 낙서 <b id="tsNum">-</b></span>
+          <span class="ts-sep" aria-hidden="true">·</span>
+          <span class="ts-item">방문 <b id="tsVisit">-</b></span>
+          <span class="ts-spacer"></span>
+          <span class="ts-price">π <b id="tsPrice">--</b> <span id="tsChange"></span></span>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 둘러보기: 낙서만 조용히 보여주는 별도 페이지 (헤더는 그대로 유지) -->
+    <div id="pageBrowse" class="fullpage">
+      <div class="promo-strip" id="promoStripBrowse" style="margin:0 0 12px;"></div>
+      <label class="my-posts-toggle">
+        <input type="checkbox" id="myPostsOnly">
+        내 글만 보기
+        <span class="en">My posts only</span>
+      </label>
+      <div id="wallLoading">방을 불러오는 중...<span class="en">Loading the room...</span></div>
+      <div id="wallEmpty" style="display:none;">
+        아직 아무도 낙서를 남기지 않았어요. 첫 낙서의 주인공이 되어보세요!
+        <span class="en">No graffiti yet. Be the first to leave one!</span>
+      </div>
+      <div id="wallList" class="meditative-list"></div>
+
+      <!-- 인기 낙서 TOP5: 이 방을 열 때마다 아래에 표시 -->
+      <div id="topboard">
+        <div class="tb-title">인기 낙서 TOP5<span class="en">Top 5 Viewed</span></div>
+        <div id="tbList"></div>
+        <div class="tb-empty" id="tbEmpty" style="display:none;">아직 순위 없음<span class="en">No ranking yet</span></div>
+      </div>
+
+      <button class="btn btn-back" id="backFromBrowse">메인화면으로 돌아가기<span class="en">Back to Main</span></button>
+    </div>
+
+    <!-- 앱 홍보: 폼 작성부터 결제 완료까지 한 서브화면 안에서 진행 (헤더는 로고+soSOso만 유지) -->
+    <div id="pagePromo" class="fullpage">
+      <div id="promoFormWrap">
+        <p class="hint">
+          <b>Pi 생태계 앱만 등록 가능합니다.</b> Pi Developer Portal에 등록된 앱 URL만 허용되며, 그 외 외부 사이트 링크는 등록되지 않습니다. 이는 Pi 코어팀의 메인넷 리스팅 정책(외부 사이트 리다이렉트 제한)을 지키기 위함입니다.
+          <span class="en">Only Pi ecosystem apps can be listed. Only URLs registered in the Pi Developer Portal are allowed — other external links will be rejected, in line with Pi's mainnet listing policy restricting external redirects.</span>
+        </p>
+
+        <label for="promoName">내 앱 이름<span class="en">Your app name</span></label>
+        <input type="text" id="promoName" maxlength="40" placeholder="예: 한글낙서방 / e.g. Hangul Graffiti Room">
+
+        <label for="promoUrl">내 앱 URL (Pi 생태계 앱만)<span class="en">Your app URL (Pi ecosystem apps only)</span></label>
+        <input type="text" id="promoUrl" maxlength="200" placeholder="예: https://your-app.pinet.com 또는 pi://your-app">
+
+        <label for="promoMsg">한 줄 소개<span class="en">One-line description</span></label>
+        <textarea id="promoMsg" maxlength="120" placeholder="앱을 한 줄로 소개해주세요 (최대 120자) / Describe your app in one line (max 120 chars)"></textarea>
+
+        <label>홍보 기간 선택<span class="en">Choose a plan</span></label>
+        <div class="plan-list" id="planList">
+          <label class="plan-opt sel"><input type="radio" name="plan" value="7" checked>
+            <span class="pn">7일 노출<span class="en">7 days</span></span><span class="pp">0.5 Pi</span></label>
+          <label class="plan-opt"><input type="radio" name="plan" value="30">
+            <span class="pn">30일 노출<span class="en">30 days</span></span><span class="pp">1.5 Pi</span></label>
+          <label class="plan-opt off" id="freePlanOpt"><input type="radio" name="plan" value="free" disabled>
+            <span class="pn">무료 1일권<span class="en">Free 1-day pass</span><span class="en" id="freePlanInfo" style="display:block;">로그인하면 보유 장수가 보여요 / Log in to see your passes</span></span><span class="pp">0 Pi</span></label>
+        </div>
+        <button class="btn" id="rewardAdBtn" type="button" style="margin-top:4px;">📺 광고 보고 무료 1일권 받기 (하루 1회)<span class="en">Watch an ad for a free 1-day pass (once a day)</span></button>
+        <div class="status" id="rewardAdStatus"></div>
+        <p class="hint">
+          연속 7일 낙서하면 무료 1일권을 1장 드려요. 유료 결제는 Pi 공식 결제(U2A)로 처리되며 앱 운영자에게 전달됩니다(네트워크 수수료 별도).
+          <span class="en">Write graffiti 7 days in a row to earn a free 1-day pass. Paid plans use Pi's official U2A payment (network fee may apply).</span>
+        </p>
+
+        <button class="btn btn-promo" id="submitPromo">0.5 Pi 내고 7일 홍보하기<span class="en">Pay 0.5 Pi &amp; Promote for 7 Days</span></button>
+        <div class="status" id="promoStatus"></div>
+        <p class="hint">
+          이 홍보 마켓은 Pi 공식 "Pi Ad Network" 광고와는 별개의, 개발자 간 자율 홍보 공간입니다. 결제는 표준 U2A로 처리됩니다.
+          <span class="en">This is a separate developer-to-developer promotion market, not the official Pi Ad Network. Payments use standard U2A.</span>
+        </p>
+      </div>
+
+      <div id="promoResultWrap" style="display:none;"></div>
+
+      <button class="btn btn-back" id="backFromPromo">메인화면으로 돌아가기<span class="en">Back to Main</span></button>
+    </div>
+
+  </div>
+
+  <!-- 오른쪽: Pi 실시간 가치 / 런치패드 TOP5 / 스테이킹 TOP5 -->
+  <aside id="rightpanel">
+    <div class="rp-block top-clock">
+      <div class="tc-date" id="tcDate">----년 --월 --일</div>
+      <div class="tc-time" id="tcTime">--:--:--</div>
+    </div>
+
+    <div class="rp-block pi-price">
+      <div class="rp-title">PI 실시간 가치<span class="en">Pi Live Price</span></div>
+      <div class="amount" id="piAmount">--</div>
+      <div class="change" id="piChange">--</div>
+      <div class="updated" id="piUpdated"></div>
+    </div>
+
+    <div class="rp-block rp-rank">
+      <div class="rp-title">런치패드 TOP5<span class="en">Launchpad Top 5</span></div>
+      <div id="launchpadList"></div>
+      <div class="rp-empty" id="launchpadEmpty" style="display:none;">데이터 준비 중<span class="en">Data coming soon</span></div>
+    </div>
+
+    <div class="rp-block rp-rank">
+      <div class="rp-title">스테이킹 TOP5<span class="en">Staking Top 5</span></div>
+      <div id="stakingList"></div>
+      <div class="rp-empty" id="stakingEmpty" style="display:none;">데이터 준비 중<span class="en">Data coming soon</span></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const API_BASE = ''; // 배포 시 백엔드 주소로 교체 (동일 도메인이면 비워둠)
+let currentUser = null; // { uid, username, accessToken }
+
+// ---------- 오른쪽 상단 시계 (한국시간: 년월일 / 24시간) ----------
+function updateClocks(){
+  const dEl = document.getElementById('tcDate'), tEl = document.getElementById('tcTime');
+  try{
+    const now = new Date();
+    const p = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Seoul', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23' })
+      .formatToParts(now).reduce((o,x)=>(o[x.type]=x.value,o),{});
+    dEl.textContent = `${p.year}년 ${p.month}월 ${p.day}일`;
+    tEl.textContent = `${p.hour}:${p.minute}:${p.second}`;
+  }catch(e){ dEl.textContent='----년 --월 --일'; tEl.textContent='--:--:--'; }
+}
+updateClocks();
+setInterval(updateClocks, 1000);
+
+// ---------- 왼쪽 실시간 낙서 피드 ----------
+function kstDay(ts){ return new Date(ts + 9*3600*1000).toISOString().slice(0,10); }
+function agoText(ts){
+  const m = Math.floor((Date.now()-ts)/60000);
+  if(m < 1) return '방금 · now';
+  if(m < 60) return m + '분 전';
+  const h = Math.floor(m/60);
+  if(h < 24) return h + '시간 전';
+  return Math.floor(h/24) + '일 전';
+}
+// ---------- 오늘 방문 통계 (방문 / 낙서함 / 구경만) ----------
+// 방문자 구분용 무작위 번호: 이 브라우저에만 저장되고, 이름·계정과 연결되지 않음
+const visitorId = (() => {
+  try{
+    let id = localStorage.getItem('dbtVid');
+    if(!id || !/^[a-z0-9]{8,32}$/.test(id)){
+      id = (Date.now().toString(36) + Math.random().toString(36).slice(2, 12)).slice(0, 20);
+      localStorage.setItem('dbtVid', id);
+    }
+    return id;
+  }catch(e){ return undefined; } // 저장소를 못 쓰면 서버가 대신 구분
+})();
+function showVisitStats(s){
+  if(!s || typeof s.visitors !== 'number') return;
+  document.getElementById('vVisitors').textContent = s.visitors;
+  document.getElementById('vWriters').textContent = s.writers;
+  document.getElementById('vLookers').textContent = s.lookers;
+  document.getElementById('lfVisits').hidden = false;
+  document.getElementById('tsVisit').textContent = s.visitors;
+}
+async function sendVisit(){
+  try{
+    const res = await fetch(API_BASE + '/api/visit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ visitorId }) });
+    if(res.ok) showVisitStats(await res.json());
+  }catch(e){ /* 조용히 무시 */ }
+}
+async function loadVisitStats(){
+  try{
+    const res = await fetch(API_BASE + '/api/visit/today?_=' + Date.now());
+    if(res.ok) showVisitStats(await res.json());
+  }catch(e){ /* 조용히 무시 */ }
+}
+sendVisit();
+setInterval(loadVisitStats, 60000);
+
+async function loadLiveFeed(){
+  try{
+    const res = await fetch(API_BASE + '/api/wall?_=' + Date.now());
+    const items = (await res.json()).filter(x => x.type === 'graffiti');
+    const listEl = document.getElementById('lfList');
+    const today = kstDay(Date.now());
+    document.getElementById('lfNum').textContent = items.filter(g => kstDay(g.createdAt) === today).length;
+    document.getElementById('tsNum').textContent = document.getElementById('lfNum').textContent;
+    renderRecent(items.slice(0, 3));
+    listEl.innerHTML = '';
+    document.getElementById('lfEmpty').style.display = items.length ? 'none' : 'block';
+    items.slice(0, 6).forEach(g=>{
+      const div = document.createElement('div');
+      div.className = 'lf-item';
+      div.innerHTML = `<div class="who">@${escapeHtml(g.author||'익명')}</div><div class="msg">${escapeHtml(g.message||'')}</div><div class="ago">${agoText(g.createdAt)}</div>`;
+      div.addEventListener('click', ()=>showBrowsePage());
+      listEl.appendChild(div);
+    });
+  }catch(e){ /* 조용히 무시 */ }
+}
+// 메인 화면 "방금 올라온 낙서" 3개 (누르면 낙서벽으로)
+function renderRecent(items){
+  const listEl = document.getElementById('recentList');
+  if(!listEl) return; // 메인 화면에서 '방금 올라온 낙서'는 '오늘의 소식'으로 바뀜
+  listEl.innerHTML = '';
+  document.getElementById('recentEmpty').style.display = items.length ? 'none' : 'block';
+  items.forEach(g=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'recent-item';
+    b.innerHTML = `<span class="r-msg">${escapeHtml(g.message||'')}</span><span class="r-meta">@${escapeHtml(g.author||'익명')} · ${agoText(g.createdAt)}</span>`;
+    b.addEventListener('click', ()=>showBrowsePage());
+    listEl.appendChild(b);
+  });
+}
+loadLiveFeed();
+setInterval(loadLiveFeed, 30000);
+
+// ---------- 라이트/다크 테마 전환 ----------
+const themeToggleBtn = document.getElementById('themeToggle');
+function safeGetTheme(){
+  try{ return localStorage.getItem('theme'); }
+  catch(e){ return null; } // 일부 인앱 브라우저는 localStorage 접근을 막아 에러를 던짐
+}
+function safeSetTheme(v){
+  try{ localStorage.setItem('theme', v); }
+  catch(e){ /* 저장 실패해도 화면 전환 자체는 계속 동작해야 함 */ }
+}
+function applyTheme(theme){
+  if(theme === 'light'){
+    document.body.classList.add('light-theme');
+    themeToggleBtn.textContent = '☀️';
+  }else{
+    document.body.classList.remove('light-theme');
+    themeToggleBtn.textContent = '🌙';
+  }
+}
+applyTheme(safeGetTheme() || 'dark');
+let themeToggleHandledByTouch = false;
+function toggleTheme(){
+  const next = document.body.classList.contains('light-theme') ? 'dark' : 'light';
+  applyTheme(next);
+  safeSetTheme(next);
+}
+// 일부 임베디드 웹뷰(Pi Browser, 네이버 인앱 브라우저 등)는 버튼의 click 이벤트를
+// 제대로 합성하지 않는 경우가 있어, touchend로도 동일하게 처리해 안전망을 둠
+themeToggleBtn.addEventListener('touchend', (e)=>{
+  e.preventDefault();
+  themeToggleHandledByTouch = true;
+  toggleTheme();
+});
+themeToggleBtn.addEventListener('click', ()=>{
+  if(themeToggleHandledByTouch){ themeToggleHandledByTouch = false; return; } // touchend에서 이미 처리했으면 중복 방지
+  toggleTheme();
+});
+
+// ---------- 외계 시각 연작 5점: 상자 안에서만 차례로 순환 (만남 → 혼돈 → 폭발 → 침묵 → 새로운 탄생 → 다시 만남)
+// 낙서를 쓰는 순간 그 장면 그대로 정지 ----------
+let sosoWriteTabActive = true; // 다른 탭 코드와의 호환용
+const meetBox = document.getElementById('meetBox');
+const meetCanvas = document.getElementById('meetCanvas');
+const mctx = meetCanvas.getContext('2d');
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let meetW = 0, meetH = 0, meetRaf = 0, meetT = 0, meetLast = 0, meetFrozen = false, meetIdx = -1;
+const SCENE_SEC = 8, FADE_SEC = 1.2;
+
+function rnd(a, b){ return a + Math.random() * (b - a); }
+function pick(arr){ return arr[Math.random() * arr.length | 0]; }
+function makeDots(n, colors, extra){ return Array.from({length: n}, () => Object.assign(
+  { a: rnd(0, Math.PI*2), r: rnd(0.75, 1.2), s: rnd(0.25, 0.7) * (Math.random() < .5 ? -1 : 1), z: rnd(0.5, 1.5), c: pick(colors), ph: Math.random() }, extra ? extra() : {})); }
+function dot(x, y, r, c){ mctx.fillStyle = c; mctx.beginPath(); mctx.arc(x, y, r, 0, Math.PI*2); mctx.fill(); }
+
+// 휘어진 공간선. k>0 밀어냄, k<0 끌어당김
+function field(t, masses, stops, opt){
+  const W = meetW, H = meetH, o = Object.assign({ n: 11, alpha: 1, wob: 0, lw: 0.7 }, opt || {});
+  const g = mctx.createLinearGradient(0, 0, W, 0);
+  stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c));
+  mctx.strokeStyle = g; mctx.lineWidth = o.lw;
+  const ga = mctx.globalAlpha; mctx.globalAlpha = ga * o.alpha;
+  for(let i = 0; i < o.n; i++){
+    const y0 = (i + 0.5) / o.n * H;
+    mctx.beginPath();
+    for(let x = 0; x <= W; x += 3){
+      let y = y0 + o.wob * Math.sin(x * 0.06 + t * 0.8 + i);
+      for(const m of masses){
+        const f = Math.exp(-((x - m.x) ** 2) / (2 * m.sx * m.sx)), dy = y0 - m.y;
+        y += m.k > 0 ? m.k * H * f * Math.sign(dy) * Math.exp(-Math.abs(dy) / (0.9 * H))
+                     : m.k * H * f * dy / (Math.abs(dy) + 0.12 * H);
+      }
+      x === 0 ? mctx.moveTo(x, y) : mctx.lineTo(x, y);
+    }
+    mctx.stroke();
+  }
+  mctx.globalAlpha = ga;
+}
+function glow(x, y, r, rgb, a){
+  const g = mctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`);
+  mctx.fillStyle = g; mctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+// ---- 1. 만남 · 셀-로흐: 푸른 고리(밀어냄)와 붉은 불씨(끌어당김)가 다가갔다 물러남
+const m1ring = makeDots(90, ['#5ad0ff', '#3a4fd0', '#6fdcff', '#2c3fb8', '#fff2b8']);
+const m1ember = makeDots(16, ['#ff3b4f', '#ff8a2a', '#e8203a', '#ffb02e'], () => ({ r: rnd(0.2, 1), s: rnd(0.9, 1.8) * (Math.random()<.5?-1:1) }));
+function sceneMeet(t){
+  const W = meetW, H = meetH;
+  const bx = W * 0.36 + Math.sin(t * 0.7) * W * 0.04, by = H * 0.5 + Math.sin(t * 1.1) * H * 0.08;
+  const meet = (Math.sin(t * 0.9) + 1) / 2;
+  const rx = W * (0.80 - 0.22 * meet), ry = H * 0.5 + Math.cos(t * 1.3) * H * 0.12;
+  const R = H * 0.33 * (1 + 0.08 * Math.sin(t * 2.2));
+  field(t, [{ x: bx, y: by, k: 0.32, sx: W * 0.2 }, { x: rx, y: ry, k: -0.45 * (0.6 + 0.4 * meet), sx: W * 0.09 }],
+        ['rgba(70,80,190,0.55)', 'rgba(120,50,160,0.55)', 'rgba(210,40,80,0.6)']);
+  for(const p of m1ring){
+    const a = p.a + t * Math.abs(p.s);
+    const wob = 1 + 0.12 * Math.sin(a * 3 + t * 1.7) + 0.25 * meet * Math.max(0, Math.cos(a));
+    dot(bx + Math.cos(a) * R * p.r * wob * 1.15, by + Math.sin(a) * R * p.r * wob, p.z, p.c);
+  }
+  for(const p of m1ember){
+    const a = p.a + t * p.s, rr = H * 0.16 * p.r * (1 + 0.3 * Math.sin(t * 3 + p.a));
+    dot(rx + Math.cos(a) * rr, ry + Math.sin(a) * rr * 1.4, p.z, p.c);
+  }
+  if(meet > 0.75) glow((bx + R * 1.1 + rx) / 2, (by + ry) / 2, H * 0.5, '255,240,200', 0.35 * (meet - 0.75) / 0.25);
+}
+
+// ---- 2. 혼돈: 에메랄드·금빛·보라 세 질량이 제각각 공간을 비틀며 엉킴
+const m2g = makeDots(42, ['#3fd8a0', '#2fbf8a', '#7ff0c4', '#ffffff']);
+const m2y = makeDots(30, ['#f2b632', '#ffcf4a', '#e09a1c']);
+const m2p = makeDots(36, ['#a46bff', '#8b55f0', '#c49bff', '#ffffff']);
+const m2w = makeDots(12, ['#7fa0c8', '#9fb3d0']);
+function sceneChaos(t){
+  const W = meetW, H = meetH;
+  const G = { x: W * 0.22 + Math.sin(t * 0.9) * W * 0.05, y: H * 0.42 + Math.sin(t * 1.3) * H * 0.15 };
+  const Y = { x: W * 0.48 + Math.cos(t * 1.1) * W * 0.06, y: H * 0.62 + Math.cos(t * 0.8) * H * 0.15 };
+  const P = { x: W * 0.75 + Math.sin(t * 0.7 + 1) * W * 0.06, y: H * 0.45 + Math.sin(t * 1.6) * H * 0.18 };
+  field(t, [{ x: G.x, y: G.y, k: 0.35, sx: W * 0.09 }, { x: Y.x, y: Y.y, k: -0.4, sx: W * 0.06 }, { x: P.x, y: P.y, k: 0.45, sx: W * 0.05 }],
+        ['rgba(63,216,160,0.55)', 'rgba(242,182,50,0.5)', 'rgba(164,107,255,0.6)']);
+  for(const p of m2g){ const a = p.a + t * p.s; dot(G.x + Math.cos(a) * H * 0.3 * p.r * 1.2, G.y + Math.sin(a) * H * 0.3 * p.r, p.z, p.c); }
+  for(const p of m2y){ const a = p.a + t * p.s * 1.6, rr = H * 0.22 * p.r * (0.7 + 0.3 * Math.sin(t * 2 + p.a)); dot(Y.x + Math.cos(a) * rr * 1.3, Y.y + Math.sin(a) * rr, p.z, p.c); }
+  for(const p of m2p){ const a = p.a + t * p.s * 1.2; dot(P.x + Math.cos(a) * H * 0.28 * p.r, P.y + Math.sin(a * 2) * H * 0.28 * p.r, p.z, p.c); }
+  for(const p of m2w){ // 세 질량 사이를 떠도는 먼지
+    const k = (p.ph + t * 0.07 * Math.abs(p.s)) % 1, A = k < 0.5 ? G : Y, B = k < 0.5 ? Y : P, u = (k % 0.5) * 2;
+    dot(A.x + (B.x - A.x) * u, A.y + (B.y - A.y) * u + Math.sin(t * 2 + p.a) * H * 0.12, p.z * 0.8, p.c);
+  }
+}
+
+// ---- 3. 폭발: 하얀 중심에서 열세 갈래 줄기가 뿜어지고 주황 충격파가 퍼져 나감
+const m3stream = Array.from({length: 13 * 9}, (_, i) => ({ arm: i % 13, ph: Math.random(), j: rnd(-0.025, 0.025), z: rnd(0.6, 1.3) }));
+const m3ring = makeDots(90, ['#ff7a1a', '#ff5a1f', '#ff9a3c', '#e8481c'], () => ({ r: rnd(0.95, 1.06) }));
+function sceneBurst(t, local){
+  const W = meetW, H = meetH, cx = W * 0.5, cy = H * 0.5;
+  const R = H * (0.3 + 0.12 * Math.max(0, Math.min(1, local / SCENE_SEC))) * (1 + 0.04 * Math.sin(t * 6)), S = 2.2; // S: 가로로 넓은 상자에 맞춘 비율
+  field(t, [{ x: cx, y: cy, k: 0.25, sx: W * 0.18 }], ['rgba(200,60,40,0.35)', 'rgba(255,140,60,0.4)', 'rgba(200,60,40,0.35)'], { alpha: 0.8 });
+  glow(cx, cy, H * 0.28, '255,244,194', 0.45 + 0.15 * Math.sin(t * 5));
+  for(const p of m3stream){
+    const ang = p.arm / 13 * Math.PI * 2 + t * 0.15 + p.j, d = ((t * 0.55 + p.ph) % 1) * R * 0.95;
+    const c = d < R * 0.4 ? '#fff4c2' : (d < R * 0.7 ? '#ffd86a' : '#ffb02e');
+    dot(cx + Math.cos(ang) * d * S, cy + Math.sin(ang) * d, p.z * (1.1 - d / R * 0.5), c);
+  }
+  for(const p of m3ring){
+    const a = p.a + t * 0.12, rr = R * (1 + 0.1 * Math.sin(p.a * 5 + t * 3)) * p.r;
+    dot(cx + Math.cos(a) * rr * S, cy + Math.sin(a) * rr, p.z, p.c);
+  }
+}
+
+// ---- 4. 침묵: 거의 곧게 펴진 선, 작은 흰 점 하나, 떠도는 회청색 먼지
+const m4dust = makeDots(46, ['#7f8fb0', '#5d6b88', '#9aa8c4', '#8a5c74'], () => ({ x: Math.random(), y: Math.random(), v: rnd(0.004, 0.015) }));
+function sceneSilence(t){
+  const W = meetW, H = meetH, cx = W * 0.5, cy = H * 0.5;
+  field(t, [{ x: cx, y: cy, k: 0.04, sx: W * 0.05 }], ['rgba(110,130,170,0.25)', 'rgba(130,140,180,0.25)'], { wob: 0.4, lw: 0.5 });
+  for(const p of m4dust){
+    const x = ((p.x + t * p.v) % 1) * W, y = p.y * H + Math.sin(t * 0.4 + p.a) * 2;
+    dot(x, y, p.z * 0.55, p.c);
+  }
+  const pulse = (Math.sin(t * 0.8) + 1) / 2;
+  mctx.strokeStyle = `rgba(255,255,255,${0.15 + 0.2 * pulse})`; mctx.lineWidth = 0.6;
+  mctx.beginPath(); mctx.arc(cx, cy, H * (0.1 + 0.04 * pulse), 0, Math.PI * 2); mctx.stroke();
+  dot(cx, cy, 1.3, '#ffffff');
+}
+
+// ---- 5. 새로운 탄생: 흰 핵으로 앞선 작품들의 색이 섞인 두 갈래 나선 팔이 감겨 듦
+const m5arm = Array.from({length: 150}, (_, i) => ({ arm: i % 2, u0: Math.random(), z: rnd(0.6, 1.4), j: rnd(-0.05, 0.05) }));
+const m5core = makeDots(14, ['#ffffff', '#f4f0ff', '#fff6e0'], () => ({ r: rnd(0, 1) }));
+function sceneRebirth(t){
+  const W = meetW, H = meetH, cx = W * 0.5, cy = H * 0.5;
+  field(t, [{ x: cx, y: cy, k: -0.35, sx: W * 0.14 }],
+        ['rgba(63,216,160,0.4)', 'rgba(164,107,255,0.45)', 'rgba(255,154,60,0.45)', 'rgba(90,180,255,0.4)'], { alpha: 0.9 });
+  const base = mctx.globalAlpha;
+  for(const p of m5arm){
+    const u = ((p.u0 - t * 0.06) % 1 + 1) % 1;  // 바깥에서 핵 쪽으로 천천히 흘러듦
+    const r = H * (0.07 + 0.43 * u), th = p.arm * Math.PI + u * 4.2 + t * 0.6 + p.j;
+    const hue = (u * 300 + p.arm * 160) % 360;
+    mctx.globalAlpha = base * (u > 0.75 ? (1 - u) * 4 : 1); // 가장 바깥 끝은 희미하게
+    dot(cx + Math.cos(th) * r * 1.8, cy + Math.sin(th) * r, p.z * (0.6 + u * 0.6), `hsl(${hue},85%,62%)`);
+  }
+  mctx.globalAlpha = base;
+  glow(cx, cy, H * 0.22, '255,255,255', 0.6);
+  for(const p of m5core){ const a = p.a + t * 2 * Math.sign(p.s); dot(cx + Math.cos(a) * H * 0.07 * p.r * 1.4, cy + Math.sin(a) * H * 0.07 * p.r, p.z * 0.8, p.c); }
+}
+
+const SCENES = [
+  { title: '만남', en: 'Sel-roch', draw: sceneMeet },
+  { title: '혼돈', en: 'Chaos', draw: sceneChaos },
+  { title: '폭발', en: 'Burst', draw: sceneBurst },
+  { title: '침묵', en: 'Silence', draw: sceneSilence },
+  { title: '새로운 탄생', en: 'Rebirth', draw: sceneRebirth },
+];
+
+function meetResize(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const r = meetBox.getBoundingClientRect();
+  meetW = Math.max(1, r.width); meetH = Math.max(1, r.height);
+  meetCanvas.width = Math.round(meetW * dpr); meetCanvas.height = Math.round(meetH * dpr);
+  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  mctx.fillStyle = '#07080d'; mctx.fillRect(0, 0, meetW, meetH);
+}
+
+function meetDraw(t){
+  const W = meetW, H = meetH, n = SCENES.length;
+  const idx = Math.floor(t / SCENE_SEC) % n, local = t % SCENE_SEC;
+  mctx.fillStyle = 'rgba(7,8,13,0.38)'; mctx.fillRect(0, 0, W, H); // 잔상 → 꼬리
+
+  const fade = Math.max(0, (local - (SCENE_SEC - FADE_SEC)) / FADE_SEC); // 장면 끝 무렵 다음 작품으로 스며듦
+  mctx.globalAlpha = 1 - fade; SCENES[idx].draw(t, local);
+  if(fade > 0){ mctx.globalAlpha = fade; SCENES[(idx + 1) % n].draw(t, local - SCENE_SEC); }
+  mctx.globalAlpha = 1;
+
+  const cur = fade > 0.5 ? (idx + 1) % n : idx;
+  if(cur !== meetIdx){ // 누르면 지금 보이는 작품으로 이동
+    meetIdx = cur;
+    const lab = document.getElementById('meetLabel');
+    lab.classList.add('hide'); // 이름도 살짝 사라졌다가 바뀌어 나타남
+    setTimeout(() => { lab.textContent = SCENES[cur].title; lab.classList.remove('hide'); }, 450);
+    meetBox.href = '/gallery.html#w' + (cur + 1);
+    meetBox.setAttribute('aria-label', `갤러리 외계 시각 연작 ${cur + 1}번 ${SCENES[cur].title} 보기`);
+    meetBox.title = `외계 시각 · ${SCENES[cur].title} (${SCENES[cur].en})`;
+  }
+}
+
+function meetLoop(now){
+  if(meetFrozen){ meetRaf = 0; return; }
+  const dt = meetLast ? Math.min(0.05, (now - meetLast) / 1000) : 0;
+  meetLast = now; meetT += dt;
+  meetDraw(meetT);
+  meetRaf = requestAnimationFrame(meetLoop);
+}
+function meetStart(){
+  if(reduceMotion || meetFrozen || meetRaf || document.hidden) return;
+  meetLast = 0; meetRaf = requestAnimationFrame(meetLoop);
+}
+function meetStop(){ if(meetRaf){ cancelAnimationFrame(meetRaf); meetRaf = 0; } }
+function meetFreeze(on){
+  meetFrozen = on;
+  meetBox.classList.toggle('frozen', on);
+  on ? meetStop() : meetStart();
+}
+
+meetResize();
+// 처음 한 장면을 꽉 채워 그려 둠 (동작 줄이기 설정이면 이 정지 화면만 보임)
+for(let i = 0; i < 20; i++) meetDraw(meetT += 0.03);
+meetStart();
+window.addEventListener('resize', () => { meetResize(); meetDraw(meetT); });
+document.addEventListener('visibilitychange', () => document.hidden ? meetStop() : meetStart());
+
+// 낙서를 남긴 뒤 호출되던 인사 함수: 이제는 멈춰 있던 작품을 다시 깨움
+function playSosoJourney(){ meetFreeze(false); }
+
+// 낙서를 쓰는 순간 정지, 입력창을 비우고 나가면 다시 움직임
+const writeMsgEl = document.getElementById('writeMsg');
+writeMsgEl.addEventListener('focus', () => meetFreeze(true));
+writeMsgEl.addEventListener('input', () => meetFreeze(true));
+const writeCountEl = document.getElementById('writeCount');
+function updateWriteCount(){ writeCountEl.textContent = writeMsgEl.value.length + '/200'; }
+writeMsgEl.addEventListener('input', updateWriteCount);
+writeMsgEl.addEventListener('blur', () => { if(!writeMsgEl.value.trim()) meetFreeze(false); });
+
+// ---------- 인기 낙서 TOP5 ("낙서를 보자" 탭 안, 목록 아래) ----------
+async function loadTopBoard(){
+  try{
+    const res = await fetch(API_BASE + '/api/graffiti/top');
+    const top = await res.json();
+    const listEl = document.getElementById('tbList');
+    const emptyEl = document.getElementById('tbEmpty');
+    listEl.innerHTML = '';
+    if(!top.length){ emptyEl.style.display = 'block'; return; }
+    emptyEl.style.display = 'none';
+    top.forEach((item, i)=>{
+      const div = document.createElement('div');
+      div.className = 'tb-item';
+      div.innerHTML = `
+        <div class="rank">${i+1}위</div>
+        <div class="author">@${escapeHtml(item.author||'익명')}</div>
+        <div class="views">${item.views}회 · views</div>
+      `;
+      listEl.appendChild(div);
+    });
+  }catch(e){ /* 조용히 무시 */ }
+}
+
+// ---------- 오른쪽 패널 1: PI 실시간 가치 (CoinGecko 공개 API) ----------
+async function loadPiPrice(){
+  try{
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pi-network&vs_currencies=usd&include_24hr_change=true');
+    const data = await res.json();
+    const info = data['pi-network'];
+    if(!info) throw new Error('no data');
+    document.getElementById('piAmount').textContent = '$' + info.usd.toFixed(4);
+    const changeEl = document.getElementById('piChange');
+    const change = info.usd_24h_change || 0;
+    changeEl.textContent = (change >= 0 ? '▲ ' : '▼ ') + Math.abs(change).toFixed(2) + '%';
+    changeEl.className = 'change ' + (change >= 0 ? 'up' : 'down');
+    document.getElementById('tsPrice').textContent = '$' + info.usd.toFixed(4);
+    const tsCh = document.getElementById('tsChange');
+    tsCh.textContent = (change >= 0 ? '▲' : '▼') + Math.abs(change).toFixed(2) + '%';
+    tsCh.className = change >= 0 ? 'up' : 'down';
+    document.getElementById('piUpdated').textContent = new Date().toLocaleTimeString('ko-KR', { hour12:false });
+  }catch(e){
+    document.getElementById('piAmount').textContent = '조회 실패';
+  }
+}
+loadPiPrice();
+setInterval(loadPiPrice, 60000); // 1분마다 갱신
+
+// ---------- 오른쪽 패널 2·3: 런치패드 TOP5 / 스테이킹 TOP5 ----------
+// 참고: 코어팀의 공식 공개 API가 아직 확인되지 않아, 서버(server.js)의
+// LAUNCHPAD_TOP5 / STAKING_TOP5 배열을 수동으로 채워 넣는 방식으로 구현했습니다.
+// 나중에 공식 API가 열리면 서버 쪽만 실제 API 호출로 교체하면 됩니다.
+async function loadRankList(url, listId, emptyId){
+  try{
+    const res = await fetch(API_BASE + url);
+    const items = await res.json();
+    const listEl = document.getElementById(listId);
+    const emptyEl = document.getElementById(emptyId);
+    const blockEl = listEl.closest('.rp-block');
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'none';
+    // 데이터가 없으면 '데이터 준비 중' 대신 블록 자체를 숨김
+    if(!Array.isArray(items) || !items.length){ blockEl.classList.remove('has-data'); return; }
+    blockEl.classList.add('has-data');
+    items.forEach((item, i)=>{
+      const div = document.createElement('div');
+      div.className = 'rank-item';
+      div.innerHTML = `
+        <div class="rank">${i+1}위</div>
+        <div class="name">${escapeHtml(item.name)}</div>
+        <div class="metric">${escapeHtml(item.metric || '')}</div>
+      `;
+      listEl.appendChild(div);
+    });
+  }catch(e){ /* 조용히 무시 */ }
+}
+function loadLaunchpadTop5(){ loadRankList('/api/launchpad/top5', 'launchpadList', 'launchpadEmpty'); }
+function loadStakingTop5(){ loadRankList('/api/staking/top5', 'stakingList', 'stakingEmpty'); }
+loadLaunchpadTop5();
+loadStakingTop5();
+setInterval(loadLaunchpadTop5, 60000);
+setInterval(loadStakingTop5, 60000);
+
+// ---------- 오늘의 질문 불러오기 ----------
+async function loadTodayQuestion(){
+  try{
+    const res = await fetch(API_BASE + '/api/question/today');
+    const q = await res.json();
+    document.getElementById('todayQText').innerHTML = `${escapeHtml(q.ko)}<span class="en">${escapeHtml(q.en)}</span>`;
+  }catch(e){
+    document.getElementById('todayQText').innerHTML = '질문을 불러오지 못했어요.<span class="en">Failed to load question.</span>';
+  }
+}
+loadTodayQuestion();
+
+// ---------- 탭 전환 ----------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(btn.dataset.tab === 'wall'){
+      showBrowsePage();
+      return;
+    }
+    if(btn.dataset.tab === 'promo'){
+      showPromoPage();
+      return;
+    }
+    if(inFullpage){ backToMain(); return; }
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    sosoWriteTabActive = (btn.dataset.tab === 'write');
+  });
+});
+
+// ---------- 전체 페이지 전환: 둘러보기 / 홍보 ----------
+const appEl = document.querySelector('.app');
+const pageBrowseEl = document.getElementById('pageBrowse');
+const pagePromoEl = document.getElementById('pagePromo');
+const worldclockEl = document.getElementById('livefeed');
+const rightpanelEl = document.getElementById('rightpanel');
+const promoFormWrapEl = document.getElementById('promoFormWrap');
+const promoResultWrapEl = document.getElementById('promoResultWrap');
+
+function setActiveTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
+}
+function enterFullpage(){
+  appEl.classList.add('showing-fullpage');
+  window.scrollTo(0, 0);
+  worldclockEl.style.display = 'none';
+  rightpanelEl.style.display = 'none';
+  sosoWriteTabActive = false;
+}
+
+// ---------- 뒤로가기(브라우저/웹뷰 back) 처리 ----------
+// 서브화면(둘러보기/앱)에 들어갈 때 히스토리를 한 칸 쌓아두면, 뒤로가기를 눌렀을 때
+// 앱을 완전히 벗어나는 대신 먼저 메인화면으로만 돌아오게 만들 수 있음.
+history.replaceState({ view: 'main' }, ''); // 처음 로드된 화면을 '메인'으로 기록
+let inFullpage = false;
+
+function pushFullpageHistory(){
+  if(!inFullpage){
+    history.pushState({ view: 'sub' }, '');
+    inFullpage = true;
+  }
+}
+
+window.addEventListener('popstate', ()=>{
+  if(inFullpage){
+    // 서브화면에서 뒤로가기 → 메인화면으로만 이동 (앱을 나가지 않음)
+    goToMainScreen();
+  }
+  // 이미 메인화면이었다면 popstate가 소비할 히스토리가 더 없다는 뜻이므로,
+  // 별도 처리 없이 그대로 두면 앱을 나가는 기본 동작이 자연스럽게 진행됨
+});
+
+function showBrowsePage(){
+  enterFullpage();
+  pushFullpageHistory();
+  pagePromoEl.classList.remove('show');
+  pageBrowseEl.classList.add('show');
+  setActiveTab('wall');
+  loadWall();
+  loadTopBoard();
+}
+
+function showPromoPage(){
+  enterFullpage();
+  pushFullpageHistory();
+  pageBrowseEl.classList.remove('show');
+  pagePromoEl.classList.add('show');
+  setActiveTab('promo');
+  // 서브화면을 다시 열 때는 항상 폼부터 보여줌 (이전 결제 결과는 초기화)
+  promoResultWrapEl.style.display = 'none';
+  promoResultWrapEl.innerHTML = '';
+  promoFormWrapEl.style.display = 'block';
+  loadMyTickets();
+}
+
+// 실제 화면 전환만 담당 (히스토리는 건드리지 않음) — popstate 콜백에서 호출됨
+function goToMainScreen(){
+  inFullpage = false;
+  appEl.classList.remove('showing-fullpage');
+  worldclockEl.style.display = '';
+  rightpanelEl.style.display = '';
+  pageBrowseEl.classList.remove('show');
+  pagePromoEl.classList.remove('show');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
+  document.querySelector('.tab-btn[data-tab="write"]').classList.add('active');
+  document.getElementById('tab-write').classList.add('active');
+  sosoWriteTabActive = true;
+}
+
+// 화면 안의 "메인화면으로 돌아가기" 버튼: 직접 화면을 바꾸지 않고 history.back()을 호출해서
+// popstate 흐름을 그대로 타게 함 (뒤로가기 버튼을 눌렀을 때와 완전히 같은 경로로 처리)
+function backToMain(){
+  if(inFullpage){
+    history.back();
+  }else{
+    goToMainScreen();
+  }
+}
+document.getElementById('backFromBrowse').addEventListener('click', backToMain);
+document.getElementById('backFromPromo').addEventListener('click', backToMain);
+if(document.getElementById('recentMore')) document.getElementById('recentMore').addEventListener('click', ()=>showBrowsePage());
+(function openTabFromUrl(){
+  let tab = null;
+  try{ tab = new URLSearchParams(location.search).get('tab'); }catch(e){}
+  // 페이지의 나머지 코드(요금제 정보 등)가 모두 준비된 뒤에 열기
+  setTimeout(()=>{
+    if(tab === 'wall') showBrowsePage();
+    else if(tab === 'promo') showPromoPage();
+  }, 0);
+})();
+
+// 폼 제출 후에는 폼을 숨기고, 결제 진행/완료/오류 상태만 결과 영역에 표시
+function renderPromoPageBody(kind, msgKo, msgEn, preview){
+  if(kind === 'ok' && preview) setTimeout(loadPromoStrip, 1500);
+  promoFormWrapEl.style.display = 'none';
+  promoResultWrapEl.style.display = 'block';
+  let html = `<div class="status show ${kind}" style="margin-top:0;">${msgKo}${msgEn ? `<span class="en">${msgEn}</span>` : ''}</div>`;
+  if(preview){
+    html += `
+      <div class="card promo" style="margin-top:18px;">
+        <div class="meta"><span>@${escapeHtml(preview.author||'개발자')}</span><span class="badge">홍보 / AD</span></div>
+        <div class="msg"><b>${escapeHtml(preview.appName)}</b><br>${escapeHtml(preview.message)}</div>
+      </div>`;
+  }
+  promoResultWrapEl.innerHTML = html;
+}
+
+// ---------- Pi SDK 초기화 ----------
+function initPi(){
+  if(typeof Pi === 'undefined'){
+    console.warn('Pi SDK가 로드되지 않았습니다. Pi Browser 안에서 열어야 정상 동작합니다.');
+    return;
+  }
+  // sandbox: true 는 PC 브라우저 샌드박스 테스트 전용. Pi Browser(메인넷·광고)에서는 false 여야 함
+  Pi.init({ version: "2.0", sandbox: false });
+}
+initPi();
+
+// ---------- Pi 광고 (Pi Ad Network) ----------
+// 광고는 Pi Browser 안에서만 동작합니다. 지원하지 않는 환경이면 조용히 건너뜁니다.
+let adsSupportedCache = null;
+async function adsSupported(){
+  if(adsSupportedCache !== null) return adsSupportedCache;
+  try{
+    if(typeof Pi === 'undefined' || !Pi.nativeFeaturesList || !Pi.Ads){ adsSupportedCache = false; return false; }
+    const features = await Pi.nativeFeaturesList();
+    adsSupportedCache = Array.isArray(features) && features.includes('ad_network');
+  }catch(e){ adsSupportedCache = false; }
+  return adsSupportedCache;
+}
+
+// 광고가 준비 안 됐으면 한 번 요청해서 불러옴. 준비되면 true
+async function ensureAdReady(adType){
+  const ready = await Pi.Ads.isAdReady(adType);
+  if(ready && ready.ready) return true;
+  const req = await Pi.Ads.requestAd(adType);
+  return !!req && req.result === 'AD_LOADED';
+}
+
+// 전면 광고: 낙서를 남긴 직후 같은 자연스러운 전환 시점에만, 너무 자주 뜨지 않게 호출
+const INTERSTITIAL_EVERY_N_POSTS = 3; // 이 세션에서 낙서 3번마다 1번
+let postsThisSession = 0;
+async function maybeShowInterstitialAfterPost(){
+  postsThisSession++;
+  if(postsThisSession % INTERSTITIAL_EVERY_N_POSTS !== 0) return;
+  try{
+    if(!(await adsSupported())) return;
+    if(!(await ensureAdReady('interstitial'))) return;
+    await Pi.Ads.showAd('interstitial'); // 결과(AD_CLOSED 등)와 관계없이 앱은 그대로 진행
+  }catch(e){ console.warn('interstitial ad skipped:', e); }
+}
+
+// 보상형 광고: 끝까지 보면 서버 검증 후 무료 1일권 1장 (하루 1회)
+async function watchRewardedAdForTicket(){
+  const statusId = 'rewardAdStatus';
+  if(!currentUser){
+    showStatus(statusId,'err','먼저 Pi로 로그인해주세요.','Please log in with Pi first.');
+    return;
+  }
+  const btn = document.getElementById('rewardAdBtn');
+  btn.disabled = true;
+  try{
+    if(!(await adsSupported())){
+      showStatus(statusId,'err','이 환경에서는 광고를 볼 수 없어요. Pi Browser를 최신 버전으로 업데이트해주세요.','Ads are not supported here. Please update Pi Browser.');
+      return;
+    }
+    if(!(await ensureAdReady('rewarded'))){
+      showStatus(statusId,'err','지금은 보여줄 광고가 없어요. 잠시 뒤 다시 시도해주세요.','No ad available right now. Please try again later.');
+      return;
+    }
+    const shown = await Pi.Ads.showAd('rewarded');
+    if(!shown || shown.result !== 'AD_REWARDED' || !shown.adId){
+      showStatus(statusId,'err','광고를 끝까지 봐야 1일권을 받을 수 있어요.','Watch the full ad to receive the pass.');
+      return;
+    }
+    const res = await fetch(API_BASE + '/api/ads/rewarded/verify', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ adId: shown.adId, accessToken: currentUser.accessToken })
+    });
+    const d = await res.json().catch(()=>({}));
+    if(d.rewarded){
+      showStatus(statusId,'ok','🎟️ 무료 1일권 1장을 받았어요!','You received a free 1-day pass!');
+      loadMyTickets();
+    }else if(d.reason === 'daily_limit'){
+      showStatus(statusId,'err','오늘은 이미 광고 보상을 받았어요. 내일 다시 만나요!','You already got today\'s ad reward. See you tomorrow!');
+    }else{
+      showStatus(statusId,'err','광고 보상 확인에 실패했어요. 잠시 뒤 다시 시도해주세요.','Could not verify the ad reward. Please try again later.');
+    }
+  }catch(e){
+    console.error(e);
+    showStatus(statusId,'err','광고를 불러오지 못했어요: ' + e.message, 'Failed to load ad: ' + e.message);
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('rewardAdBtn').addEventListener('click', watchRewardedAdForTicket);
+
+// 갤러리 등 다른 페이지를 다녀와도 로그인이 유지되도록, 로그인한 적이 있으면 조용히 다시 로그인
+const AUTO_LOGIN_KEY = 'dbtAutoLogin';
+function rememberLogin(on){
+  try{ on ? sessionStorage.setItem(AUTO_LOGIN_KEY, '1') : sessionStorage.removeItem(AUTO_LOGIN_KEY); }catch(e){}
+  try{ on ? localStorage.setItem(AUTO_LOGIN_KEY, String(Date.now())) : localStorage.removeItem(AUTO_LOGIN_KEY); }catch(e){}
+}
+function shouldAutoLogin(){
+  try{ if(sessionStorage.getItem(AUTO_LOGIN_KEY) === '1') return true; }catch(e){}
+  try{ const t = Number(localStorage.getItem(AUTO_LOGIN_KEY) || 0); if(t && Date.now() - t < 12*60*60*1000) return true; }catch(e){}
+  return false;
+}
+async function loginWithPi(opts){
+  const silent = !!(opts && opts.silent);
+  if(typeof Pi === 'undefined'){
+    if(!silent) alert('Pi Browser 안에서 열어주세요. / Please open this inside Pi Browser.');
+    return;
+  }
+  try{
+    const scopes = ['username', 'payments'];
+    const authResult = await Pi.authenticate(scopes, onIncompletePaymentFound);
+    currentUser = {
+      uid: authResult.user.uid,
+      username: authResult.user.username,
+      accessToken: authResult.accessToken
+    };
+    document.getElementById('whoamiText').textContent = '@' + currentUser.username + ' 로 로그인됨 · 개인정보는 쓰지 마세요.';
+    document.getElementById('loginBtn').style.display = 'none';
+    const chip = document.getElementById('userChip');
+    chip.textContent = '@' + currentUser.username;
+    chip.hidden = false;
+    rememberLogin(true);
+    // 앱 홍보 화면이 이미 열려 있으면 내 무료권 정보를 다시 불러옴
+    if(document.getElementById('pagePromo').classList.contains('show')) loadMyTickets();
+  }catch(e){
+    console.error(e);
+    if(silent){ rememberLogin(false); return; } // 조용한 재로그인 실패는 안내 없이 넘어감
+    showStatus('writeStatus','err','로그인에 실패했습니다: ' + e.message, 'Login failed: ' + e.message);
+  }
+}
+document.getElementById('loginBtn').addEventListener('click', ()=>loginWithPi());
+if(shouldAutoLogin()) loginWithPi({ silent:true });
+
+// 서버가 로그인을 확인하지 못했을 때(토큰 만료 등): 로그인 상태를 풀고 다시 로그인하게 안내
+function handleLoginExpired(statusId){
+  currentUser = null;
+  rememberLogin(false);
+  document.getElementById('whoamiText').textContent = '낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.';
+  document.getElementById('loginBtn').style.display = '';
+  document.getElementById('userChip').hidden = true;
+  const ko = '로그인이 만료되었어요. 다시 Pi로 로그인해주세요.';
+  const en = 'Your login expired. Please log in with Pi again.';
+  if(statusId) showStatus(statusId, 'err', ko, en);
+  else alert(ko + ' / ' + en);
+}
+
+// 앱을 껐다 켰을 때 미완료 결제가 남아있으면 서버에 통보해 정리
+function onIncompletePaymentFound(payment){
+  fetch(API_BASE + '/api/payments/complete-existing', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ paymentId: payment.identifier })
+  }).catch(console.error);
+}
+
+function showStatus(id, kind, msgKo, msgEn){
+  const el = document.getElementById(id);
+  el.innerHTML = msgKo + (msgEn ? `<span class="en">${msgEn}</span>` : '');
+  el.className = 'status show ' + kind;
+}
+
+// ---------- 1. 낙서 남기기 (로그인 필수 + 직접 작성 확인 + 붙여넣기/드래그 차단) ----------
+const writeMsgElRef = document.getElementById('writeMsg');
+
+// 붙여넣기·드래그로 넣은 텍스트는 삽입 자체를 막음 (직접 타이핑만 허용)
+writeMsgElRef.addEventListener('beforeinput', (e)=>{
+  const blockedTypes = ['insertFromPaste','insertFromDrop','insertFromPasteAsQuotation','insertReplacementText','insertFromYank'];
+  if(blockedTypes.includes(e.inputType)){
+    e.preventDefault();
+    showStatus('writeStatus','err','붙여넣기·드래그로 넣은 글은 등록할 수 없어요. 직접 입력해주세요.','Pasted or dragged text is blocked — please type it yourself.');
+  }
+});
+writeMsgElRef.addEventListener('paste', (e)=>{ e.preventDefault(); });
+writeMsgElRef.addEventListener('drop', (e)=>{ e.preventDefault(); });
+
+document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
+  const msg = document.getElementById('writeMsg').value.trim();
+  if(!currentUser){
+    showStatus('writeStatus','err','낙서를 남기려면 먼저 Pi로 로그인해주세요.','Please log in with Pi to post graffiti.');
+    return;
+  }
+  if(!msg){ showStatus('writeStatus','err','내용을 입력해주세요.','Please enter a message.'); return; }
+  if(!document.getElementById('selfCertCheck').checked){
+    showStatus('writeStatus','err','직접 작성했다는 확인 체크박스를 눌러주세요.','Please check the box confirming you wrote this yourself.');
+    return;
+  }
+  try{
+    const res = await fetch(API_BASE + '/api/graffiti', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        accessToken: currentUser.accessToken,
+        message: msg,
+        visitorId
+      })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.status === 401){ handleLoginExpired('writeStatus'); return; }
+    if(!res.ok){
+      // 서버가 구체적인 사유(도배 방지/욕설·스팸/일반 오류)를 message로 내려줌
+      const msgKo = data.message || '등록에 실패했습니다.';
+      showStatus('writeStatus','err', msgKo, data.error || 'Failed to post.');
+      return;
+    }
+    document.getElementById('writeMsg').value = '';
+    updateWriteCount();
+    loadVisitStats(); // 방금 낙서한 것을 통계에 반영
+    document.getElementById('selfCertCheck').checked = false;
+    const streakLine = data.streak
+      ? `<div class="streak-badge">🔥 ${data.streak}일 연속 작성 중이에요<span class="en">${data.streak}-day streak!</span></div>`
+      : '';
+    const ticketLine = data.ticketEarned
+      ? `<div class="streak-badge">🎟️ 무료 홍보 1일권을 받았어요! (앱 탭에서 사용)<span class="en">You earned a free 1-day promo pass! (use it in the App tab)</span></div>`
+      : '';
+    document.getElementById('writeStatus').innerHTML = '낙서가 방에 붙었어요!<span class="en">Your graffiti has been posted!</span>' + streakLine + ticketLine;
+    document.getElementById('writeStatus').className = 'status show ok';
+    if(typeof loadLiveFeed==='function') loadLiveFeed();
+    playSosoJourney(); // 낙서를 남긴 반가운 순간에 한 번 더 인사
+    maybeShowInterstitialAfterPost(); // 등록이 끝난 뒤의 자연스러운 전환 시점에만 전면 광고
+  }catch(e){
+    showStatus('writeStatus','err','등록에 실패했습니다: ' + e.message, 'Failed to post: ' + e.message);
+  }
+});
+
+// ---------- 2. 디부타데스 불러오기 ----------
+let wallItemsCache = [];
+
+async function loadWall(){
+  const listEl = document.getElementById('wallList');
+  const loadingEl = document.getElementById('wallLoading');
+  const emptyEl = document.getElementById('wallEmpty');
+  loadingEl.style.display = 'block';
+  emptyEl.style.display = 'none';
+  listEl.innerHTML = '';
+  try{
+    const res = await fetch(API_BASE + '/api/wall');
+    wallItemsCache = await res.json();
+    loadingEl.style.display = 'none';
+    renderWallItems();
+  }catch(e){
+    loadingEl.innerHTML = '방을 불러오지 못했습니다.<span class="en">Failed to load the room.</span>';
+  }
+}
+
+function renderWallItems(){
+  const listEl = document.getElementById('wallList');
+  const emptyEl = document.getElementById('wallEmpty');
+  const myPostsOnly = document.getElementById('myPostsOnly').checked;
+
+  // 둘러보기 페이지는 오직 낙서만 보여줌 (홍보 카드는 제외)
+  let items = wallItemsCache.filter(item => item.type === 'graffiti');
+  if(myPostsOnly){
+    items = currentUser
+      ? items.filter(item => item.author === currentUser.username)
+      : [];
+  }
+
+  listEl.innerHTML = '';
+  if(!items.length){
+    emptyEl.style.display = 'block';
+    emptyEl.innerHTML = myPostsOnly
+      ? (currentUser
+          ? '아직 남기신 낙서가 없어요.<span class="en">You haven\'t posted any graffiti yet.</span>'
+          : '내 글을 보려면 먼저 Pi로 로그인해주세요.<span class="en">Log in with Pi to see your own posts.</span>')
+      : '아직 아무도 낙서를 남기지 않았어요. 첫 낙서의 주인공이 되어보세요!<span class="en">No graffiti yet. Be the first to leave one!</span>';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  items.forEach((item, i)=>{
+    const card = document.createElement('div');
+    card.className = 'card tag';
+    card.style.cursor = 'pointer';
+    card.style.animationDelay = Math.min(i * 0.08, 1.2) + 's';
+    const reactions = item.reactions || { heart:0, thumbsup:0, pray:0, happy:0, sad:0 };
+    const reactionButtonsHtml = REACTION_TYPES.map(r => `
+      <button class="reaction-btn" data-type="${r.key}">${r.emoji} <span class="reaction-count">${reactions[r.key] || 0}</span></button>
+    `).join('');
+    card.innerHTML = `
+      <div class="meta"><span>@${escapeHtml(item.author||'익명')}</span><span>${formatTime(item.createdAt)} · ${item.views||0}회 / views</span></div>
+      <div class="msg">${escapeHtml(item.message)}</div>
+      <div class="reaction-row">${reactionButtonsHtml}</div>
+    `;
+    if(item.id){
+      card.addEventListener('click', ()=> bumpView(item.id, card), { once:true });
+      const reactionRow = card.querySelector('.reaction-row');
+      reactionRow.querySelectorAll('.reaction-btn').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          e.stopPropagation(); // 카드 전체 클릭(조회수 증가)과 겹치지 않게
+          sendReaction(item.id, btn.dataset.type, reactionRow, btn);
+        }, { once:true });
+      });
+    }
+    listEl.appendChild(card);
+  });
+}
+
+document.getElementById('myPostsOnly').addEventListener('change', renderWallItems);
+
+// ---------- 추천 앱(홍보) 띠: 메인 + 게시글 화면 상단 ----------
+let promoItems = [];
+let promoIdx = 0;
+let promoTimer = null;
+function promoLeftText(p){
+  const exp = p.expiresAt || (p.createdAt + 7*24*60*60*1000);
+  const days = Math.ceil((exp - Date.now()) / (24*60*60*1000));
+  return days > 1 ? `${days}일 남음` : '오늘까지';
+}
+function renderPromoStrip(){
+  const strips = document.querySelectorAll('.promo-strip');
+  if(!promoItems.length){ strips.forEach(el => { el.classList.remove('on'); el.innerHTML = ''; }); return; }
+  const p = promoItems[promoIdx % promoItems.length];
+  const url = isLikelyPiAppUrl(p.appUrl || '') ? p.appUrl : '';
+  const html = `<a ${url ? `href="${escapeAttr(url)}" rel="noopener"` : ''}>
+      <div class="ps-top"><span>추천 앱<span class="en">Sponsored</span></span><span class="ps-left">${escapeHtml(promoLeftText(p))}${promoItems.length>1 ? ` · ${(promoIdx % promoItems.length)+1}/${promoItems.length}` : ''}</span></div>
+      <div class="ps-name">${escapeHtml(p.appName || '')}</div>
+      <div class="ps-msg">${escapeHtml(p.message || '')}</div>
+    </a>`;
+  strips.forEach(el => { el.innerHTML = html; el.classList.add('on'); });
+}
+async function loadPromoStrip(){
+  try{
+    const res = await fetch(API_BASE + '/api/wall?_=' + Date.now());
+    const now = Date.now();
+    promoItems = (await res.json()).filter(x => x.type === 'promo' && now < (x.expiresAt || (x.createdAt + 7*24*60*60*1000)));
+    // 새로 등록된 홍보가 먼저 보이도록 최신순 정렬
+    promoItems.sort((a,b) => b.createdAt - a.createdAt);
+    if(promoIdx >= promoItems.length) promoIdx = 0;
+    renderPromoStrip();
+    if(promoTimer) clearInterval(promoTimer);
+    if(promoItems.length > 1){
+      promoTimer = setInterval(()=>{ promoIdx = (promoIdx + 1) % promoItems.length; renderPromoStrip(); }, 6000);
+    }
+  }catch(e){ /* 조용히 무시 */ }
+}
+loadPromoStrip();
+setInterval(loadPromoStrip, 60000);
+
+// ---------- 홍보 요금제 선택 / 무료권 ----------
+const PLAN_INFO = {
+  '7':  { amount: 0.5, ko: '0.5 Pi 내고 7일 홍보하기', en: 'Pay 0.5 Pi &amp; Promote for 7 Days', memo: '디부타데스 앱 홍보 7일 게시' },
+  '30': { amount: 1.5, ko: '1.5 Pi 내고 30일 홍보하기', en: 'Pay 1.5 Pi &amp; Promote for 30 Days', memo: '디부타데스 앱 홍보 30일 게시' },
+  'free': { amount: 0, ko: '무료 1일권으로 홍보하기', en: 'Promote for 1 Day (Free Pass)' }
+};
+function selectedPlan(){
+  const r = document.querySelector('input[name="plan"]:checked');
+  return r ? r.value : '7';
+}
+function refreshPlanUI(){
+  const plan = selectedPlan();
+  document.querySelectorAll('.plan-opt').forEach(l=>{
+    l.classList.toggle('sel', l.querySelector('input').checked);
+  });
+  const info = PLAN_INFO[plan];
+  document.getElementById('submitPromo').innerHTML = `${info.ko}<span class="en">${info.en}</span>`;
+}
+document.querySelectorAll('input[name="plan"]').forEach(r=>r.addEventListener('change', refreshPlanUI));
+
+async function loadMyTickets(){
+  const optEl = document.getElementById('freePlanOpt');
+  const infoEl = document.getElementById('freePlanInfo');
+  const radio = optEl.querySelector('input');
+  let tickets = 0;
+  if(currentUser){
+    try{
+      const res = await fetch(API_BASE + '/api/tickets', { headers: { 'x-pi-token': currentUser.accessToken } });
+      const d = await res.json();
+      tickets = d.tickets || 0;
+      infoEl.innerHTML = `보유 ${tickets}장 · 연속 ${d.streak||0}일째 (7일마다 1장)<span class="en">${tickets} pass(es) · ${d.streak||0}-day streak</span>`;
+    }catch(e){ /* 조용히 무시 */ }
+  }else{
+    infoEl.innerHTML = '로그인하면 보유 장수가 보여요<span class="en">Log in to see your passes</span>';
+  }
+  radio.disabled = tickets < 1;
+  optEl.classList.toggle('off', tickets < 1);
+  if(tickets < 1 && radio.checked){ document.querySelector('input[name="plan"][value="7"]').checked = true; }
+  refreshPlanUI();
+}
+
+// ---------- 3. 앱 홍보하기 (Pi 결제 / 무료권) ----------
+document.getElementById('submitPromo').addEventListener('click', async ()=>{
+  const appName = document.getElementById('promoName').value.trim();
+  const appUrl  = document.getElementById('promoUrl').value.trim();
+  const message = document.getElementById('promoMsg').value.trim();
+
+  if(!appName || !appUrl || !message){
+    showStatus('promoStatus','err','모든 항목을 입력해주세요.','Please fill in all fields.');
+    return;
+  }
+  if(!isLikelyPiAppUrl(appUrl)){
+    showStatus('promoStatus','err','Pi 생태계 앱 URL만 등록할 수 있습니다 (pi:// 또는 .pinet.com 도메인).','Only Pi ecosystem app URLs are allowed (pi:// or .pinet.com domain).');
+    return;
+  }
+  if(!currentUser){
+    showStatus('promoStatus','err','먼저 Pi로 로그인해주세요.','Please log in with Pi first.');
+    return;
+  }
+  const plan = selectedPlan();
+  if(plan === 'free'){
+    try{
+      const res = await fetch(API_BASE + '/api/promo/free', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ appName, appUrl, message, accessToken: currentUser.accessToken })
+      });
+      if(res.status === 401){ handleLoginExpired('promoStatus'); return; }
+      const d = await res.json();
+      if(!res.ok){ showStatus('promoStatus','err', d.error || '등록에 실패했습니다.', 'Failed to register.'); return; }
+      renderPromoPageBody('ok', '무료 1일권으로 홍보가 등록되었습니다!', 'Your 1-day free promo is now live!', { appName, message, author: currentUser.username });
+      document.getElementById('promoName').value = '';
+      document.getElementById('promoUrl').value = '';
+      document.getElementById('promoMsg').value = '';
+    }catch(e){
+      showStatus('promoStatus','err','등록 중 오류가 발생했습니다.','Something went wrong.');
+    }
+    return;
+  }
+  if(typeof Pi === 'undefined'){
+    showStatus('promoStatus','err','Pi Browser 안에서만 결제가 가능합니다.','Payments only work inside Pi Browser.');
+    return;
+  }
+
+  // 여기까지 통과하면 폼을 숨기고 결제 진행 상태를 같은 서브화면 안에서 보여줌
+  const previewData = { appName, message, author: currentUser.username };
+  renderPromoPageBody('ok', '결제를 진행해주세요...', 'Please complete the payment in Pi Browser...', previewData);
+
+  try{
+    await Pi.createPayment({
+      amount: PLAN_INFO[plan].amount,
+      memo: PLAN_INFO[plan].memo,
+      metadata: { appName, appUrl, message, author: currentUser.username }
+    }, {
+      onReadyForServerApproval: async function(paymentId){
+        await fetch(API_BASE + '/api/payments/approve', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ paymentId })
+        });
+      },
+      onReadyForServerCompletion: async function(paymentId, txid){
+        await fetch(API_BASE + '/api/payments/complete', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ paymentId, txid, appName, appUrl, message, accessToken: currentUser.accessToken })
+        });
+        renderPromoPageBody('ok', `결제 완료! ${plan}일 동안 홍보가 노출됩니다.`, `Payment complete! Your promo is live for ${plan} days.`, previewData);
+        document.getElementById('promoName').value = '';
+        document.getElementById('promoUrl').value = '';
+        document.getElementById('promoMsg').value = '';
+      },
+      onCancel: function(paymentId){
+        renderPromoPageBody('err', '결제가 취소되었습니다.', 'Payment was cancelled.');
+      },
+      onError: function(error, payment){
+        renderPromoPageBody('err', '결제 오류: ' + error, 'Payment error: ' + error);
+      }
+    });
+  }catch(e){
+    renderPromoPageBody('err', '결제 시작에 실패했습니다: ' + e.message, 'Failed to start payment: ' + e.message);
+  }
+});
+
+// Pi 생태계 앱만 허용하는 간단한 검증 (운영자가 추가로 수동 검수하는 것을 권장)
+function isLikelyPiAppUrl(url){
+  return /^pi:\/\//i.test(url) || /^https:\/\/([a-z0-9-]+\.)*pinet\.com/i.test(url);
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+// 낙서를 눌러서 열어보면 조회수 +1, 표시도 갱신, TOP5 패널도 갱신
+async function bumpView(id, cardEl){
+  try{
+    const res = await fetch(API_BASE + `/api/graffiti/${id}/view`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ accessToken: currentUser ? currentUser.accessToken : undefined })
+    });
+    const data = await res.json();
+    if(data && typeof data.views === 'number'){
+      const metaSpan = cardEl.querySelector('.meta span:last-child');
+      if(metaSpan){
+        metaSpan.textContent = metaSpan.textContent.replace(/\d+회.*$/, `${data.views}회 / views`);
+      }
+    }
+    loadTopBoard();
+  }catch(e){ /* 조용히 무시 */ }
+}
+
+// 낙서에 공감(하트) 남기기 — 한 카드당 한 번만 누를 수 있게 눌린 뒤 버튼을 비활성화
+const REACTION_TYPES = [
+  { key: 'heart',    emoji: '🤍' },
+  { key: 'thumbsup', emoji: '👍' },
+  { key: 'pray',     emoji: '🙏' },
+  { key: 'happy',    emoji: '😊' },
+  { key: 'sad',      emoji: '😢' }
+];
+
+// 낙서에 반응 남기기 — 카드 하나당 5개 중 한 종류만 고를 수 있게, 고르면 나머지는 흐리게 비활성화
+async function sendReaction(id, type, rowEl, pickedBtnEl){
+  if(!currentUser){
+    alert('반응은 Pi로 로그인한 파이오니어만 남길 수 있어요. / Please log in with Pi to react.');
+    return;
+  }
+  rowEl.classList.add('answered');
+  rowEl.querySelectorAll('.reaction-btn').forEach(b => b.disabled = true);
+  pickedBtnEl.classList.add('picked');
+  try{
+    const res = await fetch(API_BASE + `/api/graffiti/${id}/react`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ type, accessToken: currentUser.accessToken })
+    });
+    if(res.status === 401){
+      // 로그인 만료: 버튼을 다시 살려서 재로그인 후 누를 수 있게
+      rowEl.classList.remove('answered');
+      rowEl.querySelectorAll('.reaction-btn').forEach(b => b.disabled = false);
+      pickedBtnEl.classList.remove('picked');
+      handleLoginExpired(null);
+      return;
+    }
+    const data = await res.json();
+    if(data && data.reactions){
+      REACTION_TYPES.forEach(r=>{
+        const btn = rowEl.querySelector(`.reaction-btn[data-type="${r.key}"]`);
+        const countSpan = btn && btn.querySelector('.reaction-count');
+        if(countSpan) countSpan.textContent = data.reactions[r.key] || 0;
+      });
+    }
+  }catch(e){ /* 조용히 무시 */ }
+}
+
+function formatTime(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ---------- 계절 분위기 (한국 날짜 기준 자동, 주소 끝에 ?season=spring|summer|autumn|winter 로 미리보기) ----------
+(function(){
+  const kstMonth = Number(new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Seoul', month:'numeric' }).format(new Date()));
+  const auto = [3,4,5].includes(kstMonth) ? 'spring' : [6,7,8].includes(kstMonth) ? 'summer' : [9,10,11].includes(kstMonth) ? 'autumn' : 'winter';
+  let season = auto;
+  try{
+    const q = new URLSearchParams(location.search).get('season');
+    if(q === 'off'){ const c = document.getElementById('seasonFx'); if(c) c.remove(); return; } // ?season=off : 계절 효과 끄기
+    if(['spring','summer','autumn','winter'].includes(q)) season = q;
+  }catch(e){}
+  document.body.classList.add('season-' + season);
+
+  const cv = document.getElementById('seasonFx');
+  if(!cv || reduceMotion) return; // '동작 줄이기' 설정이면 색만 바뀌고 장식은 없음
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0, raf = 0, last = 0;
+  const COUNT = { spring:16, summer:14, autumn:20, winter:28 }[season];
+  const PAL = {
+    spring: ['#ffc1d6','#ffb0c8','#ffd6e4','#f7a1bd'],
+    summer: ['#d8ff7a','#f4ff9e','#b8ff6a'],
+    autumn: ['#ff9a3c','#e3543c','#ffc93c','#c8642a'],
+    winter: ['#ffffff','#e8f3ff','#d6e8ff']
+  }[season];
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function make(randomY){
+    return {
+      x: Math.random() * W, y: randomY ? Math.random() * H : -20 - Math.random() * 60,
+      s: season === 'winter' ? 1 + Math.random() * 2.2 : 5 + Math.random() * 5,
+      vy: season === 'summer' ? (Math.random() - 0.5) * 8 : (season === 'winter' ? 18 : 22) + Math.random() * 22,
+      vx: season === 'summer' ? (Math.random() - 0.5) * 10 : (Math.random() - 0.3) * 12,
+      a: Math.random() * Math.PI * 2, va: (Math.random() - 0.5) * 1.6,
+      ph: Math.random() * Math.PI * 2, c: PAL[Math.random() * PAL.length | 0]
+    };
+  }
+  const items = [];
+  function lightAlpha(){ return document.body.classList.contains('light-theme') ? 0.55 : 0.8; }
+  function drawPetal(p){ ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  function drawLeaf(p){ ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.moveTo(0, -p.s); ctx.quadraticCurveTo(p.s * 0.9, 0, 0, p.s); ctx.quadraticCurveTo(-p.s * 0.9, 0, 0, -p.s); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, -p.s); ctx.lineTo(0, p.s * 1.25); ctx.stroke(); ctx.restore(); }
+  function drawFirefly(p, t){ const blink = 0.35 + 0.65 * Math.max(0, Math.sin(t * 1.6 + p.ph));
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 9); g.addColorStop(0, p.c); g.addColorStop(1, 'rgba(200,255,120,0)');
+    ctx.globalAlpha *= blink; ctx.fillStyle = g; ctx.fillRect(p.x - 9, p.y - 9, 18, 18); }
+  function drawSnow(p){ ctx.fillStyle = document.body.classList.contains('light-theme') ? '#a9c3dd' : p.c;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill(); }
+  let t = 0;
+  function frame(now){
+    raf = 0;
+    if(document.hidden) return;
+    // 낙서를 쓰는 동안(만남 애니메이션이 멈춰 있을 때)은 장식도 쉼
+    if(typeof meetFrozen !== 'undefined' && meetFrozen){ setTimeout(()=>{ if(!raf) raf = requestAnimationFrame(frame); }, 400); last = 0; return; }
+    const dt = last ? Math.min(0.05, (now - last) / 1000) : 0; last = now; t += dt;
+    ctx.clearRect(0, 0, W, H);
+    for(const p of items){
+      p.a += p.va * dt;
+      if(season === 'summer'){
+        p.x += (p.vx + Math.sin(t * 0.7 + p.ph) * 6) * dt; p.y += (p.vy + Math.cos(t * 0.5 + p.ph) * 6) * dt;
+        if(p.x < -10) p.x = W + 10; if(p.x > W + 10) p.x = -10; if(p.y < -10) p.y = H + 10; if(p.y > H + 10) p.y = -10;
+      }else{
+        p.x += (p.vx + Math.sin(t + p.ph) * (season === 'winter' ? 6 : 14)) * dt; p.y += p.vy * dt;
+        if(p.y > H + 20 || p.x < -30 || p.x > W + 30) Object.assign(p, make(false));
+      }
+      ctx.globalAlpha = lightAlpha();
+      if(season === 'spring') drawPetal(p);
+      else if(season === 'autumn') drawLeaf(p);
+      else if(season === 'summer') drawFirefly(p, t);
+      else drawSnow(p);
+    }
+    ctx.globalAlpha = 1;
+    raf = requestAnimationFrame(frame);
+  }
+  resize();
+  for(let i = 0; i < COUNT; i++) items.push(make(true));
+  raf = requestAnimationFrame(frame);
+  window.addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && !raf){ last = 0; raf = requestAnimationFrame(frame); } });
+})();
+
+// ---------- 하단 탭이 휴대폰 하단 버튼 줄에 가리지 않게 (안전 영역 보조 계산) ----------
+(function(){
+  const vv = window.visualViewport;
+  if(!vv) return;
+  function fit(){
+    const hidden = Math.max(0, Math.round(window.innerHeight - (vv.height + vv.offsetTop)));
+    // 키보드가 올라온 경우(크게 줄어든 경우)는 제외
+    document.documentElement.style.setProperty('--sys-bar', (hidden > 0 && hidden < 120 ? hidden : 0) + 'px');
+  }
+  vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); window.addEventListener('resize', fit);
+  fit();
+})();
+
+// ---------- 오늘의 소식: 한국시간/세계표준시 + 파이 · 암호화폐 · 역사 속 오늘 ----------
+(function(){
+  const kEl = document.getElementById('nowKst'), uEl = document.getElementById('nowUtc');
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function tick(){
+    const now = new Date(), k = new Date(now.getTime() + 9*3600*1000);
+    if(kEl) kEl.textContent = `${pad(k.getUTCMonth()+1)}.${pad(k.getUTCDate())} ${pad(k.getUTCHours())}:${pad(k.getUTCMinutes())}`;
+    if(uEl) uEl.textContent = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}`;
+  }
+  tick(); setInterval(tick, 10000);
+
+  const body = document.getElementById('newsBody');
+  if(!body) return;
+  const store = {};
+  let current = 'pi';
+  function ago(t){
+    const m = Math.floor((Date.now() - t) / 60000);
+    if(m < 60) return Math.max(1, m) + '분 전';
+    const h = Math.floor(m / 60); if(h < 24) return h + '시간 전';
+    return Math.floor(h / 24) + '일 전';
+  }
+  function money(n, d){ return n == null ? '-' : '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function bigMoney(n){
+    if(n == null) return '-';
+    if(n >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B';
+    if(n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+    return '$' + Math.round(n).toLocaleString('en-US');
+  }
+  function chg(c){ if(c == null) return ''; return `<span class="${c >= 0 ? 'up' : 'down'}">${c >= 0 ? '▲' : '▼'} ${Math.abs(c).toFixed(2)}%</span>`; }
+  function newsList(items, emptyMsg){
+    if(!items || !items.length) return `<div class="news-empty">${emptyMsg}</div>`;
+    return '<ul class="news-list">' + items.map(n =>
+      `<li><a href="${escapeHtml(n.link)}" target="_blank" rel="noopener">${escapeHtml(n.title)}</a><span class="news-meta">${escapeHtml(n.source || '')}${n.source ? ' · ' : ''}${ago(n.t)}</span></li>`
+    ).join('') + '</ul>';
+  }
+  function render(topic){
+    const d = store[topic];
+    if(d === undefined){ body.innerHTML = '<div class="news-empty">불러오는 중…</div>'; return; }
+    if(d === null){ body.innerHTML = '<div class="news-empty">소식을 불러오지 못했어요. 잠시 후 다시 눌러 주세요.</div>'; return; }
+    if(topic === 'pi'){
+      const p = d.price;
+      body.innerHTML =
+        '<div class="news-sub">실시간 가격</div>' +
+        (p ? `<div class="pi-now"><span class="big">${money(p.usd, 4)}</span><span class="chg">${chg(p.change24h)}</span>${p.krw ? `<span class="krw">≈ ${Math.round(p.krw).toLocaleString('ko-KR')}원</span>` : ''}</div>`
+           : '<div class="news-empty">가격을 불러오지 못했어요.</div>') +
+        '<div class="news-sub">중요 소식 · 최근 7일</div>' + newsList(d.news, '최근 7일 안의 파이 소식이 없어요.');
+    }else if(topic === 'crypto'){
+      const rows = (d.top5 || []).map((c, i) =>
+        `<tr><td class="rk">${i+1}</td><td class="nm"><b>${escapeHtml(c.symbol)}</b><span>${escapeHtml(c.name)}</span></td><td class="pr">${money(c.price, c.price < 1 ? 4 : 2)}<br>${chg(c.change24h)}</td><td class="vl">거래량<br>${bigMoney(c.vol24h)}</td></tr>`).join('');
+      body.innerHTML =
+        '<div class="news-sub">거래량 기준 TOP 5 · 24시간</div>' +
+        (rows ? `<table class="top5"><tbody>${rows}</tbody></table>` : '<div class="news-empty">순위를 불러오지 못했어요.</div>') +
+        '<div class="news-sub">중요 소식 · 최근 3일</div>' + newsList(d.news, '최근 3일 안의 소식이 없어요.');
+    }else{
+      const items = (d.events || []).map(e =>
+        `<li><span class="yr">${e.year}</span>${e.link ? `<a class="tx" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.text)}</a>` : `<span class="tx">${escapeHtml(e.text)}</span>`}</li>`).join('');
+      body.innerHTML =
+        `<div class="news-sub">${d.month}월 ${d.day}일, 역사 속 오늘</div>` +
+        (items ? `<ul class="news-list hist">${items}</ul>` : '<div class="news-empty">자료를 불러오지 못했어요.</div>') +
+        ((d.events || []).some(e => e.lang === 'en') ? '<div class="news-note">출처: 위키백과 (한국어 자료가 없는 날은 영어로 보여요)</div>' : '<div class="news-note">출처: 위키백과</div>');
+    }
+  }
+  async function load(topic, force){
+    if(store[topic] && !force){ render(topic); return; }
+    if(!store[topic]) render(topic);
+    try{
+      const r = await fetch(API_BASE + '/api/news?topic=' + topic);
+      if(!r.ok) throw new Error();
+      store[topic] = await r.json();
+    }catch(e){ if(!store[topic]) store[topic] = null; }
+    if(current === topic) render(topic);
+  }
+  document.querySelectorAll('.news-tab').forEach(btn => btn.addEventListener('click', () => {
+    current = btn.dataset.topic;
+    document.querySelectorAll('.news-tab').forEach(b => { const on = b === btn; b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    load(current, store[current] === null);
+  }));
+  load('pi');
+  setInterval(() => { load(current, true); }, 10 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
