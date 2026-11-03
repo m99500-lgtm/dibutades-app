@@ -114,6 +114,24 @@ module.exports = function mountCosmos(app, deps){
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
 
+  // 전체 리셋 (관리자만): 지금까지의 작품을 백업 파일로 보관한 뒤 우주를 비우고, 오늘의 한 획 기록도 초기화
+  app.post('/api/cosmos/reset', async (req, res) => {
+    const name = await verifyUser((req.body || {}).accessToken);
+    if(!name) return res.status(401).json(LOGIN_EXPIRED);
+    if(!isAdmin(name)) return res.status(403).json({ error: 'forbidden' });
+    try{
+      const c = await load();
+      const count = c.strokes.length;
+      let backup = null;
+      if(count){
+        backup = 'dibutades-cosmos-backup-' + new Date(Date.now() + 9*3600*1000).toISOString().replace(/[-:]/g, '').slice(0, 15) + '.json';
+        await put(backup, JSON.stringify(c), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+      }
+      await save({ strokes: [], last: {}, resetAt: Date.now(), previous: backup });
+      res.json({ ok: true, cleared: count, backup });
+    }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
+  });
+
   // 획 지우기 (관리자만)
   app.post('/api/cosmos/:id/remove', async (req, res) => {
     const name = await verifyUser((req.body || {}).accessToken);
