@@ -1223,6 +1223,9 @@
   .meal-map .cap, .meal-map .credit{ position:absolute; bottom:6px; font-size:9.5px; color:rgba(255,255,255,0.88); text-shadow:0 1px 2px rgba(0,0,0,0.8); }
   .meal-map .cap{ left:10px; }
   .meal-map .credit{ right:10px; opacity:0.8; }
+
+  .news-sub .sub-en{ display:block; font-size:10px; font-weight:400; letter-spacing:0.2px; margin-top:1px; }
+  .meal-count{ white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -2799,19 +2802,19 @@ function renderMeal(body){
   const feed = (d.posts || []).slice(0, 20).map(p =>
     `<li><span class="cc">${p.c === 'ZZ' ? '··' : escapeHtml(p.c)}</span><span><span class="mx">${escapeHtml(p.x)}</span><span class="mm">@${escapeHtml(p.a)} · ${escapeHtml(mealCountryName(p.c))} · ${escapeHtml(p.w)} ${({ '아침':'Breakfast', '점심':'Lunch', '저녁':'Dinner', '간식':'Snack' })[p.w] || ''}</span></span><span class="ag">${mealAgo(p.t)}</span></li>`).join('');
   body.innerHTML =
-    `<div class="news-sub">오늘의 세계 밥상 · ${k.month}월 ${k.day}일 <span style="font-weight:400">Today's World Table</span></div>` +
+    `<div class="news-sub">오늘의 세계 밥상 · ${k.month}월 ${k.day}일<span class="sub-en">Today's World Table</span></div>` +
     `<div class="meal-card"><div class="meal-plate" aria-hidden="true">${escapeHtml(k.code || '')}</div><div style="min-width:0">` +
       `<div class="meal-items"><span class="meal-code">${escapeHtml(k.code || '')}</span>${escapeHtml(k.ko || '')} · ${escapeHtml(k.en || '')}</div>` +
       `<div class="meal-dish">${escapeHtml(k.dish || '')}<small>${escapeHtml(k.dishEn || '')}</small></div>` +
       `<div class="meal-items">주로 ${escapeHtml(k.when || '')} · ${escapeHtml(k.items || '')}</div></div></div>` +
     `<p class="meal-desc">${escapeHtml(k.desc || '')}</p><p class="meal-desc-en">${escapeHtml(k.descEn || '')}</p>` +
-    `<div class="news-sub" style="display:flex;align-items:baseline;gap:8px"><span style="flex:1">지금 세계의 밥상 <span style="font-weight:400">Today on the map</span></span><span class="meal-count">오늘 <b>${d.countries || 0}</b>개 나라 · <b>${d.total || 0}</b>끼</span></div>` +
+    `<div class="news-sub" style="display:flex;align-items:flex-end;gap:8px"><span style="flex:1">지금 세계의 밥상<span class="sub-en">Today on the map</span></span><span class="meal-count">오늘 <b>${d.countries || 0}</b>개 나라 · <b>${d.total || 0}</b>끼</span></div>` +
     `<div class="meal-map"><svg viewBox="0 0 358 180" role="img" aria-label="오늘 사람들이 올린 한 끼가 표시된 위성 세계 지도">${mealLandSvg()}<image class="sat" href="${MEAL_SAT_URL}" x="0" y="0" width="358" height="180" preserveAspectRatio="none" onerror="var m=this.closest('.meal-map'); m.querySelectorAll('.sat-shade,.credit').forEach(function(e){e.remove()}); this.remove();"/><rect class="sat-shade" x="0" y="0" width="358" height="180"/>${dots}</svg><span class="credit">위성 사진 NASA GIBS · Blue Marble</span></div><div class="meal-note" style="margin-top:4px">점 하나 = 그 나라에서 오늘 올라온 한 끼</div>` +
-    `<div class="news-sub">오늘 뭐 먹었어? <span style="font-weight:400">What did you eat today?</span></div>` +
+    `<div class="news-sub">오늘 뭐 먹었어?<span class="sub-en">What did you eat today?</span></div>` +
     `<div class="meal-form"><div class="meal-row"><label class="sr-only" for="mealCountry">나라</label><select id="mealCountry">${opts}</select>${chips}</div>` +
     `<div class="meal-input"><label class="sr-only" for="mealText">오늘 먹은 한 끼</label><input id="mealText" type="text" maxlength="40" placeholder="김치찌개에 계란말이"><button type="button" id="mealSend">올리기</button></div>` +
     `<div class="meal-msg" id="mealMsg"></div><div class="meal-note">나라와 한 끼만 지도에 올라가요. 사진은 받지 않아요. 하루 세 번까지.</div></div>` +
-    `<div class="news-sub">세계 사람들의 한 끼 <span style="font-weight:400">Meals from pioneers</span></div>` +
+    `<div class="news-sub">세계 사람들의 한 끼<span class="sub-en">Meals from pioneers</span></div>` +
     (feed ? `<ul class="news-list meal-feed">${feed}</ul>` : '<div class="news-empty">오늘 첫 한 끼를 올려 주세요!</div>');
   // 이벤트
   body.querySelector('#mealCountry').addEventListener('change', e => { mealState.country = e.target.value; });
@@ -2829,7 +2832,7 @@ async function sendMeal(){
   const msgEl = document.getElementById('mealMsg'), btn = document.getElementById('mealSend'), input = document.getElementById('mealText');
   const text = (input.value || '').trim();
   if(!text){ msgEl.textContent = '오늘 먹은 한 끼를 적어 주세요.'; return; }
-  if(!currentUser){`
+  if(!currentUser){
     if(typeof Pi === 'undefined'){ msgEl.textContent = 'Pi Browser에서 열면 한 끼를 올릴 수 있어요. 구경은 여기서도 돼요.'; return; }
     await loginWithPi(); if(!currentUser){ msgEl.textContent = '로그인한 뒤 올릴 수 있어요.'; return; }
   }
