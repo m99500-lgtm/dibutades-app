@@ -1139,6 +1139,68 @@
   /* 맨 아래로 옮긴 숫자 줄 */
   #tab-write .today-strip{ margin:18px 0 0; }
   #tab-write .ts-price{ display:inline-block !important; }
+
+  /* =====================================================================
+     2026-11 수정 2: 탭 영어 표기 · 소식 버튼 4개 · 오늘 뭐 먹지?(세계 밥상 + 지도)
+     ===================================================================== */
+  nav .nl{ display:flex; flex-direction:column; align-items:center; line-height:1.15; }
+  nav .nl small{ font-size:9px; font-weight:400; opacity:0.85; letter-spacing:0.3px; }
+  @media (max-width:959px){ nav button, nav .nav-link{ min-height:48px !important; gap:4px !important; } nav svg{ width:16px; height:16px; } }
+  @media (min-width:960px){ nav .nl{ flex-direction:row; gap:6px; align-items:baseline; } nav .nl small{ font-size:10px; } }
+  .news-tabs{ grid-template-columns:repeat(4, minmax(0,1fr)) !important; gap:6px !important; }
+  .news-tab{ min-height:56px !important; padding:6px 4px !important; }
+  .news-tab .nt-name{ font-size:12.5px !important; line-height:1.25; word-break:keep-all; }
+  .news-tab .nt-en{ font-size:9.5px; color:var(--chalk-dim); letter-spacing:0.2px; }
+
+  .meal-card{ display:flex; gap:12px; align-items:center; margin-top:8px; }
+  .meal-code{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:4px; background:rgba(127,127,127,0.18); margin-right:6px; }
+  .meal-dish{ font-family:'Black Han Sans', sans-serif; font-size:23px; line-height:1.15; }
+  .meal-dish small{ font-family:'Noto Sans KR', sans-serif; font-size:12px; font-weight:400; color:var(--chalk-dim); margin-left:4px; }
+  .meal-items{ font-size:11.5px; color:var(--chalk-dim); }
+  .meal-desc{ font-size:13px; line-height:1.6; margin:10px 0 0; }
+  .meal-desc-en{ font-size:11px; line-height:1.5; color:var(--chalk-dim); margin:3px 0 0; }
+  .meal-plate{ flex:0 0 auto; width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle, rgba(255,255,255,0.10) 0 55%, rgba(255,255,255,0.04) 56% 70%, transparent 71%); border:1px solid var(--line);
+    font-family:'Black Han Sans', sans-serif; font-size:18px; color:var(--spray-y); }
+  .meal-map{ position:relative; margin-top:6px; border-radius:12px; background:rgba(0,0,0,0.25); border:1px solid var(--line); padding:8px 0 4px; }
+  body.light-theme .meal-map{ background:rgba(43,43,47,0.06); }
+  .meal-map svg{ display:block; width:100%; height:auto; }
+  .meal-map .land{ fill:rgba(127,127,127,0.22); stroke:rgba(127,127,127,0.30); stroke-width:0.6; stroke-linejoin:round; }
+  .meal-map .cap{ position:absolute; left:10px; bottom:6px; font-size:10px; color:var(--chalk-dim); }
+  .meal-count{ font-size:11px; color:var(--chalk-dim); }
+  .meal-count b{ color:var(--spray-y); }
+  .meal-form{ margin-top:6px; }
+  .meal-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .meal-row select{ height:38px; border-radius:19px; padding:0 10px; border:1px solid var(--line); background:var(--card); color:var(--chalk); font-family:inherit; font-size:12.5px; }
+  .meal-chip{ height:38px; padding:0 12px; border-radius:19px; border:1px solid var(--line); background:transparent; color:var(--chalk-dim); font-family:inherit; font-size:12.5px; cursor:pointer; }
+  .meal-chip small{ font-size:10px; opacity:0.8; font-weight:400; }
+  .meal-chip[aria-pressed="true"]{ border-color:var(--spray-y); color:var(--spray-y); background:rgba(255,201,60,0.12); font-weight:700; }
+  .meal-input{ display:flex; gap:8px; margin-top:8px; }
+  .meal-input input{ flex:1; min-width:0; height:46px; padding:0 12px; border-radius:12px; border:2px solid transparent; font-family:'Nanum Pen Script', cursive; font-size:22px; color:var(--chalk);
+    background:linear-gradient(var(--card), var(--card)) padding-box, linear-gradient(90deg, #ff4d4d, #ff9f1c, #ffd93d, #4dd679, #3ea6ff, #5b6cff, #b967ff) border-box; }
+  .meal-input button{ height:46px; padding:0 16px; border:none; border-radius:12px; background:var(--spray-y); color:#241b04; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+  .meal-input button:disabled{ opacity:0.5; }
+  .meal-note{ font-size:10.5px; color:var(--chalk-dim); margin-top:6px; }
+  .meal-msg{ font-size:12px; margin-top:6px; color:var(--spray-y); min-height:0; }
+  .meal-feed li{ display:grid; grid-template-columns:30px minmax(0,1fr) auto; gap:10px; align-items:center; }
+  .meal-feed .cc{ font-size:10.5px; font-weight:700; text-align:center; padding:3px 0; border-radius:6px; background:rgba(127,127,127,0.16); }
+  .meal-feed .mx{ font-family:'Nanum Pen Script', cursive; font-size:21px; line-height:1.1; overflow-wrap:anywhere; }
+  .meal-feed .mm{ display:block; font-size:10.5px; color:var(--chalk-dim); }
+  .meal-feed .ag{ font-size:10px; color:var(--chalk-dim); white-space:nowrap; }
+
+  /* 오늘의 소식 버튼 4개 색: 파이(보라) · 암호화폐(주황) · 역사 속 오늘(청록) · 오늘 뭐 먹지?(분홍) */
+  .news-tab{ border-bottom:3px solid rgba(0,0,0,0.35) !important; box-shadow:0 3px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.14); }
+  .news-tab[data-topic="pi"]{ background:rgba(124,77,255,0.22) !important; border-color:rgba(124,77,255,0.35) !important; }
+  .news-tab[data-topic="crypto"]{ background:rgba(247,147,26,0.20) !important; border-color:rgba(247,147,26,0.35) !important; }
+  .news-tab[data-topic="history"]{ background:rgba(20,184,166,0.20) !important; border-color:rgba(20,184,166,0.35) !important; }
+  .news-tab[data-topic="meal"]{ background:rgba(236,72,153,0.20) !important; border-color:rgba(236,72,153,0.35) !important; }
+  .news-tab.active[data-topic="pi"]{ background:rgba(124,77,255,0.5) !important; border-bottom-color:#7c4dff !important; }
+  .news-tab.active[data-topic="crypto"]{ background:rgba(247,147,26,0.45) !important; border-bottom-color:#f7931a !important; }
+  .news-tab.active[data-topic="history"]{ background:rgba(20,184,166,0.45) !important; border-bottom-color:#14b8a6 !important; }
+  .news-tab.active[data-topic="meal"]{ background:rgba(236,72,153,0.45) !important; border-bottom-color:#ec4899 !important; }
+  .news-tab.active .nt-name{ color:var(--chalk) !important; }
+  body:not(.light-theme) .news-tab.active .nt-name, body:not(.light-theme) .news-tab.active .nt-en{ color:#ffffff !important; }
+  .news-tab:active{ transform:translateY(2px); border-bottom-width:1px !important; }
 </style>
 </head>
 <body>
@@ -1191,16 +1253,16 @@
     <nav>
       <button class="tab-btn active" data-tab="write">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
-        <span>쓰기</span></button>
+        <span class="nl">쓰기<small>Write</small></span></button>
       <button class="tab-btn" data-tab="wall">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v6M15 10v5M9 15v5"/></svg>
-        <span>낙서벽</span></button>
+        <span class="nl">낙서벽<small>Wall</small></span></button>
       <a class="nav-link" href="/gallery.html">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
-        <span>갤러리</span></a>
+        <span class="nl">갤러리<small>Gallery</small></span></a>
       <button class="tab-btn" data-tab="promo">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>
-        <span>앱 홍보</span></button>
+        <span class="nl">앱 홍보<small>Promote</small></span></button>
     </nav>
 
     <main>
@@ -1235,11 +1297,13 @@
           </div>
           <div class="news-tabs" role="tablist" aria-label="오늘의 소식 종류">
             <button type="button" class="news-tab active" role="tab" aria-selected="true" data-topic="pi">
-              <span class="nt-name">파이</span><span class="nt-sub">소식 · 실시간 가격</span></button>
+              <span class="nt-name">파이</span><span class="nt-en">Pi</span></button>
             <button type="button" class="news-tab" role="tab" aria-selected="false" data-topic="crypto">
-              <span class="nt-name">암호화폐</span><span class="nt-sub">소식 · 거래량 TOP5</span></button>
+              <span class="nt-name">암호화폐</span><span class="nt-en">Crypto</span></button>
             <button type="button" class="news-tab" role="tab" aria-selected="false" data-topic="history">
-              <span class="nt-name">역사 속 오늘</span><span class="nt-sub">과거의 화제·사건</span></button>
+              <span class="nt-name">역사 속 오늘</span><span class="nt-en">On This Day</span></button>
+            <button type="button" class="news-tab" role="tab" aria-selected="false" data-topic="meal">
+              <span class="nt-name">오늘 뭐 먹지?</span><span class="nt-en">What to Eat?</span></button>
           </div>
           <div class="news-body" id="newsBody" role="tabpanel" aria-live="polite"><div class="news-empty">불러오는 중…</div></div>
         </div>
@@ -2652,16 +2716,113 @@ function formatTime(ts){
       if(!r.ok) throw new Error();
       store[topic] = await r.json();
     }catch(e){ if(!store[topic]) store[topic] = null; }
-    if(current === topic) render(topic);
+    if(current === topic && topic !== 'meal') render(topic);
   }
   document.querySelectorAll('.news-tab').forEach(btn => btn.addEventListener('click', () => {
     current = btn.dataset.topic;
     document.querySelectorAll('.news-tab').forEach(b => { const on = b === btn; b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    if(current === 'meal') return; // 오늘 뭐 먹지?는 아래 별도 코드가 그림
     load(current, store[current] === null);
   }));
   load('pi');
-  setInterval(() => { load(current, true); }, 10 * 60 * 1000);
+  setInterval(() => { if(current !== 'meal') load(current, true); }, 10 * 60 * 1000);
 })();
+
+// ---------- 오늘 뭐 먹지? (세계 밥상 · 지도 · 한 끼 올리기) ----------
+const MEAL_COUNTRY_LIST = [
+  ['KR','대한민국',127,37.5],['JP','일본',139.7,35.7],['CN','중국',116.4,39.9],['TW','타이완',121.5,25],['HK','홍콩',114.2,22.3],['MN','몽골',106.9,47.9],
+  ['VN','베트남',105.8,21],['TH','태국',100.5,13.7],['PH','필리핀',121,14.6],['ID','인도네시아',106.8,-6.2],['MY','말레이시아',101.7,3.1],['SG','싱가포르',103.8,1.35],
+  ['IN','인도',77.2,28.6],['PK','파키스탄',73,33.7],['BD','방글라데시',90.4,23.8],['NG','나이지리아',3.4,6.5],['GH','가나',-0.2,5.6],['ET','에티오피아',38.7,9],
+  ['KE','케냐',36.8,-1.3],['ZA','남아프리카공화국',28,-26.2],['EG','이집트',31.2,30],['MA','모로코',-6.8,34],['TR','튀르키예',32.9,39.9],['IR','이란',51.4,35.7],
+  ['SA','사우디아라비아',46.7,24.7],['AE','아랍에미리트',55.3,25.2],['LB','레바논',35.5,33.9],['IT','이탈리아',12.5,41.9],['FR','프랑스',2.3,48.9],['ES','스페인',-3.7,40.4],
+  ['PT','포르투갈',-9.1,38.7],['DE','독일',13.4,52.5],['GB','영국',-0.1,51.5],['NL','네덜란드',4.9,52.4],['GR','그리스',23.7,38],['PL','폴란드',21,52.2],
+  ['UA','우크라이나',30.5,50.4],['RU','러시아',37.6,55.8],['SE','스웨덴',18.1,59.3],['US','미국',-77,38.9],['CA','캐나다',-75.7,45.4],['MX','멕시코',-99.1,19.4],
+  ['BR','브라질',-47.9,-15.8],['AR','아르헨티나',-58.4,-34.6],['CO','콜롬비아',-74.1,4.7],['CL','칠레',-70.7,-33.4],['PE','페루',-77,-12],['AU','오스트레일리아',149.1,-35.3],
+  ['NZ','뉴질랜드',174.8,-41.3],['ZZ','그 밖의 나라',null,null]
+];
+const MEAL_LAND = 'M14.9 24.1 L39.8 17.7 L84.5 15.2 L99.4 27.9 L119.3 36.8 L127.3 46.9 L109.4 53.2 L99.4 68.5 L97.5 74.8 L82.5 81.1 L74.6 78.6 L62.6 65.9 L54.7 55.8 L54.7 43.1 L39.8 30.4 L14.9 30.4Z M82.5 81.1 L89.5 87.5 L96.5 95.1 L101.4 96.3 L91.5 88.7 L82.5 83.7Z M99.4 93.8 L117.3 92.5 L129.3 106.5 L144.2 115.4 L139.2 134.4 L121.3 154.6 L111.4 176.2 L104.4 163.5 L107.4 131.8 L98.5 112.8Z M124.3 30.4 L134.2 30.4 L159.1 17.7 L154.1 2.5 L119.3 2.5 L109.4 8.9Z M169.1 60.8 L170.0 50.7 L177.0 45.6 L184.0 40.6 L188.9 36.8 L184.0 27.9 L193.9 19.0 L206.8 16.5 L218.8 21.5 L223.8 36.8 L218.8 49.4 L206.8 54.5 L198.9 55.8 L190.9 50.7 L188.9 58.3 L179.0 58.3Z M173.0 43.1 L181.0 41.8 L179.0 36.8 L176.0 31.7 L173.0 35.5Z M162.1 79.9 L174.0 60.8 L188.9 59.6 L210.8 67.2 L221.8 91.3 L229.7 91.3 L218.8 112.8 L218.8 125.5 L210.8 142.0 L198.9 150.8 L191.9 135.6 L188.0 107.7 L171.0 101.4 L162.1 88.7Z M218.8 21.5 L238.7 17.7 L258.6 13.9 L283.4 8.9 L318.2 15.2 L348.1 20.3 L356.0 24.1 L338.1 30.4 L320.2 40.6 L318.2 53.2 L306.3 62.1 L300.3 68.5 L298.3 78.6 L286.4 83.7 L283.4 93.8 L278.4 103.9 L276.5 93.8 L270.5 78.6 L258.6 96.3 L254.6 96.3 L250.6 81.1 L244.6 74.8 L235.7 74.8 L228.7 68.5 L214.8 60.8 L218.8 49.4 L223.8 36.8Z M214.8 68.5 L221.8 90.0 L230.7 86.2 L236.7 78.6 L234.7 73.5 L226.7 68.5Z M273.5 100.1 L283.4 114.1 L298.3 117.9 L318.2 116.6 L308.3 109.0 L296.3 103.9 L286.4 103.9Z M308.3 65.9 L318.2 62.1 L320.2 50.7 L318.2 55.8 L310.3 63.4Z M292.4 134.4 L300.3 128.0 L309.3 121.7 L315.2 121.7 L320.2 120.4 L324.2 130.6 L331.2 139.4 L328.2 153.4 L318.2 154.6 L310.3 147.0 L296.3 150.8 L292.4 140.7Z';
+const mealState = { country: 'KR', time: null, data: undefined };
+(function(){ const h = Number(new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Seoul', hour:'numeric', hourCycle:'h23' }).format(new Date()));
+  mealState.time = h < 10 ? '아침' : h < 15 ? '점심' : h < 21 ? '저녁' : '간식'; })();
+function mealCountryName(code){ const c = MEAL_COUNTRY_LIST.find(x => x[0] === code); return c ? c[1] : code; }
+function mealXY(code){ const c = MEAL_COUNTRY_LIST.find(x => x[0] === code); if(!c || c[2] == null) return null;
+  return [ (c[2] + 180) / 360 * 358, (84 - c[3]) / 142 * 180 ]; }
+function mealAgo(t){ const m = Math.floor((Date.now() - t) / 60000); if(m < 1) return '방금'; if(m < 60) return m + '분 전'; return Math.floor(m / 60) + '시간 전'; }
+function renderMeal(body){
+  const d = mealState.data;
+  if(d === undefined){ body.innerHTML = '<div class="news-empty">불러오는 중…</div>'; return; }
+  if(d === null){ body.innerHTML = '<div class="news-empty">불러오지 못했어요. 잠시 후 다시 눌러 주세요.</div>'; return; }
+  const k = d.dish || {};
+  // 지도 점: 나라별 개수
+  const counts = {}; (d.posts || []).forEach(p => { counts[p.c] = (counts[p.c] || 0) + 1; });
+  const newest = d.posts && d.posts[0] ? d.posts[0].c : null;
+  let dots = '';
+  Object.keys(counts).forEach(code => {
+    const xy = mealXY(code); if(!xy) return;
+    const r = Math.min(7, 3 + counts[code]);
+    if(code === newest) dots += `<circle cx="${xy[0].toFixed(1)}" cy="${xy[1].toFixed(1)}" r="${r+4}" fill="rgba(255,201,60,0.25)"><animate attributeName="r" values="${r};${r+7};${r}" dur="2.4s" repeatCount="indefinite"/></circle>`;
+    dots += `<circle cx="${xy[0].toFixed(1)}" cy="${xy[1].toFixed(1)}" r="${r}" fill="${code === newest ? '#ffc93c' : '#ff9a3c'}"><title>${escapeHtml(mealCountryName(code))} ${counts[code]}끼</title></circle>`;
+  });
+  const opts = MEAL_COUNTRY_LIST.map(c => `<option value="${c[0]}"${c[0] === mealState.country ? ' selected' : ''}>${c[0] === 'ZZ' ? '' : c[0] + ' · '}${escapeHtml(c[1])}</option>`).join('');
+  const MEAL_TIME_EN = { '아침':'Breakfast', '점심':'Lunch', '저녁':'Dinner', '간식':'Snack' };
+  const chips = ['아침','점심','저녁','간식'].map(w => `<button type="button" class="meal-chip" data-w="${w}" aria-pressed="${w === mealState.time}">${w} <small>${MEAL_TIME_EN[w]}</small></button>`).join('');
+  const feed = (d.posts || []).slice(0, 20).map(p =>
+    `<li><span class="cc">${p.c === 'ZZ' ? '··' : escapeHtml(p.c)}</span><span><span class="mx">${escapeHtml(p.x)}</span><span class="mm">@${escapeHtml(p.a)} · ${escapeHtml(mealCountryName(p.c))} · ${escapeHtml(p.w)} ${({ '아침':'Breakfast', '점심':'Lunch', '저녁':'Dinner', '간식':'Snack' })[p.w] || ''}</span></span><span class="ag">${mealAgo(p.t)}</span></li>`).join('');
+  body.innerHTML =
+    `<div class="news-sub">오늘의 세계 밥상 · ${k.month}월 ${k.day}일 <span style="font-weight:400">Today's World Table</span></div>` +
+    `<div class="meal-card"><div class="meal-plate" aria-hidden="true">${escapeHtml(k.code || '')}</div><div style="min-width:0">` +
+      `<div class="meal-items"><span class="meal-code">${escapeHtml(k.code || '')}</span>${escapeHtml(k.ko || '')} · ${escapeHtml(k.en || '')}</div>` +
+      `<div class="meal-dish">${escapeHtml(k.dish || '')}<small>${escapeHtml(k.dishEn || '')}</small></div>` +
+      `<div class="meal-items">주로 ${escapeHtml(k.when || '')} · ${escapeHtml(k.items || '')}</div></div></div>` +
+    `<p class="meal-desc">${escapeHtml(k.desc || '')}</p><p class="meal-desc-en">${escapeHtml(k.descEn || '')}</p>` +
+    `<div class="news-sub" style="display:flex;align-items:baseline;gap:8px"><span style="flex:1">지금 세계의 밥상 <span style="font-weight:400">Today on the map</span></span><span class="meal-count">오늘 <b>${d.countries || 0}</b>개 나라 · <b>${d.total || 0}</b>끼</span></div>` +
+    `<div class="meal-map"><svg viewBox="0 0 358 180" role="img" aria-label="오늘 사람들이 올린 한 끼가 표시된 세계 지도"><path class="land" d="${MEAL_LAND}"/>${dots}</svg><span class="cap">점 하나 = 그 나라에서 오늘 올라온 한 끼</span></div>` +
+    `<div class="news-sub">오늘 뭐 먹었어? <span style="font-weight:400">What did you eat today?</span></div>` +
+    `<div class="meal-form"><div class="meal-row"><label class="sr-only" for="mealCountry">나라</label><select id="mealCountry">${opts}</select>${chips}</div>` +
+    `<div class="meal-input"><label class="sr-only" for="mealText">오늘 먹은 한 끼</label><input id="mealText" type="text" maxlength="40" placeholder="김치찌개에 계란말이"><button type="button" id="mealSend">올리기</button></div>` +
+    `<div class="meal-msg" id="mealMsg"></div><div class="meal-note">나라와 한 끼만 지도에 올라가요. 사진은 받지 않아요. 하루 세 번까지.</div></div>` +
+    `<div class="news-sub">세계 사람들의 한 끼 <span style="font-weight:400">Meals from pioneers</span></div>` +
+    (feed ? `<ul class="news-list meal-feed">${feed}</ul>` : '<div class="news-empty">오늘 첫 한 끼를 올려 주세요!</div>');
+  // 이벤트
+  body.querySelector('#mealCountry').addEventListener('change', e => { mealState.country = e.target.value; });
+  body.querySelectorAll('.meal-chip').forEach(b => b.addEventListener('click', () => {
+    mealState.time = b.dataset.w; body.querySelectorAll('.meal-chip').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  }));
+  body.querySelector('#mealSend').addEventListener('click', sendMeal);
+  body.querySelector('#mealText').addEventListener('keydown', e => { if(e.key === 'Enter') sendMeal(); });
+}
+async function loadMeal(){
+  try{ const r = await fetch(API_BASE + '/api/meal?_=' + Date.now()); if(!r.ok) throw new Error(); mealState.data = await r.json(); }
+  catch(e){ if(!mealState.data) mealState.data = null; }
+}
+async function sendMeal(){
+  const msgEl = document.getElementById('mealMsg'), btn = document.getElementById('mealSend'), input = document.getElementById('mealText');
+  const text = (input.value || '').trim();
+  if(!text){ msgEl.textContent = '오늘 먹은 한 끼를 적어 주세요.'; return; }
+  if(!currentUser){
+    if(typeof Pi === 'undefined'){ msgEl.textContent = 'Pi Browser에서 열면 한 끼를 올릴 수 있어요. 구경은 여기서도 돼요.'; return; }
+    await loginWithPi(); if(!currentUser){ msgEl.textContent = '로그인한 뒤 올릴 수 있어요.'; return; }
+  }
+  btn.disabled = true; msgEl.textContent = '올리는 중…';
+  try{
+    const r = await fetch(API_BASE + '/api/meal', { method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ accessToken: currentUser.accessToken, country: mealState.country, time: mealState.time, text }) });
+    const d = await r.json().catch(() => ({}));
+    if(r.status === 401){ handleLoginExpired(); throw new Error(d.message || '로그인이 만료되었어요.'); }
+    if(!r.ok) throw new Error(d.message || '올리지 못했어요.');
+    await loadMeal();
+    const body = document.getElementById('newsBody');
+    if(body && document.querySelector('.news-tab.active') && document.querySelector('.news-tab.active').dataset.topic === 'meal') renderMeal(body);
+    const m2 = document.getElementById('mealMsg'); if(m2) m2.textContent = '지도에 올라갔어요! 맛있게 드셨기를 🍀';
+  }catch(e){ const m3 = document.getElementById('mealMsg'); if(m3) m3.textContent = e.message; const b2 = document.getElementById('mealSend'); if(b2) b2.disabled = false; }
+}
+document.querySelectorAll('.news-tab').forEach(btn => btn.addEventListener('click', async () => {
+  if(btn.dataset.topic !== 'meal') return;
+  const body = document.getElementById('newsBody');
+  renderMeal(body);
+  await loadMeal();
+  if(btn.classList.contains('active')) renderMeal(body);
+}));
 </script>
 </body>
 </html>
