@@ -2829,7 +2829,7 @@ async function sendMeal(){
   const msgEl = document.getElementById('mealMsg'), btn = document.getElementById('mealSend'), input = document.getElementById('mealText');
   const text = (input.value || '').trim();
   if(!text){ msgEl.textContent = '오늘 먹은 한 끼를 적어 주세요.'; return; }
-  if(!currentUser){
+  if(!currentUser){`
     if(typeof Pi === 'undefined'){ msgEl.textContent = 'Pi Browser에서 열면 한 끼를 올릴 수 있어요. 구경은 여기서도 돼요.'; return; }
     await loginWithPi(); if(!currentUser){ msgEl.textContent = '로그인한 뒤 올릴 수 있어요.'; return; }
   }
