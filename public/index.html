@@ -1201,6 +1201,28 @@
   .news-tab.active .nt-name{ color:var(--chalk) !important; }
   body:not(.light-theme) .news-tab.active .nt-name, body:not(.light-theme) .news-tab.active .nt-en{ color:#ffffff !important; }
   .news-tab:active{ transform:translateY(2px); border-bottom-width:1px !important; }
+
+  /* 지도: 대륙별 옅고 부드러운 색 */
+  .meal-map .land{ stroke-width:0.6; stroke-linejoin:round; }
+  .meal-map .land-na{ fill:rgba(96,165,250,0.30); stroke:rgba(96,165,250,0.45); }   /* 아메리카 북부: 하늘 */
+  .meal-map .land-sa{ fill:rgba(74,222,128,0.26); stroke:rgba(74,222,128,0.42); }   /* 남아메리카: 연두 */
+  .meal-map .land-eu{ fill:rgba(167,139,250,0.30); stroke:rgba(167,139,250,0.45); } /* 유럽: 연보라 */
+  .meal-map .land-af{ fill:rgba(222,184,135,0.28); stroke:rgba(222,184,135,0.45); } /* 아프리카: 모래 */
+  .meal-map .land-as{ fill:rgba(45,212,191,0.24); stroke:rgba(45,212,191,0.40); }   /* 아시아: 민트 */
+  .meal-map .land-oc{ fill:rgba(244,143,177,0.28); stroke:rgba(244,143,177,0.45); } /* 오세아니아: 분홍 */
+  body.light-theme .meal-map .land-na{ fill:rgba(96,165,250,0.28); }
+  body.light-theme .meal-map .land-sa{ fill:rgba(74,222,128,0.26); }
+  body.light-theme .meal-map .land-eu{ fill:rgba(167,139,250,0.28); }
+  body.light-theme .meal-map .land-af{ fill:rgba(205,160,105,0.30); }
+  body.light-theme .meal-map .land-as{ fill:rgba(45,212,191,0.26); }
+  body.light-theme .meal-map .land-oc{ fill:rgba(244,143,177,0.30); }
+
+  /* 위성 지도 */
+  .meal-map{ padding:0 !important; overflow:hidden; background:#0b1a2e !important; }
+  .meal-map .sat-shade{ fill:rgba(0,0,0,0.12); }
+  .meal-map .cap, .meal-map .credit{ position:absolute; bottom:6px; font-size:9.5px; color:rgba(255,255,255,0.88); text-shadow:0 1px 2px rgba(0,0,0,0.8); }
+  .meal-map .cap{ left:10px; }
+  .meal-map .credit{ right:10px; opacity:0.8; }
 </style>
 </head>
 <body>
@@ -2741,6 +2763,14 @@ const MEAL_COUNTRY_LIST = [
   ['NZ','뉴질랜드',174.8,-41.3],['ZZ','그 밖의 나라',null,null]
 ];
 const MEAL_LAND = 'M14.9 24.1 L39.8 17.7 L84.5 15.2 L99.4 27.9 L119.3 36.8 L127.3 46.9 L109.4 53.2 L99.4 68.5 L97.5 74.8 L82.5 81.1 L74.6 78.6 L62.6 65.9 L54.7 55.8 L54.7 43.1 L39.8 30.4 L14.9 30.4Z M82.5 81.1 L89.5 87.5 L96.5 95.1 L101.4 96.3 L91.5 88.7 L82.5 83.7Z M99.4 93.8 L117.3 92.5 L129.3 106.5 L144.2 115.4 L139.2 134.4 L121.3 154.6 L111.4 176.2 L104.4 163.5 L107.4 131.8 L98.5 112.8Z M124.3 30.4 L134.2 30.4 L159.1 17.7 L154.1 2.5 L119.3 2.5 L109.4 8.9Z M169.1 60.8 L170.0 50.7 L177.0 45.6 L184.0 40.6 L188.9 36.8 L184.0 27.9 L193.9 19.0 L206.8 16.5 L218.8 21.5 L223.8 36.8 L218.8 49.4 L206.8 54.5 L198.9 55.8 L190.9 50.7 L188.9 58.3 L179.0 58.3Z M173.0 43.1 L181.0 41.8 L179.0 36.8 L176.0 31.7 L173.0 35.5Z M162.1 79.9 L174.0 60.8 L188.9 59.6 L210.8 67.2 L221.8 91.3 L229.7 91.3 L218.8 112.8 L218.8 125.5 L210.8 142.0 L198.9 150.8 L191.9 135.6 L188.0 107.7 L171.0 101.4 L162.1 88.7Z M218.8 21.5 L238.7 17.7 L258.6 13.9 L283.4 8.9 L318.2 15.2 L348.1 20.3 L356.0 24.1 L338.1 30.4 L320.2 40.6 L318.2 53.2 L306.3 62.1 L300.3 68.5 L298.3 78.6 L286.4 83.7 L283.4 93.8 L278.4 103.9 L276.5 93.8 L270.5 78.6 L258.6 96.3 L254.6 96.3 L250.6 81.1 L244.6 74.8 L235.7 74.8 L228.7 68.5 L214.8 60.8 L218.8 49.4 L223.8 36.8Z M214.8 68.5 L221.8 90.0 L230.7 86.2 L236.7 78.6 L234.7 73.5 L226.7 68.5Z M273.5 100.1 L283.4 114.1 L298.3 117.9 L318.2 116.6 L308.3 109.0 L296.3 103.9 L286.4 103.9Z M308.3 65.9 L318.2 62.1 L320.2 50.7 L318.2 55.8 L310.3 63.4Z M292.4 134.4 L300.3 128.0 L309.3 121.7 L315.2 121.7 L320.2 120.4 L324.2 130.6 L331.2 139.4 L328.2 153.4 L318.2 154.6 L310.3 147.0 L296.3 150.8 L292.4 140.7Z';
+const MEAL_CONTINENT_OF = ['na','na','sa','na','eu','eu','af','as','as','as','as','oc'];
+function mealLandSvg(){
+  return MEAL_LAND.split(/(?=M)/).map((d, i) => `<path class="land land-${MEAL_CONTINENT_OF[i] || 'as'}" d="${d.trim()}"/>`).join('');
+}
+// 위성 사진: NASA GIBS (Blue Marble). 지도와 같은 범위(경도 -180~180, 위도 -58~84)로 한 장을 받아 깔고,
+// 못 불러오면 이미지가 빠지면서 대륙 색 지도가 그대로 보임
+const MEAL_SAT_URL = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1'
+  + '&LAYERS=BlueMarble_NextGeneration&STYLES=&SRS=EPSG:4326&BBOX=-180,-58,180,84&WIDTH=1024&HEIGHT=512&FORMAT=image/jpeg';
 const mealState = { country: 'KR', time: null, data: undefined };
 (function(){ const h = Number(new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Seoul', hour:'numeric', hourCycle:'h23' }).format(new Date()));
   mealState.time = h < 10 ? '아침' : h < 15 ? '점심' : h < 21 ? '저녁' : '간식'; })();
@@ -2761,7 +2791,7 @@ function renderMeal(body){
     const xy = mealXY(code); if(!xy) return;
     const r = Math.min(7, 3 + counts[code]);
     if(code === newest) dots += `<circle cx="${xy[0].toFixed(1)}" cy="${xy[1].toFixed(1)}" r="${r+4}" fill="rgba(255,201,60,0.25)"><animate attributeName="r" values="${r};${r+7};${r}" dur="2.4s" repeatCount="indefinite"/></circle>`;
-    dots += `<circle cx="${xy[0].toFixed(1)}" cy="${xy[1].toFixed(1)}" r="${r}" fill="${code === newest ? '#ffc93c' : '#ff9a3c'}"><title>${escapeHtml(mealCountryName(code))} ${counts[code]}끼</title></circle>`;
+    dots += `<circle cx="${xy[0].toFixed(1)}" cy="${xy[1].toFixed(1)}" r="${r}" fill="${code === newest ? '#ffc93c' : '#ff9a3c'}" stroke="#1c1b22" stroke-width="1"><title>${escapeHtml(mealCountryName(code))} ${counts[code]}끼</title></circle>`;
   });
   const opts = MEAL_COUNTRY_LIST.map(c => `<option value="${c[0]}"${c[0] === mealState.country ? ' selected' : ''}>${c[0] === 'ZZ' ? '' : c[0] + ' · '}${escapeHtml(c[1])}</option>`).join('');
   const MEAL_TIME_EN = { '아침':'Breakfast', '점심':'Lunch', '저녁':'Dinner', '간식':'Snack' };
@@ -2776,7 +2806,7 @@ function renderMeal(body){
       `<div class="meal-items">주로 ${escapeHtml(k.when || '')} · ${escapeHtml(k.items || '')}</div></div></div>` +
     `<p class="meal-desc">${escapeHtml(k.desc || '')}</p><p class="meal-desc-en">${escapeHtml(k.descEn || '')}</p>` +
     `<div class="news-sub" style="display:flex;align-items:baseline;gap:8px"><span style="flex:1">지금 세계의 밥상 <span style="font-weight:400">Today on the map</span></span><span class="meal-count">오늘 <b>${d.countries || 0}</b>개 나라 · <b>${d.total || 0}</b>끼</span></div>` +
-    `<div class="meal-map"><svg viewBox="0 0 358 180" role="img" aria-label="오늘 사람들이 올린 한 끼가 표시된 세계 지도"><path class="land" d="${MEAL_LAND}"/>${dots}</svg><span class="cap">점 하나 = 그 나라에서 오늘 올라온 한 끼</span></div>` +
+    `<div class="meal-map"><svg viewBox="0 0 358 180" role="img" aria-label="오늘 사람들이 올린 한 끼가 표시된 위성 세계 지도">${mealLandSvg()}<image class="sat" href="${MEAL_SAT_URL}" x="0" y="0" width="358" height="180" preserveAspectRatio="none" onerror="var m=this.closest('.meal-map'); m.querySelectorAll('.sat-shade,.credit').forEach(function(e){e.remove()}); this.remove();"/><rect class="sat-shade" x="0" y="0" width="358" height="180"/>${dots}</svg><span class="credit">위성 사진 NASA GIBS · Blue Marble</span></div><div class="meal-note" style="margin-top:4px">점 하나 = 그 나라에서 오늘 올라온 한 끼</div>` +
     `<div class="news-sub">오늘 뭐 먹었어? <span style="font-weight:400">What did you eat today?</span></div>` +
     `<div class="meal-form"><div class="meal-row"><label class="sr-only" for="mealCountry">나라</label><select id="mealCountry">${opts}</select>${chips}</div>` +
     `<div class="meal-input"><label class="sr-only" for="mealText">오늘 먹은 한 끼</label><input id="mealText" type="text" maxlength="40" placeholder="김치찌개에 계란말이"><button type="button" id="mealSend">올리기</button></div>` +
