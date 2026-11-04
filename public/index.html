@@ -1226,10 +1226,52 @@
 
   .news-sub .sub-en{ display:block; font-size:10px; font-weight:400; letter-spacing:0.2px; margin-top:1px; }
   .meal-count{ white-space:nowrap; }
+
+  /* Pi Browser 안내창 */
+  .pg-wrap{ position:fixed; inset:0; z-index:2000; background:rgba(10,9,14,0.72); display:flex; align-items:flex-end; justify-content:center; padding:16px; }
+  .pg-wrap[hidden]{ display:none; }
+  .pg-card{ width:100%; max-width:440px; box-sizing:border-box; padding:20px 18px 16px; border-radius:18px; background:var(--card); color:var(--chalk);
+    border:1px solid var(--card-line); box-shadow:0 18px 40px rgba(0,0,0,0.45); margin-bottom:max(8px, env(safe-area-inset-bottom)); }
+  .pg-title{ font-size:17px; font-weight:700; line-height:1.4; }
+  .pg-en{ font-size:11px; color:var(--chalk-dim); margin-top:2px; }
+  .pg-steps{ margin:12px 0 0; padding-left:20px; font-size:13px; line-height:1.7; }
+  .pg-steps b{ color:var(--spray-y); }
+  .pg-addr{ margin-top:12px; padding:10px 12px; border-radius:10px; background:rgba(127,127,127,0.12); font-size:14px; font-weight:700; text-align:center; letter-spacing:0.3px; user-select:all; -webkit-user-select:all; }
+  .pg-copy{ width:100%; height:48px; margin-top:10px; border:none; border-radius:12px; background:var(--spray-y); color:#241b04; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; }
+  .pg-done{ font-size:12px; color:var(--spray-c); text-align:center; min-height:18px; margin-top:6px; }
+  .pg-row{ display:flex; gap:8px; margin-top:4px; }
+  .pg-close, .pg-force{ flex:1; height:44px; border-radius:12px; border:1px solid var(--line); background:transparent; color:var(--chalk-dim); font-family:inherit; font-size:13px; cursor:pointer; }
+
+  .pg-case{ margin-top:12px; font-size:12px; font-weight:700; color:var(--spray-y); }
+  .pg-case + .pg-steps{ margin-top:4px; }
+  .pg-note{ margin:4px 0 0; font-size:12.5px; line-height:1.6; color:var(--chalk-dim); }
 </style>
 </head>
 <body>
 <canvas id="seasonFx" aria-hidden="true"></canvas>
+
+<!-- Pi Browser 안내: X·카카오 등 다른 앱 브라우저에서 로그인이 필요한 버튼을 눌렀을 때 -->
+<div id="piGuide" class="pg-wrap" hidden role="dialog" aria-modal="true" aria-labelledby="pgTitle">
+  <div class="pg-card">
+    <div class="pg-title" id="pgTitle">낙서와 한 끼는 Pi Browser에서 남길 수 있어요</div>
+    <div class="pg-en">Posting works in the Pi Browser app.</div>
+    <div class="pg-case">파이오니어라면</div>
+    <ol class="pg-steps">
+      <li>아래 <b>주소 복사</b>를 눌러요.</li>
+      <li><b>Pi Browser</b> 앱을 열어요.</li>
+      <li>위쪽 주소창에 붙여 넣고 들어오면 로그인할 수 있어요.</li>
+    </ol>
+    <div class="pg-case">아직 파이오니어가 아니라면</div>
+    <p class="pg-note">구경은 지금처럼 언제든 자유롭게 할 수 있어요. 낙서와 한 끼를 남기는 건 Pi Network 회원만 Pi Browser에서 할 수 있어요.</p>
+    <div class="pg-addr" id="pgAddr">dibutades8708.pinet.com</div>
+    <button type="button" class="pg-copy" id="pgCopy">주소 복사</button>
+    <div class="pg-done" id="pgDone" aria-live="polite"></div>
+    <div class="pg-row">
+      <button type="button" class="pg-close" id="pgClose">여기서 구경하기</button>
+      <button type="button" class="pg-force" id="pgForce">그래도 Pi로 로그인</button>
+    </div>
+  </div>
+</div>
 
 <div class="layout">
 
@@ -2140,6 +2182,7 @@ function shouldAutoLogin(){
 }
 async function loginWithPi(opts){
   const silent = !!(opts && opts.silent);
+  if(!silent && !(opts && opts.force) && typeof isPiBrowser === 'function' && !isPiBrowser()){ openPiGuide(); return; }
   if(typeof Pi === 'undefined'){
     if(!silent) alert('Pi Browser 안에서 열어주세요. / Please open this inside Pi Browser.');
     return;
@@ -2167,7 +2210,9 @@ async function loginWithPi(opts){
   }
 }
 document.getElementById('loginBtn').addEventListener('click', ()=>loginWithPi());
-if(shouldAutoLogin()) loginWithPi({ silent:true });
+// Pi Browser 안에서만 조용히 다시 로그인 (X·카카오 등 다른 앱 브라우저에서는 Pi 안내창이 떠 버리므로 하지 않음)
+function isPiBrowser(){ return /PiBrowser/i.test(navigator.userAgent || ''); }
+if(shouldAutoLogin() && isPiBrowser()) loginWithPi({ silent:true });
 
 // 서버가 로그인을 확인하지 못했을 때(토큰 만료 등): 로그인 상태를 풀고 다시 로그인하게 안내
 function handleLoginExpired(statusId){
@@ -2214,6 +2259,7 @@ writeMsgElRef.addEventListener('drop', (e)=>{ e.preventDefault(); });
 document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
   const msg = document.getElementById('writeMsg').value.trim();
   if(!currentUser){
+    if(!isPiBrowser()){ openPiGuide(); return; }
     showStatus('writeStatus','err','낙서를 남기려면 먼저 Pi로 로그인해주세요.','Please log in with Pi to post graffiti.');
     return;
   }
@@ -2833,7 +2879,7 @@ async function sendMeal(){
   const text = (input.value || '').trim();
   if(!text){ msgEl.textContent = '오늘 먹은 한 끼를 적어 주세요.'; return; }
   if(!currentUser){
-    if(typeof Pi === 'undefined'){ msgEl.textContent = 'Pi Browser에서 열면 한 끼를 올릴 수 있어요. 구경은 여기서도 돼요.'; return; }
+    if(typeof Pi === 'undefined' || !isPiBrowser()){ openPiGuide(); return; }
     await loginWithPi(); if(!currentUser){ msgEl.textContent = '로그인한 뒤 올릴 수 있어요.'; return; }
   }
   btn.disabled = true; msgEl.textContent = '올리는 중…';
@@ -2856,6 +2902,31 @@ document.querySelectorAll('.news-tab').forEach(btn => btn.addEventListener('clic
   await loadMeal();
   if(btn.classList.contains('active')) renderMeal(body);
 }));
+
+// ---------- Pi Browser 안내창 ----------
+function openPiGuide(){
+  const g = document.getElementById('piGuide'); if(!g) return;
+  document.getElementById('pgDone').textContent = '';
+  g.hidden = false;
+  setTimeout(() => { const b = document.getElementById('pgCopy'); if(b) b.focus(); }, 50);
+}
+function closePiGuide(){ const g = document.getElementById('piGuide'); if(g) g.hidden = true; }
+(function(){
+  const g = document.getElementById('piGuide'); if(!g) return;
+  const addr = 'dibutades8708.pinet.com';
+  document.getElementById('pgCopy').addEventListener('click', async () => {
+    const done = document.getElementById('pgDone');
+    let ok = false;
+    try{ if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(addr); ok = true; } }catch(e){}
+    if(!ok){
+      try{ const t = document.createElement('textarea'); t.value = addr; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); }catch(e){}
+    }
+    done.textContent = ok ? '복사했어요! Pi Browser 주소창에 붙여 넣어 주세요 🍀' : '복사가 안 되면 위 주소를 길게 눌러 복사해 주세요.';
+  });
+  document.getElementById('pgClose').addEventListener('click', closePiGuide);
+  document.getElementById('pgForce').addEventListener('click', () => { closePiGuide(); loginWithPi({ force:true }); });
+  g.addEventListener('click', e => { if(e.target === g) closePiGuide(); });
+})();
 </script>
 </body>
 </html>
