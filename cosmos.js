@@ -1,8 +1,9 @@
 /**
- * 로흐 · 손들의 은하 (Galaxy of Hands) — 관람객이 함께 그리는 작품의 서버 부분
+ * 로흐 · 파이오니어들의 은하 (Galaxy of Pioneers) — 함께 그리는 작품의 서버 부분
  * -----------------------------------------------------------
- * 방문자가 Pi로 로그인해 하루에 한 획을 남기면, 그 획이 입자가 되어
- * 모두가 함께 보는 하나의 우주에 영원히 쌓입니다.
+ * 파이오니어가 디부타데스에서 낙서·한 끼·로그인 등 무엇이든 할 때마다,
+ * 서버가 은하 어딘가에 무작위 획 하나를 저절로 그려 넣습니다 (POST /api/cosmos/auto).
+ * 같은 사람의 획은 늘 같은 빛을 띱니다.
  *
  * 저장: 기존 낙서 데이터와 섞이지 않도록 별도 Blob 파일(dibutades-cosmos.json)에 저장합니다.
  * 공개: 획의 모양·색·시각만 내보내고, 누가 그렸는지(Pi 아이디)는 밖으로 내보내지 않습니다.
@@ -13,7 +14,9 @@
  */
 
 const COSMOS_BLOB_NAME = 'dibutades-cosmos.json';
-const MAX_STROKES = 4000;      // 우주에 담을 수 있는 최대 획 수
+const MAX_STROKES = 6000;      // 우주에 담을 수 있는 최대 획 수 (넘치면 가장 오래된 자동 획부터 빛이 사라짐)
+const AUTO_GAP_MS = 15 * 1000;  // 같은 사람의 자동 획 사이 최소 간격
+const AUTO_PER_DAY = 40;        // 한 사람이 하루에 남길 수 있는 자동 획 수
 const MAX_POINTS = 140;        // 한 획에 담을 수 있는 최대 점 수
 const WORLD = 1000;            // 좌표 범위 0~1000 (정사각형 우주)
 const PALETTE_SIZE = 6;        // 프론트의 색 팔레트 개수와 같아야 함
@@ -46,7 +49,8 @@ module.exports = function mountCosmos(app, deps){
     return h % PALETTE_SIZE;
   }
   function isAdmin(name){
-    const admin = String(process.env.COSMOS_ADMIN || '').trim().toLowerCase();
+    // Vercel 환경변수 COSMOS_ADMIN이 있으면 그 값을, 없으면 앱 운영자 로흐의 Pi 아이디를 관리자로 씀
+    const admin = String(process.env.COSMOS_ADMIN || 'minkyeungsoon').trim().toLowerCase();
     return !!admin && name.toLowerCase() === admin;
   }
   function publicView(c){
@@ -86,6 +90,62 @@ module.exports = function mountCosmos(app, deps){
       const c = await load();
       const key = name.trim().toLowerCase();
       res.json({ drewToday: c.last[key] === kstDateString(Date.now()), admin: isAdmin(name), h: hueOf(key) });
+    }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
+  });
+
+  // ---------- 자동 획: 은하 어딘가에 무작위 모양 하나 ----------
+  function rnd(a, b){ return a + Math.random() * (b - a); }
+  function clampW(v){ return Math.max(0, Math.min(WORLD, Math.round(v))); }
+  function randomStroke(){
+    // 원반 안 무작위 위치 (가운데가 조금 더 촘촘하게)
+    const r0 = Math.sqrt(Math.random()) * 430, a0 = Math.random() * Math.PI * 2;
+    const cx = 500 + Math.cos(a0) * r0, cy = 500 + Math.sin(a0) * r0;
+    const kind = Math.floor(Math.random() * 4);
+    const n = 14 + Math.floor(Math.random() * 14);
+    const size = rnd(28, 90), rot = Math.random() * Math.PI * 2, out = [];
+    for(let i = 0; i < n; i++){
+      const t = i / (n - 1);
+      let x, y;
+      if(kind === 0){        // 휘어진 호
+        const ang = rot + t * rnd(1.2, 2.4); x = Math.cos(ang) * size; y = Math.sin(ang) * size;
+      }else if(kind === 1){  // 소용돌이
+        const ang = rot + t * Math.PI * 3, rr = size * (0.15 + t * 0.85); x = Math.cos(ang) * rr; y = Math.sin(ang) * rr;
+      }else if(kind === 2){  // 물결
+        const lx = (t - 0.5) * size * 2.2, ly = Math.sin(t * Math.PI * 3) * size * 0.35;
+        x = lx * Math.cos(rot) - ly * Math.sin(rot); y = lx * Math.sin(rot) + ly * Math.cos(rot);
+      }else{                 // 고리
+        const ang = rot + t * Math.PI * 1.85; x = Math.cos(ang) * size * 0.7; y = Math.sin(ang) * size * 0.45;
+      }
+      out.push(clampW(cx + x + rnd(-3, 3)), clampW(cy + y + rnd(-3, 3)));
+    }
+    return out;
+  }
+
+  // 자동 획 남기기 (디부타데스에서 버튼을 누를 때마다 앱이 부름, 파이오니어 로그인 필요)
+  app.post('/api/cosmos/auto', async (req, res) => {
+    const name = await verifyUser((req.body || {}).accessToken);
+    if(!name) return res.status(401).json(LOGIN_EXPIRED);
+    try{
+      const c = await load();
+      const key = name.trim().toLowerCase();
+      const today = kstDateString(Date.now());
+      c.autoLast = c.autoLast || {};
+      c.autoCount = c.autoCount || {};
+      const cnt = c.autoCount[key] && c.autoCount[key].d === today ? c.autoCount[key].n : 0;
+      if(Date.now() - (c.autoLast[key] || 0) < AUTO_GAP_MS) return res.json({ ok: false, reason: 'too_soon' });
+      if(cnt >= AUTO_PER_DAY) return res.json({ ok: false, reason: 'daily_limit' });
+      const stroke = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), a: key, h: hueOf(key), p: randomStroke(), t: Date.now(), auto: 1 };
+      c.strokes.push(stroke);
+      if(c.strokes.length > MAX_STROKES){                     // 넘치면 가장 오래된 자동 획부터 정리
+        const idx = c.strokes.findIndex(s => s.auto);
+        c.strokes.splice(idx >= 0 ? idx : 0, 1);
+      }
+      c.autoLast[key] = Date.now();
+      c.autoCount[key] = { d: today, n: cnt + 1 };
+      // 날이 바뀐 기록은 정리
+      for(const k of Object.keys(c.autoCount)) if(c.autoCount[k].d !== today) delete c.autoCount[k];
+      await save(c);
+      res.json({ ok: true, stroke: { id: stroke.id, h: stroke.h, p: stroke.p, t: stroke.t }, total: c.strokes.length });
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
 
