@@ -84,6 +84,12 @@ footer .sig{font-family:var(--display);font-size:28px;color:var(--star)}
 .appnav a:hover,.appnav a:focus-visible{color:var(--star);background:rgba(255,255,255,.05);outline:none}
 .appnav a[aria-current="page"]{color:var(--ember);font-weight:500;background:rgba(242,182,50,.12)}
 .appnav svg{width:18px;height:18px;flex:none}
+.appnav a{white-space:nowrap}
+@media (max-width:520px){
+  .appnav .in{gap:4px;padding:6px 8px}
+  .appnav a{flex-direction:column;gap:3px;min-height:52px;font-size:12px;padding:0 2px;letter-spacing:-.2px}
+  .appnav svg{width:18px;height:18px}
+}
 </style>
 
 </head>
