@@ -1217,12 +1217,6 @@
   body.light-theme .meal-map .land-as{ fill:rgba(45,212,191,0.26); }
   body.light-theme .meal-map .land-oc{ fill:rgba(244,143,177,0.30); }
 
-  /* 위성 지도 */
-  .meal-map{ padding:0 !important; overflow:hidden; background:#0b1a2e !important; }
-  .meal-map .sat-shade{ fill:rgba(0,0,0,0.12); }
-  .meal-map .cap, .meal-map .credit{ position:absolute; bottom:6px; font-size:9.5px; color:rgba(255,255,255,0.88); text-shadow:0 1px 2px rgba(0,0,0,0.8); }
-  .meal-map .cap{ left:10px; }
-  .meal-map .credit{ right:10px; opacity:0.8; }
 
   .news-sub .sub-en{ display:block; font-size:10px; font-weight:400; letter-spacing:0.2px; margin-top:1px; }
   .meal-count{ white-space:nowrap; }
@@ -1245,6 +1239,54 @@
   .pg-case{ margin-top:12px; font-size:12px; font-weight:700; color:var(--spray-y); }
   .pg-case + .pg-steps{ margin-top:4px; }
   .pg-note{ margin:4px 0 0; font-size:12.5px; line-height:1.6; color:var(--chalk-dim); }
+
+  /* =====================================================================
+     2026-11 정리: 007 사기 경보 탭 · 앱 홍보는 아래 링크 · 오른쪽 패널 숨김 · 한 줄 남기기 잇기
+     ===================================================================== */
+  nav button[data-tab="scam"]{ background:rgba(239,68,68,0.22) !important; }
+  nav button[data-tab="scam"].active{ background:rgba(239,68,68,0.5) !important; border-bottom-color:#ef4444 !important; }
+  #rightpanel{ display:none !important; }
+  @media (min-width:960px){
+    .layout{ max-width:760px !important; justify-content:center; }
+    .app.showing-fullpage ~ #rightpanel{ display:none !important; }
+  }
+  .foot-links{ display:flex; justify-content:center; margin-top:12px; }
+  .foot-link{ background:none; border:none; color:var(--chalk-dim); font-family:inherit; font-size:12px; min-height:40px; padding:0 8px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+  .foot-link span{ font-size:10.5px; opacity:0.8; }
+  .write-link{ display:flex; align-items:center; justify-content:center; gap:6px; width:100%; min-height:44px; margin-top:12px; border-radius:12px;
+    border:1px dashed var(--spray-y); background:rgba(255,201,60,0.08); color:var(--spray-y); font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+  .write-link small{ font-weight:400; font-size:10.5px; opacity:0.85; }
+  body.light-theme .write-link{ background:rgba(184,134,11,0.08); }
+
+  /* 007 사기 경보 화면 */
+  .scam-head{ margin-bottom:14px; }
+  .scam-title{ font-family:'Black Han Sans', sans-serif; font-size:26px; color:#ff6b6b; }
+  .scam-title span{ font-family:'Noto Sans KR', sans-serif; font-size:12px; font-weight:400; color:var(--chalk-dim); margin-left:8px; }
+  .scam-lead{ margin:4px 0 0; font-size:13px; line-height:1.6; color:var(--chalk-dim); }
+  .scam-sub{ font-size:14px; font-weight:700; margin:18px 0 8px; }
+  .scam-sub .sub-en{ display:block; font-size:10px; font-weight:400; color:var(--chalk-dim); }
+  .scam-rules{ padding:4px 14px 12px; border-radius:14px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.35); }
+  .scam-rules .scam-sub{ margin-top:12px; }
+  .scam-rules ol{ margin:0; padding-left:20px; font-size:13px; line-height:1.65; }
+  .scam-rules li{ margin-bottom:6px; }
+  .scam-rules b{ color:var(--chalk); }
+  .scam-item{ padding:14px; border-radius:14px; background:var(--card); border:1px solid var(--card-line); margin-bottom:10px; }
+  .scam-item-head{ display:flex; align-items:center; gap:8px; }
+  .scam-badge{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; }
+  .scam-badge.lv-위험{ background:#ef4444; color:#fff; }
+  .scam-badge.lv-주의{ background:#f59e0b; color:#241b04; }
+  .scam-badge.lv-참고{ background:#3b82f6; color:#fff; }
+  .scam-date{ font-size:11px; color:var(--chalk-dim); margin-left:auto; }
+  .scam-item-title{ font-size:15px; font-weight:700; margin-top:8px; line-height:1.4; }
+  .scam-item-body{ font-size:13px; line-height:1.65; margin-top:6px; white-space:pre-line; overflow-wrap:anywhere; }
+  .scam-del{ margin-top:8px; background:none; border:1px solid var(--line); color:var(--chalk-dim); border-radius:8px; min-height:36px; padding:0 12px; font-family:inherit; font-size:12px; cursor:pointer; }
+  .scam-admin{ margin-top:8px; padding:14px; border-radius:14px; border:1px dashed var(--line); }
+  .scam-admin input, .scam-admin textarea{ width:100%; box-sizing:border-box; margin-top:8px; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--chalk); font-family:inherit; font-size:14px; }
+  .scam-admin textarea{ min-height:110px; resize:vertical; }
+  .scam-admin .btn{ margin-top:10px; }
+  .scam-levels{ display:flex; gap:6px; }
+  .scam-lv{ min-height:38px; padding:0 14px; border-radius:19px; border:1px solid var(--line); background:transparent; color:var(--chalk-dim); font-family:inherit; font-size:13px; cursor:pointer; }
+  .scam-lv[aria-pressed="true"]{ border-color:#ef4444; color:#ff6b6b; font-weight:700; background:rgba(239,68,68,0.12); }
 </style>
 </head>
 <body>
@@ -1327,9 +1369,9 @@
       <a class="nav-link" href="/gallery.html">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
         <span class="nl">갤러리<small>Gallery</small></span></a>
-      <button class="tab-btn" data-tab="promo">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>
-        <span class="nl">앱 홍보<small>Promote</small></span></button>
+      <button class="tab-btn" data-tab="scam">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M12 8v5M12 16h.01"/></svg>
+        <span class="nl">007 경보<small>Scam Alert</small></span></button>
     </nav>
 
     <main>
@@ -1383,9 +1425,47 @@
           <span class="ts-spacer"></span>
           <span class="ts-price">π <b id="tsPrice">--</b> <span id="tsChange"></span></span>
         </div>
+        <div class="foot-links">
+          <button type="button" class="foot-link" id="openPromo">내 Pi 앱 홍보하기 <span>Promote your Pi app</span> →</button>
+        </div>
       </section>
 
     </main>
+
+
+    <!-- 007 사기 경보: 007로저가 직접 확인한 파이 사기 수법과 경보 -->
+    <div id="pageScam" class="fullpage">
+      <div class="scam-head">
+        <div class="scam-title">007 사기 경보<span>Scam Alert</span></div>
+        <p class="scam-lead">007로저가 직접 확인한 파이 사기 수법과 경보예요. 의심되면 보내기 전에 여기부터 보세요.</p>
+      </div>
+      <div class="scam-rules">
+        <div class="scam-sub">꼭 지켜야 할 다섯 가지<span class="sub-en">Five rules that always apply</span></div>
+        <ol>
+          <li><b>패스프레이즈(24단어)는 누구에게도 알려주지 않아요.</b> 코어팀도, 앱도, 친구도 묻지 않아요.</li>
+          <li><b>Pi 코어팀은 DM·텔레그램으로 먼저 연락하지 않아요.</b> "지원팀입니다"는 사칭이에요.</li>
+          <li><b>"보내면 두 배로 돌려준다"는 100% 사기예요.</b> 에어드롭·이벤트도 먼저 보내라고 하면 의심하세요.</li>
+          <li><b>KYC·마이그레이션 대행은 없어요.</b> 수수료를 받고 빨리 해 준다는 건 모두 사기예요.</li>
+          <li><b>링크 주소를 한 글자씩 확인하세요.</b> minepi.com처럼 보이는 비슷한 주소의 가짜 사이트가 많아요.</li>
+        </ol>
+      </div>
+      <div class="scam-sub">최근 경보<span class="sub-en">Latest alerts</span></div>
+      <div id="scamList"><div class="news-empty">불러오는 중…</div></div>
+      <div id="scamAdmin" class="scam-admin" hidden>
+        <div class="scam-sub">경보 올리기 (관리자)</div>
+        <div class="scam-levels" role="group" aria-label="경보 단계">
+          <button type="button" class="scam-lv" data-lv="위험" aria-pressed="false">위험</button>
+          <button type="button" class="scam-lv" data-lv="주의" aria-pressed="true">주의</button>
+          <button type="button" class="scam-lv" data-lv="참고" aria-pressed="false">참고</button>
+        </div>
+        <label class="sr-only" for="scamTitle">제목</label>
+        <input id="scamTitle" type="text" maxlength="80" placeholder="제목 (예: 가짜 마이그레이션 지원 텔레그램 주의)">
+        <label class="sr-only" for="scamBody">내용</label>
+        <textarea id="scamBody" maxlength="1200" placeholder="수법, 실제 문구, 대처 방법을 적어 주세요."></textarea>
+        <button type="button" class="btn btn-primary" id="scamSend">경보 올리기</button>
+        <div class="status" id="scamStatus"></div>
+      </div>
+    </div>
 
     <!-- 둘러보기: 낙서만 조용히 보여주는 별도 페이지 (헤더는 그대로 유지) -->
     <div id="pageBrowse" class="fullpage">
@@ -1951,6 +2031,10 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       showPromoPage();
       return;
     }
+    if(btn.dataset.tab === 'scam'){
+      showScamPage();
+      return;
+    }
     if(inFullpage){ backToMain(); return; }
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
@@ -1964,6 +2048,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 const appEl = document.querySelector('.app');
 const pageBrowseEl = document.getElementById('pageBrowse');
 const pagePromoEl = document.getElementById('pagePromo');
+const pageScamEl = document.getElementById('pageScam');
 const worldclockEl = document.getElementById('livefeed');
 const rightpanelEl = document.getElementById('rightpanel');
 const promoFormWrapEl = document.getElementById('promoFormWrap');
@@ -2006,16 +2091,28 @@ function showBrowsePage(){
   enterFullpage();
   pushFullpageHistory();
   pagePromoEl.classList.remove('show');
+  pageScamEl.classList.remove('show');
   pageBrowseEl.classList.add('show');
   setActiveTab('wall');
   loadWall();
   loadTopBoard();
 }
 
+function showScamPage(){
+  enterFullpage();
+  pushFullpageHistory();
+  pageBrowseEl.classList.remove('show');
+  pagePromoEl.classList.remove('show');
+  pageScamEl.classList.add('show');
+  setActiveTab('scam');
+  loadScam();
+}
+
 function showPromoPage(){
   enterFullpage();
   pushFullpageHistory();
   pageBrowseEl.classList.remove('show');
+  pageScamEl.classList.remove('show');
   pagePromoEl.classList.add('show');
   setActiveTab('promo');
   // 서브화면을 다시 열 때는 항상 폼부터 보여줌 (이전 결제 결과는 초기화)
@@ -2033,6 +2130,7 @@ function goToMainScreen(){
   rightpanelEl.style.display = '';
   pageBrowseEl.classList.remove('show');
   pagePromoEl.classList.remove('show');
+  pageScamEl.classList.remove('show');
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
   document.querySelector('.tab-btn[data-tab="write"]').classList.add('active');
@@ -2059,6 +2157,7 @@ if(document.getElementById('recentMore')) document.getElementById('recentMore').
   setTimeout(()=>{
     if(tab === 'wall') showBrowsePage();
     else if(tab === 'promo') showPromoPage();
+    else if(tab === 'scam') showScamPage();
   }, 0);
 })();
 
@@ -2203,6 +2302,7 @@ async function loginWithPi(opts){
     rememberLogin(true);
     // 앱 홍보 화면이 이미 열려 있으면 내 무료권 정보를 다시 불러옴
     if(document.getElementById('pagePromo').classList.contains('show')) loadMyTickets();
+    if(document.getElementById('pageScam') && document.getElementById('pageScam').classList.contains('show')) checkScamAdmin();
   }catch(e){
     console.error(e);
     if(silent){ rememberLogin(false); return; } // 조용한 재로그인 실패는 안내 없이 넘어감
@@ -2757,26 +2857,23 @@ function formatTime(ts){
     if(d === undefined){ body.innerHTML = '<div class="news-empty">불러오는 중…</div>'; return; }
     if(d === null){ body.innerHTML = '<div class="news-empty">소식을 불러오지 못했어요. 잠시 후 다시 눌러 주세요.</div>'; return; }
     if(topic === 'pi'){
-      const p = d.price;
+      // 가격은 화면 맨 아래 숫자 줄에서만 보여 줌
       body.innerHTML =
-        '<div class="news-sub">실시간 가격</div>' +
-        (p ? `<div class="pi-now"><span class="big">${money(p.usd, 4)}</span><span class="chg">${chg(p.change24h)}</span>${p.krw ? `<span class="krw">≈ ${Math.round(p.krw).toLocaleString('ko-KR')}원</span>` : ''}</div>`
-           : '<div class="news-empty">가격을 불러오지 못했어요.</div>') +
-        '<div class="news-sub">중요 소식 · 최근 7일</div>' + newsList(d.news, '최근 7일 안의 파이 소식이 없어요.');
+        '<div class="news-sub">파이 소식 · 최근 7일<span class="sub-en">Pi news · last 7 days</span></div>' + newsList(d.news, '최근 7일 안의 파이 소식이 없어요.') +
+        writeLinkHtml('#파이소식 ', '이 소식에 한 줄 남기기', 'Leave a line about it');
     }else if(topic === 'crypto'){
-      const rows = (d.top5 || []).map((c, i) =>
-        `<tr><td class="rk">${i+1}</td><td class="nm"><b>${escapeHtml(c.symbol)}</b><span>${escapeHtml(c.name)}</span></td><td class="pr">${money(c.price, c.price < 1 ? 4 : 2)}<br>${chg(c.change24h)}</td><td class="vl">거래량<br>${bigMoney(c.vol24h)}</td></tr>`).join('');
+      // 가격 순위는 빼고 소식만
       body.innerHTML =
-        '<div class="news-sub">거래량 기준 TOP 5 · 24시간</div>' +
-        (rows ? `<table class="top5"><tbody>${rows}</tbody></table>` : '<div class="news-empty">순위를 불러오지 못했어요.</div>') +
-        '<div class="news-sub">중요 소식 · 최근 3일</div>' + newsList(d.news, '최근 3일 안의 소식이 없어요.');
+        '<div class="news-sub">암호화폐 소식 · 최근 3일<span class="sub-en">Crypto news · last 3 days</span></div>' + newsList(d.news, '최근 3일 안의 소식이 없어요.') +
+        writeLinkHtml('#암호화폐 ', '이 소식에 한 줄 남기기', 'Leave a line about it');
     }else{
       const items = (d.events || []).map(e =>
         `<li><span class="yr">${e.year}</span>${e.link ? `<a class="tx" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.text)}</a>` : `<span class="tx">${escapeHtml(e.text)}</span>`}</li>`).join('');
       body.innerHTML =
         `<div class="news-sub">${d.month}월 ${d.day}일, 역사 속 오늘</div>` +
         (items ? `<ul class="news-list hist">${items}</ul>` : '<div class="news-empty">자료를 불러오지 못했어요.</div>') +
-        ((d.events || []).some(e => e.lang === 'en') ? '<div class="news-note">출처: 위키백과 (한국어 자료가 없는 날은 영어로 보여요)</div>' : '<div class="news-note">출처: 위키백과</div>');
+        ((d.events || []).some(e => e.lang === 'en') ? '<div class="news-note">출처: 위키백과 (한국어 자료가 없는 날은 영어로 보여요)</div>' : '<div class="news-note">출처: 위키백과</div>') +
+        writeLinkHtml(`#${d.month}월${d.day}일 `, '이 날에 한 줄 남기기', 'Leave a line for this day');
     }
   }
   async function load(topic, force){
@@ -2816,10 +2913,6 @@ const MEAL_CONTINENT_OF = ['na','na','sa','na','eu','eu','af','as','as','as','as
 function mealLandSvg(){
   return MEAL_LAND.split(/(?=M)/).map((d, i) => `<path class="land land-${MEAL_CONTINENT_OF[i] || 'as'}" d="${d.trim()}"/>`).join('');
 }
-// 위성 사진: NASA GIBS (Blue Marble). 지도와 같은 범위(경도 -180~180, 위도 -58~84)로 한 장을 받아 깔고,
-// 못 불러오면 이미지가 빠지면서 대륙 색 지도가 그대로 보임
-const MEAL_SAT_URL = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1'
-  + '&LAYERS=BlueMarble_NextGeneration&STYLES=&SRS=EPSG:4326&BBOX=-180,-58,180,84&WIDTH=1024&HEIGHT=512&FORMAT=image/jpeg';
 const mealState = { country: 'KR', time: null, data: undefined };
 (function(){ const h = Number(new Intl.DateTimeFormat('en-US', { timeZone:'Asia/Seoul', hour:'numeric', hourCycle:'h23' }).format(new Date()));
   mealState.time = h < 10 ? '아침' : h < 15 ? '점심' : h < 21 ? '저녁' : '간식'; })();
@@ -2854,8 +2947,9 @@ function renderMeal(body){
       `<div class="meal-dish">${escapeHtml(k.dish || '')}<small>${escapeHtml(k.dishEn || '')}</small></div>` +
       `<div class="meal-items">주로 ${escapeHtml(k.when || '')} · ${escapeHtml(k.items || '')}</div></div></div>` +
     `<p class="meal-desc">${escapeHtml(k.desc || '')}</p><p class="meal-desc-en">${escapeHtml(k.descEn || '')}</p>` +
+    writeLinkHtml(`#${(k.dish || '').replace(/\s+/g, '')} `, '이 음식 먹어 봤어요? 한 줄 남기기', 'Tried it? Leave a line') +
     `<div class="news-sub" style="display:flex;align-items:flex-end;gap:8px"><span style="flex:1">지금 세계의 밥상<span class="sub-en">Today on the map</span></span><span class="meal-count">오늘 <b>${d.countries || 0}</b>개 나라 · <b>${d.total || 0}</b>끼</span></div>` +
-    `<div class="meal-map"><svg viewBox="0 0 358 180" role="img" aria-label="오늘 사람들이 올린 한 끼가 표시된 위성 세계 지도">${mealLandSvg()}<image class="sat" href="${MEAL_SAT_URL}" x="0" y="0" width="358" height="180" preserveAspectRatio="none" onerror="var m=this.closest('.meal-map'); m.querySelectorAll('.sat-shade,.credit').forEach(function(e){e.remove()}); this.remove();"/><rect class="sat-shade" x="0" y="0" width="358" height="180"/>${dots}</svg><span class="credit">위성 사진 NASA GIBS · Blue Marble</span></div><div class="meal-note" style="margin-top:4px">점 하나 = 그 나라에서 오늘 올라온 한 끼</div>` +
+    `<div class="meal-map"><svg viewBox="0 0 358 180" role="img" aria-label="오늘 사람들이 올린 한 끼가 표시된 세계 지도">${mealLandSvg()}${dots}</svg></div><div class="meal-note" style="margin-top:4px">점 하나 = 그 나라에서 오늘 올라온 한 끼</div>` +
     `<div class="news-sub">오늘 뭐 먹었어?<span class="sub-en">What did you eat today?</span></div>` +
     `<div class="meal-form"><div class="meal-row"><label class="sr-only" for="mealCountry">나라</label><select id="mealCountry">${opts}</select>${chips}</div>` +
     `<div class="meal-input"><label class="sr-only" for="mealText">오늘 먹은 한 끼</label><input id="mealText" type="text" maxlength="40" placeholder="김치찌개에 계란말이"><button type="button" id="mealSend">올리기</button></div>` +
@@ -2927,6 +3021,96 @@ function closePiGuide(){ const g = document.getElementById('piGuide'); if(g) g.h
   document.getElementById('pgForce').addEventListener('click', () => { closePiGuide(); loginWithPi({ force:true }); });
   g.addEventListener('click', e => { if(e.target === g) closePiGuide(); });
 })();
+
+// ---------- 소식에서 쓰기로: '한 줄 남기기' ----------
+function writeLinkHtml(tag, ko, en){
+  return `<button type="button" class="write-link" data-tag="${escapeHtml(tag)}">${escapeHtml(ko)} <small>${escapeHtml(en)}</small></button>`;
+}
+function goWrite(tag){
+  if(inFullpage){ backToMain(); }
+  const ta = document.getElementById('writeMsg');
+  if(!ta) return;
+  if(tag){
+    const v = ta.value;
+    if(!v.trim() || /^(#\S+\s*)+$/.test(v.trim())) ta.value = tag;          // 아직 태그만 있으면 새 태그로 바꿈
+    else if(!v.startsWith(tag.trim())) ta.value = tag + v;                   // 쓰던 글이 있으면 앞에 붙임
+  }
+  if(typeof updateWriteCount === 'function') updateWriteCount();
+  const card = document.querySelector('.write-card');
+  setTimeout(() => {
+    (card || ta).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ta.focus({ preventScroll: true });
+    const n = ta.value.length; try{ ta.setSelectionRange(n, n); }catch(e){}
+  }, 60);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.write-link');
+  if(b){ goWrite(b.dataset.tag || ''); }
+});
+document.getElementById('openPromo').addEventListener('click', () => showPromoPage());
+
+// ---------- 007 사기 경보 ----------
+let scamIsAdminUser = false, scamLevel = '주의';
+function scamDate(t){ const d = new Date(t + 9*3600*1000); return `${d.getUTCFullYear()}.${String(d.getUTCMonth()+1).padStart(2,'0')}.${String(d.getUTCDate()).padStart(2,'0')}`; }
+async function loadScam(){
+  const list = document.getElementById('scamList');
+  try{
+    const r = await fetch(API_BASE + '/api/scam?_=' + Date.now());
+    if(!r.ok) throw new Error();
+    const d = await r.json();
+    const items = d.items || [];
+    list.innerHTML = items.length ? items.map(it =>
+      `<article class="scam-item"><div class="scam-item-head"><span class="scam-badge lv-${escapeHtml(it.level)}">${escapeHtml(it.level)}</span><span class="scam-date">${scamDate(it.t)}</span></div>` +
+      `<div class="scam-item-title">${escapeHtml(it.title)}</div>${it.body ? `<div class="scam-item-body">${escapeHtml(it.body)}</div>` : ''}` +
+      (scamIsAdminUser ? `<button type="button" class="scam-del" data-id="${escapeHtml(it.id)}">이 경보 지우기</button>` : '') + `</article>`
+    ).join('') : '<div class="news-empty">아직 올라온 경보가 없어요. 위의 다섯 가지만 지켜도 대부분의 사기를 피할 수 있어요.</div>';
+  }catch(e){ list.innerHTML = '<div class="news-empty">경보를 불러오지 못했어요. 잠시 후 다시 열어 주세요.</div>'; }
+  checkScamAdmin();
+}
+async function checkScamAdmin(){
+  const box = document.getElementById('scamAdmin');
+  if(!currentUser){ box.hidden = true; return; }
+  try{
+    const r = await fetch(API_BASE + '/api/scam/me', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accessToken: currentUser.accessToken }) });
+    const d = await r.json().catch(() => ({}));
+    const was = scamIsAdminUser;
+    scamIsAdminUser = !!d.admin;
+    box.hidden = !scamIsAdminUser;
+    if(scamIsAdminUser && !was) loadScam();
+  }catch(e){ box.hidden = true; }
+}
+document.querySelectorAll('.scam-lv').forEach(b => b.addEventListener('click', () => {
+  scamLevel = b.dataset.lv;
+  document.querySelectorAll('.scam-lv').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+}));
+document.getElementById('scamSend').addEventListener('click', async () => {
+  const title = document.getElementById('scamTitle').value.trim();
+  const body = document.getElementById('scamBody').value.trim();
+  if(!title){ showStatus('scamStatus','err','제목을 적어 주세요.','Please enter a title.'); return; }
+  if(!currentUser){ showStatus('scamStatus','err','먼저 로그인해 주세요.','Please log in first.'); return; }
+  const btn = document.getElementById('scamSend'); btn.disabled = true;
+  try{
+    const r = await fetch(API_BASE + '/api/scam', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ accessToken: currentUser.accessToken, level: scamLevel, title, body }) });
+    const d = await r.json().catch(() => ({}));
+    if(r.status === 401){ handleLoginExpired('scamStatus'); return; }
+    if(!r.ok) throw new Error(d.message || '올리지 못했어요.');
+    document.getElementById('scamTitle').value = ''; document.getElementById('scamBody').value = '';
+    showStatus('scamStatus','ok','경보를 올렸어요.','Alert posted.');
+    loadScam();
+  }catch(e){ showStatus('scamStatus','err', e.message, e.message); }
+  finally{ btn.disabled = false; }
+});
+document.getElementById('scamList').addEventListener('click', async e => {
+  const b = e.target.closest('.scam-del'); if(!b || !currentUser) return;
+  if(b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = '정말 지울까요? 한 번 더 누르기'; return; }
+  b.disabled = true;
+  try{
+    const r = await fetch(API_BASE + '/api/scam/' + encodeURIComponent(b.dataset.id) + '/remove', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accessToken: currentUser.accessToken }) });
+    if(!r.ok) throw new Error();
+    loadScam();
+  }catch(err){ b.disabled = false; b.textContent = '지우지 못했어요. 다시 누르기'; b.dataset.armed = ''; }
+});
 </script>
 </body>
 </html>
