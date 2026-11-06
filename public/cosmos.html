@@ -42,6 +42,7 @@ button:disabled{opacity:.45}
 .about h2{font-family:var(--display);font-size:26px;color:var(--star);margin:0}
 .about .spec{font-family:var(--mono);font-size:12px;color:var(--dust)}
 [hidden]{display:none!important}
+.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .how{flex:1 1 100%;font-size:12.5px;line-height:1.55;color:rgba(230,233,242,.82);text-align:center;margin-bottom:6px}
 </style>
 </head>
@@ -50,8 +51,8 @@ button:disabled{opacity:.45}
 
 <div class="top">
   <div class="title">
-    <span class="by">로흐 Roch · 함께 그리는 작품</span>
-    <h1>파이오니어들의 은하<small>Galaxy of Pioneers</small></h1>
+    <span class="by" id="byLine">로흐 Roch · 함께 그리는 작품</span>
+    <h1 id="h1title">파이오니어들의 은하<small>Galaxy of Pioneers</small></h1>
     <div class="stats" id="stats">우주를 여는 중…</div>
   </div>
   <a class="back" href="/gallery.html">← 갤러리</a>
@@ -71,8 +72,23 @@ button:disabled{opacity:.45}
   </div>
   <div class="row" id="rowAdmin" hidden>
     <button class="main" id="btnRemove" disabled>이 획 지우기</button>
+    <button class="quiet" id="btnComplete">작품 완성</button>
     <button class="quiet" id="btnReset">전체 리셋</button>
     <button class="quiet" id="btnAdminDone">관리 끝내기</button>
+  </div>
+</div>
+
+<div class="about" id="completeBox" hidden>
+  <div class="card">
+    <h2>작품 완성</h2>
+    <p class="spec" id="completeInfo"></p>
+    <p>지금의 은하를 완성작으로 갤러리에 걸고, 다음 호를 빈 은하로 시작해요. 완성한 작품은 더 이상 바뀌지 않아요.</p>
+    <label class="sr-only" for="completeTitle">작품 제목</label>
+    <input id="completeTitle" type="text" maxlength="60" placeholder="제목 (비워 두면 '파이오니어들의 은하 제N호')" style="width:100%;box-sizing:border-box;margin-top:6px;padding:10px 12px;border-radius:10px;border:1px solid rgba(230,233,242,.25);background:rgba(255,255,255,.06);color:#E6E9F2;font:inherit;font-size:14px">
+    <div class="row" style="justify-content:flex-start;margin-top:12px">
+      <button class="main" id="btnCompleteGo">완성하고 갤러리에 걸기</button>
+      <button class="quiet" id="btnCompleteCancel">그만두기</button>
+    </div>
   </div>
 </div>
 
@@ -365,13 +381,36 @@ function setStats(){
     ? `별 획 <b>${strokes.length.toLocaleString()}</b> · 파이오니어 <b>${hands.toLocaleString()}</b>`
     : '아직 별이 없는 은하';
 }
+let edition = null;
+const viewEd = (() => { try{ const n = parseInt(new URLSearchParams(location.search).get('ed'), 10); return n > 0 ? n : 0; }catch(e){ return 0; } })();
+function kday(t){ const d = new Date(t + 9*3600*1000); return `${d.getUTCFullYear()}. ${d.getUTCMonth()+1}. ${d.getUTCDate()}`; }
+function setByLine(){
+  if(viewEd && edition){
+    $('byLine').textContent = `로흐 Roch · 완성작 · 제${edition.no}호 · ${kday(edition.startedAt || edition.endedAt)} ~ ${kday(edition.endedAt)}`;
+  }else if(edition){
+    $('byLine').textContent = `로흐 Roch · 함께 그리는 작품 · 제${edition.no}호 · ${kday(edition.startedAt)}부터`;
+  }
+}
+async function loadEdition(no){
+  try{
+    const r = await fetch(API + '/edition/' + no, { cache: 'no-store' });
+    if(!r.ok) throw new Error();
+    const d = await r.json();
+    edition = { no: d.no, startedAt: d.startedAt, endedAt: d.endedAt };
+    strokes = d.strokes || []; hands = d.hands || 0; buildStatic(); setStats(); setByLine();
+    if(d.title) $('h1title').firstChild.textContent = d.title;
+    $('howText').textContent = '완성된 작품이에요. 지금 함께 그려지고 있는 은하는 아래 버튼으로 볼 수 있어요.';
+  }catch(e){ $('stats').textContent = '작품을 불러오지 못했어요'; }
+}
 async function loadCosmos(quiet){
+  if(viewEd){ if(!quiet) loadEdition(viewEd); return; }
   try{
     const r = await fetch(API, { cache: 'no-store' });
     if(!r.ok) throw new Error(r.status);
     const d = await r.json();
     const changed = d.strokes.length !== strokes.length || (d.strokes.length && strokes.length && d.strokes[d.strokes.length-1].id !== strokes[strokes.length-1].id);
     hands = d.hands || 0;
+    if(d.edition){ edition = d.edition; setByLine(); }
     if(changed || !quiet){ strokes = d.strokes; if(!arrivals.length) buildStatic(); }
     setStats();
     if(!quiet && !strokes.length) msg('디부타데스에서 무엇이든 하면 첫 별이 그려져요.');
@@ -391,7 +430,7 @@ async function login(){
   const r = await fetch(API + '/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: user.accessToken }) });
   if(!r.ok){ user = null; throw new Error('login'); }
   me = await r.json();
-  $('btnAdmin').hidden = !me.admin;
+  $('btnAdmin').hidden = !me.admin || !!viewEd;
   rememberLogin();
   return user;
 }
@@ -407,7 +446,7 @@ function shouldAutoLogin(){
   return false;
 }
 if(piReady && shouldAutoLogin() && /PiBrowser/i.test(navigator.userAgent || '')){
-  login().then(() => { if(me && me.admin) msg('관리자로 들어왔어요. 아래 \'관리\'에서 획을 지울 수 있어요.'); }).catch(() => {});
+  login().then(() => { if(me && me.admin && !viewEd) msg('관리자로 들어왔어요. 아래 \'관리\'에서 획을 지울 수 있어요.'); }).catch(() => {});
 }
 
 // ---------- 모드 ----------
@@ -452,6 +491,33 @@ $('btnSend').onclick = async () => {
     msg(`당신의 획이 ${strokes.length.toLocaleString()}번째 빛이 되었어요. 내일 또 한 획 🍀`);
   }catch(e){ msg(e.message); }
   finally{ $('btnSend').disabled = false; }
+};
+
+// 작품 완성 (관리자)
+$('btnComplete').onclick = () => {
+  if(!strokes.length){ msg('아직 별이 없는 은하는 완성할 수 없어요.'); return; }
+  $('completeInfo').textContent = `제${edition ? edition.no : 1}호 · 별 획 ${strokes.length.toLocaleString()} · 파이오니어 ${hands.toLocaleString()}`;
+  $('completeTitle').value = '';
+  $('completeBox').hidden = false;
+};
+$('btnCompleteCancel').onclick = () => { $('completeBox').hidden = true; };
+$('completeBox').addEventListener('click', e => { if(e.target === $('completeBox')) $('completeBox').hidden = true; });
+$('btnCompleteGo').onclick = async () => {
+  const b = $('btnCompleteGo');
+  if(b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = '정말 완성할까요? 한 번 더'; return; }
+  b.dataset.armed = ''; b.textContent = '완성하고 갤러리에 걸기'; b.disabled = true;
+  try{
+    const r = await fetch(API + '/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken: user.accessToken, title: $('completeTitle').value }) });
+    const d = await r.json().catch(() => ({}));
+    if(r.status === 401){ user = null; me = null; throw new Error('로그인이 만료되었어요. 다시 들어와 주세요.'); }
+    if(!r.ok) throw new Error(d.message || '완성하지 못했어요.');
+    $('completeBox').hidden = true;
+    strokes = []; hands = 0; selected = null; buildStatic(); setStats();
+    edition = { no: d.next, startedAt: Date.now() }; setByLine();
+    setMode('view');
+    msg(`'${d.completed.title}'을(를) 갤러리에 걸었어요. 제${d.next}호가 시작됐어요 🍀`);
+  }catch(e){ msg(e.message); }
+  finally{ b.disabled = false; }
 };
 
 // 관리 (COSMOS_ADMIN 계정만 버튼이 보임)
@@ -532,6 +598,11 @@ $('about').addEventListener('click', e => { if(e.target === $('about')) $('about
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
 resize();
+if(viewEd){
+  const live = document.createElement('a'); live.href = '/cosmos.html'; live.className = 'quiet'; live.textContent = '지금 그려지는 은하 보기';
+  live.style.cssText = 'display:inline-flex;align-items:center;text-decoration:none;font-family:var(--body);font-size:13px;color:var(--star);background:rgba(13,15,26,.82);border:1px solid rgba(242,182,50,.7);border-radius:999px;padding:8px 14px';
+  $('rowIdle').insertBefore(live, $('btnAbout'));
+}
 loadCosmos(false);
 setInterval(() => { if(mode === 'view' && !arrivals.length && !document.hidden) loadCosmos(true); }, 20000);
 requestAnimationFrame(frame);
