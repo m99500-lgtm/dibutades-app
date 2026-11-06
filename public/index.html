@@ -2303,6 +2303,7 @@ async function loginWithPi(opts){
     chip.textContent = '@' + currentUser.username;
     chip.hidden = false;
     rememberLogin(true);
+    if(typeof cosmosTouch === 'function') setTimeout(cosmosTouch, 0);   // 로그인도 은하에 별 하나
     // 앱 홍보 화면이 이미 열려 있으면 내 무료권 정보를 다시 불러옴
     if(document.getElementById('pagePromo').classList.contains('show')) loadMyTickets();
     if(document.getElementById('pageScam') && document.getElementById('pageScam').classList.contains('show')) checkScamAdmin();
@@ -3114,6 +3115,22 @@ document.getElementById('scamList').addEventListener('click', async e => {
     loadScam();
   }catch(err){ b.disabled = false; b.textContent = '지우지 못했어요. 다시 누르기'; b.dataset.armed = ''; }
 });
+
+// ---------- 파이오니어들의 은하: 버튼을 누를 때마다 은하에 별 획이 저절로 ----------
+// 로그인한 파이오니어만, 15초에 한 번까지 (서버에서도 같은 제한 + 하루 40번)
+let cosmosLastSent = 0;
+function cosmosTouch(){
+  if(!currentUser || !currentUser.accessToken) return;
+  const now = Date.now();
+  if(now - cosmosLastSent < 15000) return;
+  cosmosLastSent = now;
+  fetch(API_BASE + '/api/cosmos/auto', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ accessToken: currentUser.accessToken }), keepalive: true }).catch(() => {});
+}
+document.addEventListener('click', e => {
+  const el = e.target && e.target.closest && e.target.closest('button, a, select, input[type="checkbox"], [role="tab"]');
+  if(el) setTimeout(cosmosTouch, 0);   // 로그인 버튼처럼 누른 뒤에 로그인되는 경우도 아래에서 따로 처리
+}, true);
 </script>
 </body>
 </html>
