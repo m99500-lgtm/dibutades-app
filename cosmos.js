@@ -5,6 +5,11 @@
  * 서버가 은하 어딘가에 무작위 획 하나를 저절로 그려 넣습니다 (POST /api/cosmos/auto).
  * 같은 사람의 획은 늘 같은 빛을 띱니다.
  *
+ * 작품은 '호'로 나뉩니다. 관리자가 '작품 완성'을 누르면(POST /api/cosmos/complete)
+ * 지금 은하가 완성작으로 보관되고(dibutades-cosmos-ed-<호>.json), 다음 호가 빈 은하로 시작됩니다.
+ * 완성작 목록: GET /api/cosmos/editions · 완성작 보기: GET /api/cosmos/edition/<호>
+ * 예전 '손들의 은하'(호 정보가 없는 데이터)는 처음 불러올 때 백업 후 비우고 제1호로 시작합니다.
+ *
  * 저장: 기존 낙서 데이터와 섞이지 않도록 별도 Blob 파일(dibutades-cosmos.json)에 저장합니다.
  * 공개: 획의 모양·색·시각만 내보내고, 누가 그렸는지(Pi 아이디)는 밖으로 내보내지 않습니다.
  * 관리: Vercel 환경변수 COSMOS_ADMIN 에 로흐의 Pi 아이디를 넣으면, 그 계정만 획을 지울 수 있습니다.
@@ -24,17 +29,37 @@ const PALETTE_SIZE = 6;        // 프론트의 색 팔레트 개수와 같아야
 module.exports = function mountCosmos(app, deps){
   const { put, get, verifyUser, kstDateString, LOGIN_EXPIRED } = deps;
 
+  function freshGalaxy(no){ return { strokes: [], last: {}, edition: { no, startedAt: Date.now() } }; }
   async function load(){
+    let c;
     try{
       const response = await get(COSMOS_BLOB_NAME, { access: 'private' });
-      const c = JSON.parse(await new Response(response.stream).text());
+      c = JSON.parse(await new Response(response.stream).text());
       c.strokes = c.strokes || [];
       c.last = c.last || {};
-      return c;
     }catch(e){
       if(!(e && (e.name === 'BlobNotFoundError' || /not.*found/i.test(e.message || '')))) console.error('cosmos load error:', e);
-      return { strokes: [], last: {} };
+      return freshGalaxy(1);
     }
+    if(!c.edition){
+      // 예전 '손들의 은하' 데이터: 백업해 두고 비운 뒤 '파이오니어들의 은하 제1호'로 시작
+      if(c.strokes.length){
+        const backup = 'dibutades-cosmos-hands-legacy-' + new Date(Date.now() + 9*3600*1000).toISOString().replace(/[-:]/g, '').slice(0, 15) + '.json';
+        await put(backup, JSON.stringify(c), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+      }
+      c = freshGalaxy(1);
+      await save(c);
+    }
+    return c;
+  }
+  const EDITIONS_BLOB = 'dibutades-cosmos-editions.json';
+  async function loadEditions(){
+    try{
+      const response = await get(EDITIONS_BLOB, { access: 'private' });
+      const d = JSON.parse(await new Response(response.stream).text());
+      d.list = Array.isArray(d.list) ? d.list : [];
+      return d;
+    }catch(e){ return { list: [] }; }
   }
   async function save(c){
     await put(COSMOS_BLOB_NAME, JSON.stringify(c), {
@@ -57,6 +82,7 @@ module.exports = function mountCosmos(app, deps){
     const hands = new Set(c.strokes.map(s => s.a)).size;
     return {
       hands,
+      edition: c.edition ? { no: c.edition.no, startedAt: c.edition.startedAt } : null,
       strokes: c.strokes.map(s => ({ id: s.id, h: s.h, p: s.p, t: s.t }))
     };
   }
@@ -149,6 +175,46 @@ module.exports = function mountCosmos(app, deps){
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
 
+  // ---------- 작품 완성 (관리자만): 지금 은하를 완성작으로 보관하고 다음 호 시작 ----------
+  app.post('/api/cosmos/complete', async (req, res) => {
+    const { accessToken, title } = req.body || {};
+    const name = await verifyUser(accessToken);
+    if(!name) return res.status(401).json(LOGIN_EXPIRED);
+    if(!isAdmin(name)) return res.status(403).json({ error: 'forbidden' });
+    try{
+      const c = await load();
+      if(!c.strokes.length) return res.status(400).json({ error: 'empty', message: '아직 별이 없는 은하는 완성할 수 없어요.' });
+      const no = (c.edition && c.edition.no) || 1;
+      const t = String(title || '').trim().slice(0, 60) || `파이오니어들의 은하 제${no}호`;
+      const view = publicView(c);
+      const archive = { no, title: t, startedAt: (c.edition && c.edition.startedAt) || null, endedAt: Date.now(), hands: view.hands, strokes: view.strokes };
+      await put(`dibutades-cosmos-ed-${no}.json`, JSON.stringify(archive), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+      const eds = await loadEditions();
+      eds.list = eds.list.filter(x => x.no !== no).concat({ no, title: t, startedAt: archive.startedAt, endedAt: archive.endedAt, count: archive.strokes.length, hands: archive.hands });
+      await put(EDITIONS_BLOB, JSON.stringify(eds), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+      await save(freshGalaxy(no + 1));
+      res.json({ ok: true, completed: { no, title: t, count: archive.strokes.length }, next: no + 1 });
+    }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
+  });
+  // 완성작 목록 (최근 것부터)
+  app.get('/api/cosmos/editions', async (req, res) => {
+    try{
+      const eds = await loadEditions();
+      res.set('Cache-Control', 'no-store');
+      res.json({ list: eds.list.slice().sort((a, b) => b.no - a.no) });
+    }catch(e){ res.status(500).json({ error: e.message }); }
+  });
+  // 완성작 하나 보기
+  app.get('/api/cosmos/edition/:no', async (req, res) => {
+    const no = parseInt(req.params.no, 10);
+    if(!(no > 0)) return res.status(400).json({ error: 'bad_no' });
+    try{
+      const response = await get(`dibutades-cosmos-ed-${no}.json`, { access: 'private' });
+      res.set('Cache-Control', 'public, max-age=300');
+      res.json(JSON.parse(await new Response(response.stream).text()));
+    }catch(e){ res.status(404).json({ error: 'not_found' }); }
+  });
+
   // 한 획 남기기 (하루에 한 번)
   app.post('/api/cosmos', async (req, res) => {
     const { accessToken, p } = req.body || {};
@@ -187,7 +253,7 @@ module.exports = function mountCosmos(app, deps){
         backup = 'dibutades-cosmos-backup-' + new Date(Date.now() + 9*3600*1000).toISOString().replace(/[-:]/g, '').slice(0, 15) + '.json';
         await put(backup, JSON.stringify(c), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
       }
-      await save({ strokes: [], last: {}, resetAt: Date.now(), previous: backup });
+      await save({ strokes: [], last: {}, edition: { no: (c.edition && c.edition.no) || 1, startedAt: Date.now() }, resetAt: Date.now(), previous: backup });
       res.json({ ok: true, cleared: count, backup });
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
