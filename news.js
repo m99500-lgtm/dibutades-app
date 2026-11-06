@@ -4,8 +4,8 @@
  * 브라우저에서 바로 부르기 어려운 뉴스·역사 자료를 서버가 대신 가져와
  * 15분 동안 보관(캐시)했다가 앱에 넘겨 줍니다. 추가 설치할 패키지는 없습니다.
  *
- *  GET /api/news?topic=pi       → 파이 시세 + 파이 관련 최근 뉴스
- *  GET /api/news?topic=crypto   → 거래량 TOP 5 + 암호화폐 최근 뉴스
+ *  GET /api/news?topic=pi       → 파이 관련 최근 뉴스 (7일 안)
+ *  GET /api/news?topic=crypto   → 암호화폐 최근 뉴스 (3일 안)
  *  GET /api/news?topic=history  → 역사 속 오늘 (한국시간 기준 날짜)
  *  GET/POST /api/meal           → 오늘 뭐 먹지? (오늘의 세계 밥상 + 세계 사람들의 한 끼)
  *
@@ -80,32 +80,15 @@ async function googleNews(query, maxAgeDays, limit){
 }
 
 async function piTopic(){
-  const [price, news] = await Promise.all([
-    getJson('https://api.coingecko.com/api/v3/simple/price?ids=pi-network&vs_currencies=usd,krw&include_24hr_change=true&include_24hr_vol=true')
-      .then(d => d['pi-network'] || null).catch(() => null),
-    googleNews('파이코인 OR 파이네트워크 OR "Pi Network"', 7, 5).catch(() => [])
-  ]);
-  return {
-    topic: 'pi',
-    price: price ? { usd: price.usd, krw: price.krw, change24h: price.usd_24h_change, vol24h: price.usd_24h_vol } : null,
-    news
-  };
+  // 실시간 가격은 화면 맨 아래 숫자 줄에서 1분마다 보여 주므로, 여기서는 소식만
+  const news = await googleNews('파이코인 OR 파이네트워크 OR "Pi Network"', 7, 6).catch(() => []);
+  return { topic: 'pi', news };
 }
 
 async function cryptoTopic(){
-  const [markets, news] = await Promise.all([
-    getJson('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=volume_desc&per_page=5&page=1&price_change_percentage=24h')
-      .catch(() => []),
-    googleNews('암호화폐 OR 비트코인 OR 가상자산', 3, 5).catch(() => [])
-  ]);
-  return {
-    topic: 'crypto',
-    top5: (Array.isArray(markets) ? markets : []).slice(0, 5).map(m => ({
-      name: m.name, symbol: String(m.symbol || '').toUpperCase(), price: m.current_price,
-      vol24h: m.total_volume, change24h: m.price_change_percentage_24h, image: m.image
-    })),
-    news
-  };
+  // 가격 순위는 다른 시세 앱에서도 볼 수 있어 빼고, 최근 소식만 보여 줍니다
+  const news = await googleNews('암호화폐 OR 비트코인 OR 가상자산', 3, 6).catch(() => []);
+  return { topic: 'crypto', news };
 }
 
 function kstMonthDay(){
@@ -345,8 +328,86 @@ function mountMeal(app){
   });
 }
 
+
+/* =====================================================================
+ * 007 사기 경보
+ *  GET    /api/scam                 → 경보 목록 (최신순)
+ *  POST   /api/scam/me              → { accessToken } 관리자인지 확인
+ *  POST   /api/scam                 → { accessToken, level, title, body } 경보 올리기 (관리자만)
+ *  POST   /api/scam/:id/remove      → { accessToken } 경보 지우기 (관리자만)
+ * 관리자: Vercel 환경변수 COSMOS_ADMIN, 없으면 minkyeungsoon
+ * 저장: Vercel Blob 'dibutades-scam.json'
+ * ===================================================================== */
+const SCAM_BLOB = 'dibutades-scam.json';
+const SCAM_LEVELS = ['위험', '주의', '참고'];
+function scamIsAdmin(name){
+  const admin = String(process.env.COSMOS_ADMIN || 'minkyeungsoon').trim().toLowerCase();
+  return !!name && name.toLowerCase() === admin;
+}
+async function scamLoad(){
+  try{
+    const { get } = require('@vercel/blob');
+    const res = await get(SCAM_BLOB, { access: 'private' });
+    const d = JSON.parse(await new Response(res.stream).text());
+    d.items = Array.isArray(d.items) ? d.items : [];
+    return d;
+  }catch(e){
+    if(!(e && (e.name === 'BlobNotFoundError' || /not.*found/i.test(e.message || '')))) console.error('scam load error:', e && e.message);
+    return { items: [] };
+  }
+}
+async function scamSave(d){
+  const { put } = require('@vercel/blob');
+  d.items = d.items.slice(-200);
+  await put(SCAM_BLOB, JSON.stringify(d), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+}
+function mountScam(app){
+  app.get('/api/scam', async (req, res) => {
+    try{
+      const d = await scamLoad();
+      res.set('Cache-Control', 'no-store');
+      res.json({ items: d.items.slice().reverse() });
+    }catch(e){ res.status(500).json({ error: 'scam_unavailable' }); }
+  });
+  app.post('/api/scam/me', async (req, res) => {
+    const name = await mealVerify((req.body || {}).accessToken);
+    if(!name) return res.status(401).json({ error: 'login required' });
+    res.json({ admin: scamIsAdmin(name) });
+  });
+  app.post('/api/scam', async (req, res) => {
+    const { accessToken, level, title, body } = req.body || {};
+    const name = await mealVerify(accessToken);
+    if(!name) return res.status(401).json({ error: 'login required', message: '로그인이 만료되었어요. 다시 로그인해주세요.' });
+    if(!scamIsAdmin(name)) return res.status(403).json({ error: 'forbidden', message: '관리자만 올릴 수 있어요.' });
+    const lv = SCAM_LEVELS.includes(level) ? level : '주의';
+    const t = String(title || '').trim().slice(0, 80);
+    const b = String(body || '').trim().slice(0, 1200);
+    if(!t) return res.status(400).json({ error: 'bad_title', message: '제목을 적어 주세요.' });
+    try{
+      const d = await scamLoad();
+      const item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), level: lv, title: t, body: b, t: Date.now() };
+      d.items.push(item);
+      await scamSave(d);
+      res.json({ ok: true, item });
+    }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
+  });
+  app.post('/api/scam/:id/remove', async (req, res) => {
+    const name = await mealVerify((req.body || {}).accessToken);
+    if(!name) return res.status(401).json({ error: 'login required' });
+    if(!scamIsAdmin(name)) return res.status(403).json({ error: 'forbidden' });
+    try{
+      const d = await scamLoad();
+      const before = d.items.length;
+      d.items = d.items.filter(x => x.id !== req.params.id);
+      await scamSave(d);
+      res.json({ ok: true, removed: before - d.items.length });
+    }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
+  });
+}
+
 module.exports = function mountNews(app){
   mountMeal(app);
+  mountScam(app);
   app.get('/api/news', async (req, res) => {
     const topic = String(req.query.topic || 'pi');
     const fn = { pi: piTopic, crypto: cryptoTopic, history: historyTopic }[topic];
