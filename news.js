@@ -103,23 +103,103 @@ function kstMonthDay(){
   const d = new Date(Date.now() + 9 * 3600 * 1000);
   return { m: d.getUTCMonth() + 1, d: d.getUTCDate() };
 }
+// 한국어 위키백과 날짜 문서(예: "11월 10일")의 "사건" 부분에서 연도와 내용을 뽑습니다.
+// (위키미디어 '오늘의 역사' 묶음 자료는 한국어를 지원하지 않아서 직접 읽어 옵니다)
+function wikiPlain(t){
+  return String(t || '')
+    .replace(/<ref[^>]*\/>/g, '').replace(/<ref[^>]*>[\s\S]*?<\/ref>/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\{\{[^{}]*\}\}/g, '').replace(/\{\{[^{}]*\}\}/g, '')
+    .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1')
+    .replace(/\[https?:\/\/\S+\s([^\]]*)\]/g, '$1').replace(/\[https?:\/\/\S+\]/g, '')
+    .replace(/'{2,}/g, '').replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function koWikiEvents(wikitext, m, d){
+  const lines = String(wikitext || '').split('\n');
+  let inEvents = false, year = null;
+  const out = [];
+  for(const raw of lines){
+    const line = raw.trim();
+    const h = line.match(/^==\s*([^=].*?)\s*==$/);
+    if(h){ inEvents = /사건/.test(h[1]); year = null; continue; }
+    if(!inEvents || !line.startsWith('*')) continue;
+    const depth = line.match(/^\*+/)[0].length;
+    const body = line.replace(/^\*+\s*/, '');
+    const y = body.match(/^\[\[(기원전\s*)?(\d{1,4})년(?:\|[^\]]*)?\]\]\s*(?:[-–—:]\s*)?(.*)$/);
+    if(y){
+      year = y[1] ? -Number(y[2]) : Number(y[2]);
+      const text = wikiPlain(y[3]);
+      if(text) out.push({ year, text, link: null, lang: 'ko' });
+    }else if(depth >= 2 && year != null){
+      const text = wikiPlain(body);
+      if(text) out.push({ year, text, link: null, lang: 'ko' });
+    }
+  }
+  const page = 'https://ko.m.wikipedia.org/wiki/' + encodeURIComponent(`${m}월 ${d}일`.replace(/ /g, '_'));
+  return out.filter(e => e.year > 0 && e.text.length >= 4 && e.text.length <= 160).map(e => Object.assign(e, { link: page }));
+}
+async function koHistory(m, d){
+  const title = encodeURIComponent(`${m}월 ${d}일`.replace(/ /g, '_'));
+  const data = await getJson(`https://ko.wikipedia.org/w/api.php?action=parse&page=${title}&prop=wikitext&redirects=1&format=json&formatversion=2`);
+  return koWikiEvents(data && data.parse && data.parse.wikitext, m, d);
+}
+
+// 번역: MyMemory 무료 번역 (키 없이 하루 사용량이 정해져 있어서, 하루 한 번만 번역하고 Blob에 보관)
+async function translate(text, from, to){
+  const q = String(text || '').slice(0, 450);
+  if(!q) return '';
+  const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(q) + '&langpair=' + from + '|' + to;
+  const j = await getJson(url);
+  const out = j && j.responseData && j.responseData.translatedText;
+  if(!out || j.quotaFinished || Number(j.responseStatus) !== 200) throw new Error('translate_failed');
+  if(/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(out)) throw new Error('translate_limit');
+  return decode(out);
+}
+const HIST_BLOB = 'dibutades-history.json';
+async function histLoad(){
+  try{
+    const { get } = require('@vercel/blob');
+    const res = await get(HIST_BLOB, { access: 'private' });
+    return JSON.parse(await new Response(res.stream).text());
+  }catch(e){ return null; }
+}
+async function histSave(h){
+  try{
+    const { put } = require('@vercel/blob');
+    await put(HIST_BLOB, JSON.stringify(h), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+  }catch(e){ console.error('history save', e && e.message); }
+}
+
 async function historyTopic(){
   const { m, d } = kstMonthDay();
   const mm = String(m).padStart(2, '0'), dd = String(d).padStart(2, '0');
+  const dateKey = `${mm}-${dd}`;
+  // 오늘 이미 번역해 둔 것이 있으면 그대로 (번역이 덜 된 채면 1시간 뒤 다시 시도)
+  const saved = await histLoad();
+  if(saved && saved.date === dateKey && (saved.complete || Date.now() - (saved.at || 0) < 3600 * 1000)){
+    return { topic: 'history', month: m, day: d, events: saved.events || [], eventsEn: saved.eventsEn || [] };
+  }
   const pick = (data, lang) => ((data && (data.selected || data.events)) || []).map(e => ({
     year: e.year,
     text: e.text,
     link: e.pages && e.pages[0] && e.pages[0].content_urls && e.pages[0].content_urls.mobile ? e.pages[0].content_urls.mobile.page : null,
     lang
   })).filter(e => e.year && e.text);
-  // 한국어 사건 먼저, 그 아래 영어 사건 (둘 다 위키백과)
+  // 한국 위키백과 사건 + 영어 위키백과(세계) 사건
   const [ko, en] = await Promise.all([
-    getJson(`https://api.wikimedia.org/feed/v1/wikipedia/ko/onthisday/selected/${mm}/${dd}`).then(x => pick(x, 'ko')).catch(() => []),
+    koHistory(m, d).catch(() => []),
     getJson(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/selected/${mm}/${dd}`).then(x => pick(x, 'en')).catch(() => [])
   ]);
-  ko.sort((a, b) => b.year - a.year);
+  ko.sort((a, b) => b.year - a.year); // 가까운 해부터
   en.sort((a, b) => b.year - a.year);
-  return { topic: 'history', month: m, day: d, events: ko.slice(0, 4), eventsEn: en.slice(0, 4) };
+  let complete = true;
+  const tr = (t, f, to) => translate(t, f, to).catch(() => { complete = false; return ''; });
+  // 한국 사건: 한국어 원문 + 영어 번역 / 세계 사건: 한국어 번역 + 영어 원문
+  const events = await Promise.all(ko.slice(0, 4).map(async e => ({ year: e.year, link: e.link, ko: e.text, en: await tr(e.text, 'ko', 'en') })));
+  const eventsEn = await Promise.all(en.slice(0, 4).map(async e => ({ year: e.year, link: e.link, ko: await tr(e.text, 'en', 'ko'), en: e.text })));
+  if(events.length || eventsEn.length) await histSave({ date: dateKey, at: Date.now(), complete, events, eventsEn });
+  return { topic: 'history', month: m, day: d, events, eventsEn };
 }
 
 
