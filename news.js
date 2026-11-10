@@ -60,8 +60,9 @@ function tag(xml, name){
 }
 
 // Google 뉴스 RSS 검색 → [{title, source, link, t}]
-async function googleNews(query, maxAgeDays, limit){
-  const url = 'https://news.google.com/rss/search?q=' + encodeURIComponent(query) + '&hl=ko&gl=KR&ceid=KR:ko';
+async function googleNews(query, maxAgeDays, limit, lang){
+  const loc = lang === 'en' ? '&hl=en-US&gl=US&ceid=US:en' : '&hl=ko&gl=KR&ceid=KR:ko';
+  const url = 'https://news.google.com/rss/search?q=' + encodeURIComponent(query) + loc;
   const xml = await getText(url);
   const items = xml.split('<item>').slice(1).map(chunk => {
     const source = tag(chunk, 'source');
@@ -81,14 +82,21 @@ async function googleNews(query, maxAgeDays, limit){
 
 async function piTopic(){
   // 실시간 가격은 화면 맨 아래 숫자 줄에서 1분마다 보여 주므로, 여기서는 소식만
-  const news = await googleNews('파이코인 OR 파이네트워크 OR "Pi Network"', 7, 6).catch(() => []);
-  return { topic: 'pi', news };
+  // 한국어 소식 먼저, 그 아래 영어 소식
+  const [news, newsEn] = await Promise.all([
+    googleNews('파이코인 OR 파이네트워크 OR "Pi Network"', 7, 4, 'ko').catch(() => []),
+    googleNews('"Pi Network" OR "Pi Coin"', 7, 4, 'en').catch(() => [])
+  ]);
+  return { topic: 'pi', news, newsEn };
 }
 
 async function cryptoTopic(){
   // 가격 순위는 다른 시세 앱에서도 볼 수 있어 빼고, 최근 소식만 보여 줍니다
-  const news = await googleNews('암호화폐 OR 비트코인 OR 가상자산', 3, 6).catch(() => []);
-  return { topic: 'crypto', news };
+  const [news, newsEn] = await Promise.all([
+    googleNews('암호화폐 OR 비트코인 OR 가상자산', 3, 4, 'ko').catch(() => []),
+    googleNews('crypto OR bitcoin OR cryptocurrency', 3, 4, 'en').catch(() => [])
+  ]);
+  return { topic: 'crypto', news, newsEn };
 }
 
 function kstMonthDay(){
@@ -104,14 +112,14 @@ async function historyTopic(){
     link: e.pages && e.pages[0] && e.pages[0].content_urls && e.pages[0].content_urls.mobile ? e.pages[0].content_urls.mobile.page : null,
     lang
   })).filter(e => e.year && e.text);
-  let events = [];
-  // 한국어 자료가 있으면 한국어로, 없으면 영어로
-  try{ events = pick(await getJson(`https://api.wikimedia.org/feed/v1/wikipedia/ko/onthisday/selected/${mm}/${dd}`), 'ko'); }catch(e){}
-  if(events.length < 3){
-    try{ events = pick(await getJson(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/selected/${mm}/${dd}`), 'en'); }catch(e){}
-  }
-  events.sort((a, b) => b.year - a.year);
-  return { topic: 'history', month: m, day: d, events: events.slice(0, 6) };
+  // 한국어 사건 먼저, 그 아래 영어 사건 (둘 다 위키백과)
+  const [ko, en] = await Promise.all([
+    getJson(`https://api.wikimedia.org/feed/v1/wikipedia/ko/onthisday/selected/${mm}/${dd}`).then(x => pick(x, 'ko')).catch(() => []),
+    getJson(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/selected/${mm}/${dd}`).then(x => pick(x, 'en')).catch(() => [])
+  ]);
+  ko.sort((a, b) => b.year - a.year);
+  en.sort((a, b) => b.year - a.year);
+  return { topic: 'history', month: m, day: d, events: ko.slice(0, 4), eventsEn: en.slice(0, 4) };
 }
 
 
