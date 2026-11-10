@@ -1253,6 +1253,30 @@
     .app.showing-fullpage ~ #rightpanel{ display:none !important; }
   }
 
+
+  /* ---------- 오늘의 007 퀴즈 ---------- */
+  .quiz-box{ margin:14px 0; padding:14px 14px 12px; border-radius:14px; border:1px solid rgba(239,68,68,0.40); background:rgba(239,68,68,0.08); }
+  .quiz-head{ display:flex; align-items:baseline; gap:8px; }
+  .quiz-title{ flex:1; font-size:14px; font-weight:800; }
+  .quiz-title small{ display:block; font-size:10.5px; font-weight:400; color:var(--chalk-dim); margin-top:1px; }
+  .quiz-no{ font-size:10.5px; color:var(--chalk-dim); white-space:nowrap; }
+  .quiz-q{ margin:10px 0 0; font-size:14px; line-height:1.6; }
+  .quiz-q small, .quiz-x small{ display:block; font-size:11.5px; line-height:1.5; color:var(--chalk-dim); margin-top:3px; }
+  .quiz-btns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .quiz-btn{ min-height:48px; border-radius:12px; border:1px solid var(--line); border-bottom-width:3px; background:var(--card); color:var(--chalk);
+    font-family:inherit; font-size:14.5px; font-weight:800; cursor:pointer; line-height:1.2; }
+  .quiz-btn small{ display:block; font-size:10px; font-weight:500; color:var(--chalk-dim); margin-top:2px; }
+  .quiz-btn[data-c="scam"]{ border-color:rgba(239,68,68,0.55); }
+  .quiz-btn[data-c="safe"]{ border-color:rgba(34,197,94,0.55); }
+  .quiz-btn:disabled{ cursor:default; opacity:0.55; }
+  .quiz-btn.picked{ opacity:1; outline:2px solid var(--spray-y); outline-offset:1px; }
+  .quiz-res{ margin-top:12px; padding:10px 12px; border-radius:10px; background:rgba(127,127,127,0.10); }
+  .quiz-verdict{ font-size:15px; font-weight:800; }
+  .quiz-verdict.ok{ color:#4ade80; } .quiz-verdict.no{ color:#f87171; }
+  body.light-theme .quiz-verdict.ok{ color:#15803d; } body.light-theme .quiz-verdict.no{ color:#b91c1c; }
+  .quiz-x{ margin:6px 0 0; font-size:13px; line-height:1.6; }
+  .quiz-stat{ margin-top:8px; font-size:11.5px; color:var(--chalk-dim); }
+  .quiz-more{ display:inline-block; margin-top:8px; background:none; border:none; padding:6px 0; color:var(--spray-y); font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
   /* ---------- 처음 방문 소개 팝업 / Welcome popup ---------- */
   .wc-wrap{ position:fixed; inset:0; z-index:2100; background:rgba(10,9,14,0.74); display:flex; align-items:center; justify-content:center; padding:16px; }
   .wc-wrap[hidden]{ display:none; }
@@ -1456,6 +1480,9 @@
 
         <div class="promo-strip" id="promoStripMain"></div>
 
+        <!-- 오늘의 007 퀴즈 (로그인 없이 누구나) -->
+        <div class="quiz-box" data-quiz="main" aria-live="polite"></div>
+
         <div class="news">
           <div class="news-head">
             <span class="news-title">오늘의 소식</span>
@@ -1497,6 +1524,7 @@
         <div class="scam-title">007 사기 경보<span>Scam Alert</span></div>
         <p class="scam-lead">007로저가 직접 확인한 파이 사기 수법과 경보예요. 의심되면 보내기 전에 여기부터 보세요.</p>
       </div>
+      <div class="quiz-box" data-quiz="scam" aria-live="polite"></div>
       <div class="scam-rules">
         <div class="scam-sub">꼭 지켜야 할 다섯 가지<span class="sub-en">Five rules that always apply</span></div>
         <ol>
@@ -3227,6 +3255,60 @@ document.addEventListener('click', e => {
   // 이미 로그인해 본 적이 있는 분(자동 로그인 기록)에게는 띄우지 않음
   try{ if(localStorage.getItem('dbtAutoLogin')) seen = true; }catch(e){}
   if(!seen) open();
+})();
+
+// ---------- 오늘의 007 퀴즈 · 이건 사기일까? ----------
+(function(){
+  const KEY = 'dbtQuiz';
+  const st = { data: null, result: null };
+  function vid(){ try{ return localStorage.getItem('dbtVid') || ''; }catch(e){ return ''; } }
+  function saved(date){ try{ const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.date === date ? v : null; }catch(e){ return null; } }
+  function keep(v){ try{ localStorage.setItem(KEY, JSON.stringify(v)); }catch(e){} }
+  function pct(s){ return s && s.total ? Math.round(s.right / s.total * 100) : null; }
+  function render(){
+    const d = st.data, r = st.result;
+    document.querySelectorAll('.quiz-box').forEach(box => {
+      if(!d){ box.innerHTML = '<div class="quiz-q" style="margin:0;color:var(--chalk-dim)">오늘의 퀴즈를 불러오는 중…</div>'; return; }
+      const head = `<div class="quiz-head"><div class="quiz-title">🛡️ 오늘의 007 퀴즈 · 이건 사기일까?<small>Today's Scam Quiz · Is it a scam?</small></div><span class="quiz-no">${d.no}/${d.count}</span></div>` +
+        `<p class="quiz-q">${escapeHtml(d.q)}<small>${escapeHtml(d.qEn)}</small></p>`;
+      const btn = (c, ko, en) => `<button type="button" class="quiz-btn${r && r.choice === c ? ' picked' : ''}" data-c="${c}"${r ? ' disabled' : ''}>${ko}<small>${en}</small></button>`;
+      let html = head + `<div class="quiz-btns">${btn('scam', '🚨 사기다', 'Scam')}${btn('safe', '✅ 괜찮다', 'Safe')}</div>`;
+      if(r){
+        const p = pct(r.stats);
+        html += `<div class="quiz-res"><div class="quiz-verdict ${r.correct ? 'ok' : 'no'}">${r.correct ? '정답이에요! 🍀' : '아쉬워요, 다시 볼까요?'} <small style="font-weight:500;font-size:11px;color:var(--chalk-dim)">${r.correct ? 'Correct!' : 'Not quite'}</small></div>` +
+          `<p class="quiz-x"><b>정답: ${r.a === 'scam' ? '🚨 사기다' : '✅ 괜찮다'}</b> · ${escapeHtml(r.x)}<small>${escapeHtml(r.xEn)}</small></p>` +
+          (p != null ? `<div class="quiz-stat">오늘 ${r.stats.total}명 중 ${p}%가 맞혔어요 · ${p}% got it right today</div>` : '') +
+          (box.dataset.quiz === 'main' ? `<button type="button" class="quiz-more">007 경보에서 더 알아보기 → <span style="font-weight:400;font-size:11px">More scam alerts</span></button>` : '<div class="quiz-stat">내일 새 문제가 나와요 · A new question tomorrow</div>') +
+          `</div>`;
+      }
+      box.innerHTML = html;
+      box.querySelectorAll('.quiz-btn').forEach(b => b.addEventListener('click', () => answer(b.dataset.c)));
+      const more = box.querySelector('.quiz-more'); if(more) more.addEventListener('click', () => { if(typeof showScamPage === 'function') showScamPage(); });
+    });
+  }
+  async function answer(choice){
+    if(st.result || !st.data) return;
+    document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = true);
+    try{
+      const r = await fetch(API_BASE + '/api/quiz/answer', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ choice, visitorId: vid() }) });
+      const j = await r.json();
+      if(!r.ok) throw new Error();
+      st.result = Object.assign({ choice }, j);
+      keep({ date: st.data.date, ...st.result });
+    }catch(e){ document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = false); return; }
+    render();
+  }
+  async function load(){
+    render();
+    try{
+      const r = await fetch(API_BASE + '/api/quiz?_=' + Date.now());
+      if(!r.ok) throw new Error();
+      st.data = await r.json();
+      st.result = saved(st.data.date);
+    }catch(e){ document.querySelectorAll('.quiz-box').forEach(b => b.hidden = true); return; }
+    render();
+  }
+  load();
 })();
 </script>
 </body>
