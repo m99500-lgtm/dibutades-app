@@ -493,7 +493,485 @@ function mountScam(app){
   });
 }
 
+
+/* =====================================================================
+ * 오늘의 007 퀴즈 · 이건 사기일까?
+ *  GET  /api/quiz          → 오늘의 문제 (정답은 빼고) + 오늘 맞힌 비율
+ *  POST /api/quiz/answer   → { choice:'scam'|'safe', visitorId } → 정답·설명·비율
+ *  문제는 아래 QUIZ 목록을 한국시간 날짜에 맞춰 하루 한 문제씩 차례로 돌립니다.
+ *  새 문제를 넣고 싶으면 QUIZ 목록 맨 끝에 같은 모양으로 한 줄 더 붙이면 됩니다.
+ *  (a: 'scam' = 사기다, 'safe' = 괜찮다)
+ * ===================================================================== */
+const QUIZ = [
+ {
+  "a": "scam",
+  "q": "X에서 \"Pi Network 공식 지원팀\"이라는 계정이 DM을 보냈어요. \"지갑에 이상 거래가 감지됐어요. 잠금 해제를 위해 24단어 패스프레이즈를 입력해 주세요.\"",
+  "qEn": "A \"Pi Network Support\" account DMs you: \"Suspicious activity detected. Enter your 24-word passphrase to unlock your wallet.\"",
+  "x": "패스프레이즈는 지갑의 열쇠 그 자체예요. Pi 팀은 DM으로 먼저 연락하지 않고, 패스프레이즈를 절대 묻지 않아요.",
+  "xEn": "Your passphrase is the key to your wallet. The Pi team never DMs first and never asks for it."
+ },
+ {
+  "a": "scam",
+  "q": "텔레그램 단체방에 글이 올라왔어요. \"서밋 기념 이벤트! 지금 10 Pi를 보내면 24시간 안에 20 Pi로 돌려드립니다. 선착순 100명!\"",
+  "qEn": "\"Summit event! Send 10 Pi now and get 20 Pi back within 24 hours. First 100 only!\"",
+  "x": "\"보내면 두 배로\"는 가장 오래되고 흔한 사기예요. \"선착순\"과 \"24시간\"은 생각할 틈을 주지 않으려는 장치예요.",
+  "xEn": "\"Send and get double back\" is the oldest trick. Time limits are there to stop you from thinking."
+ },
+ {
+  "a": "safe",
+  "q": "Pi Browser에서 처음 연 앱의 로그인 버튼을 누르자, Pi 화면이 \"이 앱에 사용자 이름을 공유할까요?\"라고 물어요. 패스프레이즈를 적는 칸은 없어요.",
+  "qEn": "A Pi app's login shows the Pi screen: \"Share your username with this app?\" No passphrase field.",
+  "x": "Pi 공식 로그인의 정상적인 모습이에요. 앱은 내가 허락한 사용자 이름만 받아요. 로그인 화면에 패스프레이즈 칸이 있다면 그건 가짜예요.",
+  "xEn": "This is the normal official Pi login. If a login screen asks for your passphrase, it is fake."
+ },
+ {
+  "a": "scam",
+  "q": "\"KYC가 너무 오래 걸리시죠? 수수료 5 Pi만 내시면 저희가 하루 만에 통과시켜 드립니다.\"라는 광고를 봤어요.",
+  "qEn": "\"KYC taking too long? Pay just 5 Pi and we will get you approved in one day.\"",
+  "x": "KYC를 대신 빨리 통과시켜 주는 곳은 없어요. KYC는 Pi 앱이 안내하는 공식 절차로만 진행돼요.",
+  "xEn": "No one can speed up your KYC for a fee. KYC only goes through the official process in the Pi app."
+ },
+ {
+  "a": "scam",
+  "q": "\"메인넷 마이그레이션 대행 서비스! 패스프레이즈만 알려 주시면 남은 파이를 바로 옮겨 드려요.\"",
+  "qEn": "\"Mainnet migration service! Just give us your passphrase and we will move your remaining Pi right away.\"",
+  "x": "마이그레이션은 Pi 앱의 메인넷 체크리스트로만 진행돼요. 패스프레이즈를 넘기는 순간 파이는 그 사람 것이 돼요.",
+  "xEn": "Migration only happens through the Mainnet checklist in the Pi app. Hand over your passphrase and your Pi becomes theirs."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi 에어드롭 당첨! 지금 이 사이트에 접속해 지갑을 연결하고 패스프레이즈로 본인 확인을 해 주세요.\"",
+  "qEn": "\"You won a Pi airdrop! Visit this site, connect your wallet and verify with your passphrase.\"",
+  "x": "에어드롭을 받으려고 패스프레이즈를 입력하는 일은 없어요. \"당첨\"이라는 말로 서두르게 만드는 전형적인 낚시예요.",
+  "xEn": "No real airdrop needs your passphrase. \"You won\" is classic bait."
+ },
+ {
+  "a": "safe",
+  "q": "Pi 앱 결제를 누르자 Pi 지갑 화면에 앱 이름과 금액이 나오고, 내가 \"승인\"을 눌러야만 결제가 돼요.",
+  "qEn": "Paying in a Pi app opens the Pi wallet showing the app name and amount; it only goes through if you tap approve.",
+  "x": "정상적인 Pi 결제 모습이에요. 승인 전에 앱 이름과 금액을 꼭 확인하고, 이상하면 취소하면 돼요.",
+  "xEn": "This is a normal Pi payment. Check the app name and amount, and cancel if anything looks off."
+ },
+ {
+  "a": "scam",
+  "q": "메신저로 \"Pi Browser 프로 버전\"이라는 파일(apk)을 받았어요. \"채굴 속도가 2배\"라며 설치하래요.",
+  "qEn": "You get a \"Pi Browser Pro\" apk file by message, promising \"double mining speed\".",
+  "x": "Pi 앱과 Pi Browser는 공식 앱 스토어에서만 받아야 해요. 출처 모를 설치 파일은 지갑 정보를 훔쳐 갈 수 있어요.",
+  "xEn": "Only install Pi apps from the official app stores. Unknown installers can steal your wallet."
+ },
+ {
+  "a": "scam",
+  "q": "니콜라스 코칼리스라고 소개한 계정이 DM으로 \"특별히 선택된 파이오니어에게만 드리는 기회\"라며 연락했어요.",
+  "qEn": "An account claiming to be Nicolas Kokkalis DMs you about \"a special chance for selected pioneers\".",
+  "x": "창립자는 개인 DM으로 파이오니어에게 기회를 제안하지 않아요. 창립자 이름을 빌린 사칭은 아주 흔해요.",
+  "xEn": "The founders do not offer private deals by DM. Impersonating them is very common."
+ },
+ {
+  "a": "scam",
+  "q": "\"파이를 1개당 314,159달러에 사 드립니다. 먼저 활성화 수수료 100달러만 보내 주세요.\"",
+  "qEn": "\"We buy Pi at $314,159 each. Just send a $100 activation fee first.\"",
+  "x": "터무니없이 비싼 값에 사 준다며 먼저 돈을 받는 건 선입금 사기예요. 수수료를 보내면 연락이 끊겨요.",
+  "xEn": "An unrealistic price plus an upfront fee is advance-fee fraud. Pay and they vanish."
+ },
+ {
+  "a": "safe",
+  "q": "친구가 Pi에 가입할 때 내 사용자 이름을 초대 코드로 넣었어요.",
+  "qEn": "A friend used your username as the invitation code when joining Pi.",
+  "x": "초대 코드는 사용자 이름일 뿐이라 알려 줘도 괜찮아요. 패스프레이즈와는 전혀 달라요.",
+  "xEn": "An invitation code is just a username, safe to share. It is nothing like your passphrase."
+ },
+ {
+  "a": "scam",
+  "q": "\"파이 투자 리딩방! 매달 30% 수익 보장, 원금도 보장해 드립니다.\"",
+  "qEn": "\"Pi investment group! 30% guaranteed every month, principal guaranteed.\"",
+  "x": "수익과 원금을 \"보장\"한다는 말 자체가 경고 신호예요. 진짜 투자에는 보장이 없어요.",
+  "xEn": "\"Guaranteed returns\" is itself the warning sign. Real investments guarantee nothing."
+ },
+ {
+  "a": "scam",
+  "q": "\"채굴 속도를 3배로 올려 주는 부스터! 월 5 Pi만 내면 됩니다.\"",
+  "qEn": "\"A booster that triples your mining rate! Only 5 Pi a month.\"",
+  "x": "채굴 속도는 돈을 내서 올릴 수 없어요. 보안 서클, 추천 팀 같은 Pi 앱 안의 공식 방법만 있어요.",
+  "xEn": "You cannot buy a faster mining rate. Only official in-app features like Security Circles affect it."
+ },
+ {
+  "a": "scam",
+  "q": "\"이 메일에 24시간 안에 답하지 않으면 회원님의 Pi 계정이 삭제됩니다. 아래 링크에서 본인 확인을 해 주세요.\"",
+  "qEn": "\"Reply within 24 hours or your Pi account will be deleted. Verify through the link below.\"",
+  "x": "겁을 주고 시간을 재촉하는 메일은 낚시예요. 계정 관련 안내는 Pi 앱 안에서 직접 확인하세요.",
+  "xEn": "Threats with a deadline are phishing. Check account notices inside the Pi app itself."
+ },
+ {
+  "a": "safe",
+  "q": "실제로 알고 믿을 수 있는 가족과 친구 몇 명을 Pi 앱의 보안 서클에 넣었어요.",
+  "qEn": "You added a few family members and friends you truly trust to your Security Circle in the Pi app.",
+  "x": "보안 서클의 원래 쓰임새예요. 모르는 사람이 아니라 실제로 아는 사람을 넣는 게 맞아요.",
+  "xEn": "That is exactly what Security Circles are for: people you really know."
+ },
+ {
+  "a": "scam",
+  "q": "\"KYC 서류는 이 웹사이트에 올려 주세요. 신분증 앞뒷면과 셀카가 필요합니다.\"라는 링크를 받았어요.",
+  "qEn": "You get a link: \"Upload your KYC documents here — both sides of your ID and a selfie.\"",
+  "x": "KYC는 Pi 앱이 연결해 주는 공식 KYC 앱 안에서만 해요. 외부 사이트에 신분증을 올리면 신분 도용에 쓰일 수 있어요.",
+  "xEn": "KYC is only done in the official KYC app opened from Pi. Uploading your ID elsewhere risks identity theft."
+ },
+ {
+  "a": "scam",
+  "q": "온라인에서 알게 된 친구가 몇 주째 다정하게 대화하더니, \"급한 일이 생겼다\"며 파이를 조금 보내 달래요.",
+  "qEn": "An online friend you have chatted with for weeks suddenly asks you to send some Pi for \"an emergency\".",
+  "x": "오랜 시간 신뢰를 쌓은 뒤 돈을 요구하는 건 로맨스·친분 사기의 전형이에요. 한 번 보낸 파이는 되돌릴 수 없어요.",
+  "xEn": "Building trust then asking for money is a classic romance scam. Sent Pi cannot be recovered."
+ },
+ {
+  "a": "scam",
+  "q": "\"재택 알바! 월급은 파이로 드립니다. 시작하려면 보증금 20 Pi를 먼저 보내 주세요.\"",
+  "qEn": "\"Work from home, paid in Pi! Send a 20 Pi deposit to get started.\"",
+  "x": "일을 시작하기 전에 보증금을 요구하는 일자리는 사기예요.",
+  "xEn": "A job that asks you to pay a deposit first is a scam."
+ },
+ {
+  "a": "safe",
+  "q": "Pi 앱을 열고 하루에 한 번 채굴 버튼을 눌렀어요. 돈은 내지 않았어요.",
+  "qEn": "You opened the Pi app and tapped the mining button once for the day. No payment involved.",
+  "x": "Pi 채굴의 정상적인 방법이에요. 채굴은 무료예요.",
+  "xEn": "That is the normal way to mine Pi. Mining is free."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi 거래소 상장 전 프리세일! 지금 사면 상장 후 10배!\"라며 다른 코인으로 파이를 사라고 해요.",
+  "qEn": "\"Pi pre-sale before the exchange listing! Buy now with other coins and get 10x after listing!\"",
+  "x": "\"상장 전 프리세일\"과 \"몇 배 보장\"은 가짜 판매의 대표적인 문구예요.",
+  "xEn": "\"Pre-sale before listing\" and \"guaranteed 10x\" are hallmarks of fake sales."
+ },
+ {
+  "a": "scam",
+  "q": "\"패스프레이즈를 잃어버리셨나요? 저희가 지갑을 복구해 드립니다. 남아 있는 단어를 알려 주세요.\"",
+  "qEn": "\"Lost your passphrase? We can recover your wallet. Tell us the words you remember.\"",
+  "x": "복구 업체를 사칭해 남은 단어를 받아 내는 수법이에요. 단어 몇 개만 알려 줘도 위험해요.",
+  "xEn": "Fake \"recovery services\" collect your remaining words. Even a few words are dangerous."
+ },
+ {
+  "a": "scam",
+  "q": "상담원이 \"문제를 해결해 드릴게요\"라며 화면 공유를 켜고 Pi 지갑을 열어 보라고 해요.",
+  "qEn": "A \"support agent\" asks you to share your screen and open your Pi wallet so they can \"fix the problem\".",
+  "x": "화면 공유 중에 지갑을 열면 패스프레이즈와 잔액이 그대로 보여요. 진짜 지원팀은 이런 요청을 하지 않아요.",
+  "xEn": "Opening your wallet while sharing your screen exposes everything. Real support never asks this."
+ },
+ {
+  "a": "safe",
+  "q": "Pi 노드 프로그램을 Pi Network 공식 사이트(minepi.com)에서 내려받았어요.",
+  "qEn": "You downloaded the Pi Node software from the official site, minepi.com.",
+  "x": "노드는 공식 사이트에서 받는 게 맞아요. 다른 곳에서 받은 노드 파일은 피하세요.",
+  "xEn": "The official site is the right place. Avoid node files from anywhere else."
+ },
+ {
+  "a": "scam",
+  "q": "\"지갑이 정상인지 확인하려면 테스트로 1 Pi만 이 주소로 보내 주세요. 바로 돌려드려요.\"",
+  "qEn": "\"To check your wallet works, send 1 Pi to this address as a test. We will send it right back.\"",
+  "x": "\"테스트 송금\"은 돌려받지 못해요. 1 Pi로 시작해서 점점 더 큰 금액을 요구하기도 해요.",
+  "xEn": "\"Test transfers\" never come back, and they often lead to bigger requests."
+ },
+ {
+  "a": "scam",
+  "q": "텔레그램에 \"Pi 공식 고객센터\"라는 방이 있어요. 관리자가 개인 메시지로 문제를 도와주겠다고 해요.",
+  "qEn": "A Telegram group called \"Pi Official Help Desk\"; an admin offers to help you by private message.",
+  "x": "관리자를 사칭해 먼저 개인 메시지를 보내는 건 흔한 수법이에요. 공식 도움은 Pi 앱 안에서 받으세요.",
+  "xEn": "Fake admins messaging you first is a common trick. Get help inside the Pi app."
+ },
+ {
+  "a": "scam",
+  "q": "\"리트윗하고 지갑을 연결하면 100 Pi 무료 증정!\" 링크를 누르니 패스프레이즈 입력 창이 나와요.",
+  "qEn": "\"Retweet and connect your wallet for 100 free Pi!\" The link asks for your passphrase.",
+  "x": "무료라면서 패스프레이즈를 묻는 순간 사기예요. 그 창은 지갑을 훔치려는 가짜 화면이에요.",
+  "xEn": "\"Free\" plus a passphrase prompt equals theft."
+ },
+ {
+  "a": "safe",
+  "q": "Pi 앱이 안내하는 KYC 메뉴로 들어가 공식 KYC 앱에서 신청했어요. 신청비는 내지 않았어요.",
+  "qEn": "You applied for KYC through the menu in the Pi app, using the official KYC app, without paying anything.",
+  "x": "공식 KYC 절차예요. Pi 앱 안에서 연결되는 공식 경로로만 신청하세요.",
+  "xEn": "That is the official KYC process. Only use the path the Pi app gives you."
+ },
+ {
+  "a": "scam",
+  "q": "어떤 앱 화면 안에 \"보너스를 받으려면 여기에 패스프레이즈를 입력하세요\"라는 칸이 있어요.",
+  "qEn": "An app shows a box: \"Enter your passphrase here to claim your bonus.\"",
+  "x": "정상적인 앱은 패스프레이즈를 입력하라고 하지 않아요. 결제는 Pi 지갑의 승인 화면에서만 이뤄져요.",
+  "xEn": "Legit apps never ask for your passphrase. Payments only happen on the Pi wallet approval screen."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi 체크카드 사전 예약! 예약금 10 Pi를 내면 출시 즉시 1순위로 받습니다.\"",
+  "qEn": "\"Pi debit card pre-order! Pay 10 Pi to get it first at launch.\"",
+  "x": "공식 발표에 없는 상품을 미리 돈 받고 파는 건 사기예요. 새 기능은 Pi 공식 채널에서 먼저 확인하세요.",
+  "xEn": "Selling products that were never officially announced is a scam. Check official Pi channels first."
+ },
+ {
+  "a": "scam",
+  "q": "\"해커톤 상금에 당첨되셨어요! 상금을 받으려면 송금 수수료 15 Pi를 먼저 보내 주세요.\"",
+  "qEn": "\"You won a hackathon prize! Send a 15 Pi transfer fee first to receive it.\"",
+  "x": "상금을 주기 전에 수수료를 내라는 건 선입금 사기예요.",
+  "xEn": "Paying a fee before receiving a prize is advance-fee fraud."
+ },
+ {
+  "a": "safe",
+  "q": "24단어 패스프레이즈를 종이에 적어 집 안 안전한 곳에 보관했어요. 사진은 찍지 않았어요.",
+  "qEn": "You wrote your 24-word passphrase on paper and keep it somewhere safe at home. No photos.",
+  "x": "아주 좋은 습관이에요. 사진·메모 앱·클라우드에 두면 해킹으로 새어 나갈 수 있어요.",
+  "xEn": "Great habit. Photos, notes apps and clouds can leak in a hack."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi 행사 VIP 입장권 판매! 창립자와 화상으로 직접 만날 수 있어요. 50 Pi\"",
+  "qEn": "\"Pi event VIP pass! Meet the founders on a video call. 50 Pi.\"",
+  "x": "공식 발표에 없는 입장권이나 만남을 파는 건 사기예요. 가짜 입장권은 큰 행사 때마다 나타나요. 행사 소식은 Pi 공식 채널에서 확인하세요.",
+  "xEn": "Passes or meetings not in official announcements are scams, and they pop up at every big event. Check official Pi channels."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi Network 한국 공식 모임\" 운영자가 \"회원 등급을 올리려면 30 Pi를 예치하라\"고 해요.",
+  "qEn": "The leader of a \"Pi Network Korea official group\" asks you to deposit 30 Pi to raise your member level.",
+  "x": "공식 이름을 붙인 모임이 예치금을 받는 건 위험 신호예요. Pi에는 돈을 내고 올리는 회원 등급이 없어요.",
+  "xEn": "A group using an official-sounding name and asking for deposits is a red flag. Pi has no paid member levels."
+ },
+ {
+  "a": "scam",
+  "q": "\"채굴이 더 잘되는 Pi Mining 2.0 앱!\"이라는 광고로 비슷한 이름의 다른 앱을 깔라고 해요.",
+  "qEn": "An ad pushes \"Pi Mining 2.0 — mines better!\", a look-alike app.",
+  "x": "이름과 로고를 흉내 낸 가짜 앱이에요. 채굴은 공식 Pi 앱에서만 할 수 있어요.",
+  "xEn": "It is a copycat app. Mining only happens in the official Pi app."
+ },
+ {
+  "a": "safe",
+  "q": "친구에게 파이를 받으려고 G로 시작하는 내 지갑 주소(공개 주소)만 알려 줬어요.",
+  "qEn": "To receive Pi from a friend, you shared only your wallet address starting with G.",
+  "x": "지갑 주소는 받는 데 쓰는 공개 정보라 알려 줘도 괜찮아요. 패스프레이즈만은 절대 안 돼요.",
+  "xEn": "Your public address is meant for receiving. Just never share the passphrase."
+ },
+ {
+  "a": "scam",
+  "q": "누군가 \"계정을 확인하려고 문자로 보낸 인증번호를 알려 달라\"고 해요.",
+  "qEn": "Someone asks you to tell them the verification code just sent to you by SMS.",
+  "x": "인증번호를 넘기면 내 계정을 그 사람이 가져갈 수 있어요. 인증번호는 누구에게도 알려 주지 마세요.",
+  "xEn": "Sharing that code lets them take over your account. Never share it."
+ },
+ {
+  "a": "scam",
+  "q": "\"신분증을 빌려주시면 다른 사람 KYC에 쓰고 1건당 5 Pi를 드려요.\"",
+  "qEn": "\"Lend us your ID for other people's KYC and earn 5 Pi each time.\"",
+  "x": "내 신분을 남의 계정에 쓰게 하는 건 사기이자 불법이에요. 내 계정도 위험해질 수 있어요.",
+  "xEn": "Letting others use your identity is fraud and illegal, and it puts your own account at risk."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi 스테이킹 디앱! 맡기기만 하면 매일 3% 이자가 붙어요.\"",
+  "qEn": "\"Pi staking dApp! Just deposit and earn 3% interest every day.\"",
+  "x": "하루 3%면 1년에 수천 % 수익이라는 뜻이에요. 비현실적인 이자는 폰지 사기의 신호예요.",
+  "xEn": "3% a day means thousands of percent a year. Unrealistic interest signals a Ponzi scheme."
+ },
+ {
+  "a": "safe",
+  "q": "메인넷 이전을 Pi 앱의 메인넷 체크리스트를 따라 하나씩 진행했어요.",
+  "qEn": "You moved to Mainnet by following the Mainnet checklist in the Pi app step by step.",
+  "x": "공식 방법이에요. 대행이나 외부 사이트 없이 체크리스트만 따라가면 돼요.",
+  "xEn": "That is the official way. No agents or outside sites needed."
+ },
+ {
+  "a": "scam",
+  "q": "\"잠긴(락업) 파이를 지금 바로 풀어 드립니다. 해제 수수료 20%.\"",
+  "qEn": "\"We can unlock your locked-up Pi right now. 20% unlock fee.\"",
+  "x": "락업 기간은 내가 선택한 설정대로 지켜져요. 남이 수수료를 받고 풀어 줄 수 없어요.",
+  "xEn": "Lockups follow the settings you chose. No one can release them for a fee."
+ },
+ {
+  "a": "scam",
+  "q": "\"노드 보상 2배 프로그램! 노드 운영자 전용, 가입비 10 Pi.\"",
+  "qEn": "\"Double node rewards program! Node operators only, 10 Pi to join.\"",
+  "x": "노드 보상은 공식 노드 소프트웨어와 규칙으로만 정해져요. 돈 내고 늘리는 프로그램은 없어요.",
+  "xEn": "Node rewards come only from the official node software and rules. There is no paid boost."
+ },
+ {
+  "a": "scam",
+  "q": "YouTube 라이브에 창립자 얼굴이 나오며 \"지금 이 주소로 보내면 두 배로 돌려드려요\"라는 자막이 떠요.",
+  "qEn": "A YouTube live shows a founder's face with a caption: \"Send to this address now and get double back.\"",
+  "x": "얼굴과 목소리를 합성한 가짜 방송이 늘고 있어요. 창립자가 송금을 부탁하는 일은 없어요.",
+  "xEn": "Deepfake streams are on the rise. Founders never ask you to send them anything."
+ },
+ {
+  "a": "safe",
+  "q": "내 거래 내역을 Pi 공식 블록 탐색기에서 지갑 주소로 찾아봤어요.",
+  "qEn": "You looked up your transactions on the official Pi block explorer using your wallet address.",
+  "x": "블록 탐색기는 누구나 볼 수 있는 공개 기록이에요. 주소만으로 조회하니 안전해요.",
+  "xEn": "The block explorer is a public record. Looking up by address is safe."
+ },
+ {
+  "a": "scam",
+  "q": "\"어려운 이웃을 돕는 Pi 기부 캠페인\"이라며 지갑 주소만 하나 알려 주고 사연을 보내요. 단체 이름이나 확인할 곳은 없어요.",
+  "qEn": "A \"Pi charity drive\" sends a sad story and one wallet address, with no organization or way to verify.",
+  "x": "확인할 수 없는 기부 요청은 감정을 이용한 사기일 수 있어요. 보내기 전에 단체를 꼭 확인하세요.",
+  "xEn": "Unverifiable charity requests often play on emotions. Check the organization before giving."
+ },
+ {
+  "a": "scam",
+  "q": "\"큰 거래소에 오늘 파이가 상장됐어요! 저희에게 팔면 시세보다 20% 더 드려요. 먼저 보내 주세요.\"",
+  "qEn": "\"Pi just listed on a big exchange! Sell to us for 20% above market — send first.\"",
+  "x": "확인되지 않은 소식에 웃돈까지 얹어 먼저 보내라는 건 사기예요. 소식은 공식 발표로 확인하세요.",
+  "xEn": "Unverified news plus a premium plus \"send first\" is a scam. Check official announcements."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi와 1:1로 바꿔 주는 BNB 체인 Pi 토큰이 나왔어요. 지금 사면 나중에 메인넷 Pi로 바꿔 줘요.\"",
+  "qEn": "\"A Pi token on BNB chain that converts 1:1 to Mainnet Pi later. Buy now!\"",
+  "x": "다른 체인의 \"Pi 토큰\"은 Pi Network와 관계없는 가짜예요. 메인넷 Pi로 바꿔 주지 않아요.",
+  "xEn": "\"Pi tokens\" on other chains are unrelated fakes. They do not convert to Mainnet Pi."
+ },
+ {
+  "a": "safe",
+  "q": "Pi Browser에서 결제하기 전에 주소창을 보고 내가 원래 쓰던 앱 주소가 맞는지 확인했어요.",
+  "qEn": "Before paying in the Pi Browser, you checked the address bar to make sure it is the app you know.",
+  "x": "훌륭한 습관이에요. 비슷한 이름의 가짜 앱을 걸러 낼 수 있어요.",
+  "xEn": "Great habit. It filters out look-alike fake apps."
+ },
+ {
+  "a": "scam",
+  "q": "\"QR 코드를 찍으면 이벤트 보상이 바로 들어와요.\" 찍으니 낯선 사이트가 열리고 지갑 연결을 요구해요.",
+  "qEn": "\"Scan this QR code for an instant event reward.\" It opens an unknown site asking to connect your wallet.",
+  "x": "QR 코드는 어디로든 연결될 수 있어요. 낯선 사이트에서 지갑을 연결하거나 정보를 입력하지 마세요.",
+  "xEn": "A QR code can lead anywhere. Do not connect your wallet on unknown sites."
+ },
+ {
+  "a": "scam",
+  "q": "\"보안 서클 자리를 팔아요. 10 Pi만 내면 채굴 속도가 올라가는 서클에 넣어 드려요.\"",
+  "qEn": "\"Selling Security Circle spots. Pay 10 Pi and I will add you to boost your mining.\"",
+  "x": "보안 서클은 내가 실제로 아는 믿을 만한 사람끼리 맺는 거예요. 자리를 사고파는 건 사기예요.",
+  "xEn": "Security Circles are for people you actually know and trust. Buying a spot is a scam."
+ },
+ {
+  "a": "scam",
+  "q": "\"KYC가 끝난 Pi 계정을 팝니다. 잔액 5,000 Pi 포함.\"",
+  "qEn": "\"Selling a KYC-verified Pi account with 5,000 Pi balance.\"",
+  "x": "계정 매매는 Pi 규칙 위반이고, 돈만 받고 넘기지 않거나 나중에 되찾아 가는 경우가 많아요.",
+  "xEn": "Account trading breaks Pi rules, and sellers often take the money or reclaim the account."
+ },
+ {
+  "a": "safe",
+  "q": "앱을 쓰다가 생각지 않은 결제 승인 창이 떠서 \"취소\"를 눌렀어요.",
+  "qEn": "An unexpected payment approval popped up while using an app, so you tapped cancel.",
+  "x": "잘하셨어요. 내가 원하지 않은 결제는 언제든 거절할 수 있어요.",
+  "xEn": "Well done. You can always refuse a payment you did not intend."
+ },
+ {
+  "a": "scam",
+  "q": "\"이전 가능 잔액을 늘려 드려요. 저희에게 연락 주세요.\"라는 댓글이 내 글에 달렸어요.",
+  "qEn": "A reply under your post: \"We can increase your transferable balance. Contact us.\"",
+  "x": "이전 가능 잔액은 Pi의 공식 절차로만 바뀌어요. 이런 댓글은 연락을 유도하는 미끼예요.",
+  "xEn": "Transferable balance only changes through official Pi processes. Such replies are bait."
+ },
+ {
+  "a": "scam",
+  "q": "\"파이 가격이 다음 달 100배 오릅니다. 확실한 정보, VIP 방 입장료 20 Pi.\"",
+  "qEn": "\"Pi will 100x next month. Inside info — VIP room entry 20 Pi.\"",
+  "x": "가격을 \"확실하게\" 아는 사람은 없어요. 확실한 정보를 판다는 것 자체가 사기의 신호예요.",
+  "xEn": "No one knows prices for sure. Selling \"certain\" tips is itself the scam."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi 앱 업데이트 필수! 아래 링크로 새 버전을 받으세요.\" 링크 주소는 처음 보는 사이트예요.",
+  "qEn": "\"Mandatory Pi app update! Download the new version from this link.\" The address is unfamiliar.",
+  "x": "앱 업데이트는 휴대폰의 공식 앱 스토어에서만 하세요. 낯선 링크의 업데이트는 악성 앱일 수 있어요.",
+  "xEn": "Only update through your official app store. \"Updates\" from links can be malware."
+ },
+ {
+  "a": "safe",
+  "q": "창립자를 사칭하는 계정을 보고 X의 신고 기능으로 신고했어요.",
+  "qEn": "You saw an account impersonating a founder and reported it with X's report feature.",
+  "x": "좋은 행동이에요. 신고가 쌓이면 다른 파이오니어의 피해를 막을 수 있어요.",
+  "xEn": "Good move. Reports help protect other pioneers."
+ },
+ {
+  "a": "scam",
+  "q": "\"메인넷 이전 마감이 오늘이에요! 지금 이 주소로 파이를 보내야 사라지지 않아요.\"",
+  "qEn": "\"Migration deadline is today! Send your Pi to this address now or it will be lost.\"",
+  "x": "파이를 남의 주소로 보내야 지켜진다는 말은 사기예요. 공식 일정과 절차는 Pi 앱 안에서 확인하세요.",
+  "xEn": "No real process needs you to send Pi to someone else. Check official dates in the Pi app."
+ },
+ {
+  "a": "scam",
+  "q": "게임 앱에서 \"지금 10 Pi를 걸면 5분 만에 30 Pi가 될 수도 있어요!\" 하며 계속 더 걸라고 해요.",
+  "qEn": "A game app urges you: \"Bet 10 Pi now, it could be 30 Pi in 5 minutes!\" and keeps pushing for more.",
+  "x": "짧은 시간에 몇 배를 약속하며 계속 더 걸게 만드는 건 도박·사기의 방식이에요.",
+  "xEn": "Promising multiples in minutes and pushing for more is how gambling scams work."
+ },
+ {
+  "a": "scam",
+  "q": "\"Pi 지갑 주소와 패스프레이즈를 적어 주시면 서밋 기념 NFT를 보내 드려요.\"",
+  "qEn": "\"Leave your wallet address and passphrase and we will send you a summit NFT.\"",
+  "x": "주소만으로도 무언가를 보낼 수 있어요. 패스프레이즈까지 달라는 건 지갑을 가져가겠다는 뜻이에요.",
+  "xEn": "Sending only needs your address. Asking for the passphrase means they want your wallet."
+ },
+ {
+  "a": "safe",
+  "q": "새 기능 소식을 듣고, 바로 믿기 전에 Pi 앱 안의 공지와 Pi Network 공식 계정에서 먼저 확인했어요.",
+  "qEn": "Hearing about a new feature, you checked the in-app news and the official Pi Network account before believing it.",
+  "x": "가장 확실한 습관이에요. 공식 채널에 없는 소식은 일단 의심해 보세요.",
+  "xEn": "The surest habit. Be wary of news that is not on official channels."
+ },
+ {
+  "a": "safe",
+  "q": "Pi 생태계 앱에 로그인할 때 Pi 화면이 \"결제 권한도 함께 허락할까요?\"라고 물어요. 실제 결제는 매번 따로 승인 창이 떠요.",
+  "qEn": "When logging into a Pi app, the Pi screen asks to allow payments too; each actual payment still needs its own approval.",
+  "x": "정상이에요. 결제 권한은 앱이 결제를 \"요청\"할 수 있게 해 줄 뿐이고, 돈은 내가 매번 승인해야만 나가요.",
+  "xEn": "Normal. The permission only lets the app request payments; money moves only when you approve each one."
+ }
+];
+const QUIZ_BLOB = 'dibutades-quiz.json';
+function quizToday(){
+  const kst = new Date(Date.now() + 9 * 3600 * 1000);
+  const date = kst.toISOString().slice(0, 10);
+  const dayNo = Math.floor(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) / 86400000);
+  const QUIZ_START = 20767; // 2026-11-10 = 1번 문제
+  const idx = (((dayNo - QUIZ_START) % QUIZ.length) + QUIZ.length) % QUIZ.length;
+  return { date, idx, item: QUIZ[idx] };
+}
+async function quizLoad(date){
+  try{
+    const { get } = require('@vercel/blob');
+    const res = await get(QUIZ_BLOB, { access: 'private' });
+    const d = JSON.parse(await new Response(res.stream).text());
+    if(d && d.date === date) return d;
+  }catch(e){}
+  return { date, total: 0, right: 0, voters: {} };
+}
+async function quizSave(d){
+  const { put } = require('@vercel/blob');
+  await put(QUIZ_BLOB, JSON.stringify(d), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+}
+function quizStats(d){ return { total: d.total || 0, right: d.right || 0 }; }
+function mountQuiz(app){
+  app.get('/api/quiz', async (req, res) => {
+    const { date, idx, item } = quizToday();
+    const d = await quizLoad(date);
+    res.json({ date, no: idx + 1, count: QUIZ.length, q: item.q, qEn: item.qEn, stats: quizStats(d) });
+  });
+  app.post('/api/quiz/answer', async (req, res) => {
+    const { choice, visitorId } = req.body || {};
+    if(choice !== 'scam' && choice !== 'safe') return res.status(400).json({ error: 'bad_choice' });
+    const { date, item } = quizToday();
+    const correct = choice === item.a;
+    let d = await quizLoad(date);
+    const vid = String(visitorId || '').slice(0, 64);
+    try{
+      if(vid && !d.voters[vid] && Object.keys(d.voters).length < 20000){
+        d.voters[vid] = 1; d.total = (d.total || 0) + 1; if(correct) d.right = (d.right || 0) + 1;
+        await quizSave(d);
+      }
+    }catch(e){ console.error('quiz save', e && e.message); }
+    res.json({ date, correct, a: item.a, x: item.x, xEn: item.xEn, stats: quizStats(d) });
+  });
+}
+
 module.exports = function mountNews(app){
+  mountQuiz(app);
   mountMeal(app);
   mountScam(app);
   app.get('/api/news', async (req, res) => {
