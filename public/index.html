@@ -1111,6 +1111,7 @@
   .news-empty{ font-size:12px; color:var(--chalk-dim); padding:18px 0; text-align:center; }
   .news-sub{ font-size:11px; font-weight:700; color:var(--chalk-dim); letter-spacing:0.5px; margin:14px 0 6px; }
   .news-sub:first-child{ margin-top:0; }
+  .news-sub-en{ margin-top:18px; padding-top:12px; border-top:1px solid var(--line); }
   .news-list{ list-style:none; margin:0; padding:0; }
   .news-list li{ padding:9px 0; border-top:1px dashed var(--line); }
   .news-list li:first-child{ border-top:none; padding-top:2px; }
@@ -2863,20 +2864,28 @@ function formatTime(ts){
     if(topic === 'pi'){
       // 가격은 화면 맨 아래 숫자 줄에서만 보여 줌
       body.innerHTML =
-        '<div class="news-sub">파이 소식 · 최근 7일<span class="sub-en">Pi news · last 7 days</span></div>' + newsList(d.news, '최근 7일 안의 파이 소식이 없어요.') +
+        '<div class="news-sub">파이 소식 · 최근 7일</div>' + newsList(d.news, '최근 7일 안의 한국어 소식이 없어요.') +
+        '<div class="news-sub news-sub-en">Pi News · last 7 days</div>' + newsList(d.newsEn, 'No English news in the last 7 days.') +
         writeLinkHtml('#파이소식 ', '이 소식에 한 줄 남기기', 'Leave a line about it');
     }else if(topic === 'crypto'){
       // 가격 순위는 빼고 소식만
       body.innerHTML =
-        '<div class="news-sub">암호화폐 소식 · 최근 3일<span class="sub-en">Crypto news · last 3 days</span></div>' + newsList(d.news, '최근 3일 안의 소식이 없어요.') +
+        '<div class="news-sub">암호화폐 소식 · 최근 3일</div>' + newsList(d.news, '최근 3일 안의 한국어 소식이 없어요.') +
+        '<div class="news-sub news-sub-en">Crypto News · last 3 days</div>' + newsList(d.newsEn, 'No English news in the last 3 days.') +
         writeLinkHtml('#암호화폐 ', '이 소식에 한 줄 남기기', 'Leave a line about it');
     }else{
-      const items = (d.events || []).map(e =>
-        `<li><span class="yr">${e.year}</span>${e.link ? `<a class="tx" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.text)}</a>` : `<span class="tx">${escapeHtml(e.text)}</span>`}</li>`).join('');
+      const histList = (list, emptyMsg) => {
+        const li = (list || []).map(e =>
+          `<li><span class="yr">${e.year}</span>${e.link ? `<a class="tx" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.text)}</a>` : `<span class="tx">${escapeHtml(e.text)}</span>`}</li>`).join('');
+        return li ? `<ul class="news-list hist">${li}</ul>` : `<div class="news-empty">${emptyMsg}</div>`;
+      };
+      const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
       body.innerHTML =
         `<div class="news-sub">${d.month}월 ${d.day}일, 역사 속 오늘</div>` +
-        (items ? `<ul class="news-list hist">${items}</ul>` : '<div class="news-empty">자료를 불러오지 못했어요.</div>') +
-        ((d.events || []).some(e => e.lang === 'en') ? '<div class="news-note">출처: 위키백과 (한국어 자료가 없는 날은 영어로 보여요)</div>' : '<div class="news-note">출처: 위키백과</div>') +
+        histList(d.events, '오늘은 한국어 자료가 없어요.') +
+        `<div class="news-sub news-sub-en">On This Day · ${MON[d.month - 1]} ${d.day}</div>` +
+        histList(d.eventsEn, 'No English entries today.') +
+        '<div class="news-note">출처: 위키백과 · Source: Wikipedia</div>' +
         writeLinkHtml(`#${d.month}월${d.day}일 `, '이 날에 한 줄 남기기', 'Leave a line for this day');
     }
   }
