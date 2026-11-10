@@ -1252,7 +1252,31 @@
     .layout{ max-width:760px !important; justify-content:center; }
     .app.showing-fullpage ~ #rightpanel{ display:none !important; }
   }
-  .foot-links{ display:flex; justify-content:center; margin-top:12px; }
+
+  /* ---------- 처음 방문 소개 팝업 / Welcome popup ---------- */
+  .wc-wrap{ position:fixed; inset:0; z-index:2100; background:rgba(10,9,14,0.74); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .wc-wrap[hidden]{ display:none; }
+  .wc-card{ position:relative; width:100%; max-width:440px; max-height:calc(100dvh - 32px); overflow-y:auto; box-sizing:border-box; padding:22px 18px 16px;
+    border-radius:18px; background:var(--card); color:var(--chalk); border:1px solid var(--card-line); box-shadow:0 18px 40px rgba(0,0,0,0.45); }
+  .wc-x{ position:absolute; top:8px; right:8px; width:44px; height:44px; border:none; border-radius:50%; background:transparent; color:var(--chalk-dim);
+    font-size:22px; line-height:1; cursor:pointer; }
+  .wc-x:hover, .wc-x:focus-visible{ background:rgba(127,127,127,0.16); color:var(--chalk); }
+  .wc-title{ font-size:18px; font-weight:800; line-height:1.4; padding-right:40px; }
+  .wc-en{ display:block; font-size:11.5px; font-weight:400; color:var(--chalk-dim); margin-top:2px; line-height:1.45; }
+  .wc-lead{ margin:10px 0 0; font-size:13.5px; line-height:1.6; }
+  .wc-list{ list-style:none; margin:14px 0 0; padding:0; display:grid; gap:8px; }
+  .wc-list li{ display:grid; grid-template-columns:28px minmax(0,1fr); gap:8px; align-items:start; font-size:13.5px; line-height:1.5; }
+  .wc-list .ic{ font-size:18px; line-height:1.3; text-align:center; }
+  .wc-list b{ color:var(--spray-y); }
+  .wc-safe{ margin-top:16px; padding:12px 12px 10px; border-radius:12px; border:1px solid rgba(34,197,94,0.45); background:rgba(34,197,94,0.10); }
+  .wc-safe-h{ font-size:14px; font-weight:800; color:#4ade80; }
+  body.light-theme .wc-safe-h{ color:#15803d; }
+  .wc-safe ul{ margin:8px 0 0; padding-left:18px; font-size:12.5px; line-height:1.6; }
+  .wc-safe li + li{ margin-top:5px; }
+  .wc-safe .wc-en{ font-size:11px; margin-top:1px; }
+  .wc-go{ width:100%; height:48px; margin-top:14px; border:none; border-radius:12px; background:var(--spray-y); color:#241b04; font-family:inherit; font-size:15px; font-weight:800; cursor:pointer; }
+  .wc-go small{ font-size:11px; font-weight:600; opacity:0.8; margin-left:4px; }
+  .foot-links{ display:flex; justify-content:center; flex-wrap:wrap; gap:4px 12px; margin-top:12px; }
   .foot-link{ background:none; border:none; color:var(--chalk-dim); font-family:inherit; font-size:12px; min-height:40px; padding:0 8px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
   .foot-link span{ font-size:10.5px; opacity:0.8; }
   .write-link{ display:flex; align-items:center; justify-content:center; gap:6px; width:100%; min-height:44px; margin-top:12px; border-radius:12px;
@@ -1296,6 +1320,34 @@
 </head>
 <body>
 <canvas id="seasonFx" aria-hidden="true"></canvas>
+
+<!-- 처음 방문한 분께 보여 주는 앱 소개 (X로 닫으면 다음부터는 안 보임, 아래 '디부타데스 소개'로 다시 열기) -->
+<div id="welcome" class="wc-wrap" hidden role="dialog" aria-modal="true" aria-labelledby="wcTitle">
+  <div class="wc-card">
+    <button type="button" class="wc-x" id="wcX" aria-label="닫기 / Close">✕</button>
+    <div class="wc-title" id="wcTitle">디부타데스에 오신 걸 환영해요 🍀<span class="wc-en">Welcome to Dibutades</span></div>
+    <p class="wc-lead">사람이 직접 쓴 한 줄을 모으는 Pi Network의 작은 광장이에요. 느낌 오면 낙서하면 돼요~
+      <span class="wc-en">A small Pi Network square that collects lines written by real people. Feel something? Just scribble it.</span></p>
+    <ul class="wc-list">
+      <li><span class="ic" aria-hidden="true">✏️</span><span><b>쓰기</b> — 오늘의 질문에 한 줄 남기기<span class="wc-en">Write — one line for today's question</span></span></li>
+      <li><span class="ic" aria-hidden="true">🧱</span><span><b>낙서벽</b> — 모두의 한 줄에 마음 하나<span class="wc-en">Wall — react to everyone's lines</span></span></li>
+      <li><span class="ic" aria-hidden="true">🖼️</span><span><b>갤러리</b> — 함께 그리는 '파이오니어들의 은하'<span class="wc-en">Gallery — the Galaxy of Pioneers we draw together</span></span></li>
+      <li><span class="ic" aria-hidden="true">🛡️</span><span><b>007 경보</b> — 파이 사칭·사기 알림<span class="wc-en">Scam Alert — warnings about Pi scams</span></span></li>
+      <li><span class="ic" aria-hidden="true">📰</span><span><b>오늘의 소식</b> — 파이·암호화폐·역사 속 오늘·오늘 뭐 먹지?<span class="wc-en">Today — Pi, crypto, on this day, and world meals</span></span></li>
+    </ul>
+    <div class="wc-safe">
+      <div class="wc-safe-h">🔒 로그인은 안전해요<span class="wc-en">Logging in is safe</span></div>
+      <ul>
+        <li>Pi 공식 로그인만 써요. 비밀번호는 받지 않아요.<span class="wc-en">Only the official Pi login is used. We never take your password.</span></li>
+        <li>24단어 패스프레이즈는 절대 묻지 않아요. 묻는 곳이 있다면 사기예요.<span class="wc-en">We will never ask for your 24-word passphrase. Anyone who does is a scammer.</span></li>
+        <li>앱이 받는 건 Pi 사용자 이름뿐이에요. 이메일·전화번호·위치는 받지 않아요.<span class="wc-en">We only receive your Pi username — no email, phone number or location.</span></li>
+        <li>낙서는 무료예요. 결제는 내가 Pi 지갑에서 직접 승인할 때만 이뤄져요.<span class="wc-en">Writing is free. A payment only happens if you approve it yourself in your Pi wallet.</span></li>
+        <li>구경은 로그인 없이도 자유롭게 할 수 있어요.<span class="wc-en">You can look around freely without logging in.</span></li>
+      </ul>
+    </div>
+    <button type="button" class="wc-go" id="wcGo">둘러보기 시작<small>Start exploring</small></button>
+  </div>
+</div>
 
 <!-- Pi Browser 안내: X·카카오 등 다른 앱 브라우저에서 로그인이 필요한 버튼을 눌렀을 때 -->
 <div id="piGuide" class="pg-wrap" hidden role="dialog" aria-modal="true" aria-labelledby="pgTitle">
@@ -1431,6 +1483,7 @@
           <span class="ts-price">π <b id="tsPrice">--</b> <span id="tsChange"></span></span>
         </div>
         <div class="foot-links">
+          <button type="button" class="foot-link" id="openWelcome">디부타데스 소개 <span>About</span></button>
           <button type="button" class="foot-link" id="openPromo">내 Pi 앱 홍보하기 <span>Promote your Pi app</span> →</button>
         </div>
       </section>
@@ -3146,6 +3199,35 @@ document.addEventListener('click', e => {
   const el = e.target && e.target.closest && e.target.closest('button, a, select, input[type="checkbox"], [role="tab"]');
   if(el) setTimeout(cosmosTouch, 0);   // 로그인 버튼처럼 누른 뒤에 로그인되는 경우도 아래에서 따로 처리
 }, true);
+
+// ---------- 처음 방문 소개 팝업 / Welcome popup ----------
+(function(){
+  const KEY = 'dbtWelcomeSeen';
+  const w = document.getElementById('welcome'); if(!w) return;
+  let lastFocus = null;
+  function open(){
+    lastFocus = document.activeElement;
+    w.hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => { const x = document.getElementById('wcX'); if(x) x.focus(); }, 50);
+  }
+  function close(){
+    w.hidden = true;
+    document.body.style.overflow = '';
+    try{ localStorage.setItem(KEY, '1'); }catch(e){}
+    if(lastFocus && lastFocus.focus) try{ lastFocus.focus(); }catch(e){}
+  }
+  document.getElementById('wcX').addEventListener('click', close);
+  document.getElementById('wcGo').addEventListener('click', close);
+  w.addEventListener('click', e => { if(e.target === w) close(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && !w.hidden) close(); });
+  const again = document.getElementById('openWelcome'); if(again) again.addEventListener('click', open);
+  let seen = false;
+  try{ seen = localStorage.getItem(KEY) === '1'; }catch(e){}
+  // 이미 로그인해 본 적이 있는 분(자동 로그인 기록)에게는 띄우지 않음
+  try{ if(localStorage.getItem('dbtAutoLogin')) seen = true; }catch(e){}
+  if(!seen) open();
+})();
 </script>
 </body>
 </html>
