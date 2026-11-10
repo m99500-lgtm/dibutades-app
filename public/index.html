@@ -1134,6 +1134,7 @@
   .hist li{ display:grid; grid-template-columns:52px minmax(0,1fr); gap:10px; }
   .hist .yr{ font-weight:900; color:var(--spray-y); font-size:14px; padding-top:1px; }
   .hist .tx{ font-size:13px; line-height:1.5; color:var(--chalk); }
+  .hist .tx-en{ display:block; font-size:11.5px; line-height:1.45; color:var(--chalk-dim); margin-top:3px; }
   .hist a.tx{ text-decoration:none; } .hist a.tx:hover{ color:var(--spray-y); }
   .news-note{ font-size:10.5px; color:var(--chalk-dim); margin-top:10px; }
 
@@ -2875,17 +2876,22 @@ function formatTime(ts){
         writeLinkHtml('#암호화폐 ', '이 소식에 한 줄 남기기', 'Leave a line about it');
     }else{
       const histList = (list, emptyMsg) => {
-        const li = (list || []).map(e =>
-          `<li><span class="yr">${e.year}</span>${e.link ? `<a class="tx" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${escapeHtml(e.text)}</a>` : `<span class="tx">${escapeHtml(e.text)}</span>`}</li>`).join('');
+        const li = (list || []).map(e => {
+          const ko = e.ko || (e.lang !== 'en' ? e.text : '') || '';
+          const en = e.en || (e.lang === 'en' ? e.text : '') || '';
+          const main = escapeHtml(ko || en);
+          const sub = ko && en ? `<small class="tx-en">${escapeHtml(en)}</small>` : '';
+          return `<li><span class="yr">${e.year}</span>${e.link ? `<a class="tx" href="${escapeHtml(e.link)}" target="_blank" rel="noopener">${main}${sub}</a>` : `<span class="tx">${main}${sub}</span>`}</li>`;
+        }).join('');
         return li ? `<ul class="news-list hist">${li}</ul>` : `<div class="news-empty">${emptyMsg}</div>`;
       };
       const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
       body.innerHTML =
-        `<div class="news-sub">${d.month}월 ${d.day}일, 역사 속 오늘</div>` +
-        histList(d.events, '오늘은 한국어 자료가 없어요.') +
-        `<div class="news-sub news-sub-en">On This Day · ${MON[d.month - 1]} ${d.day}</div>` +
-        histList(d.eventsEn, 'No English entries today.') +
-        '<div class="news-note">출처: 위키백과 · Source: Wikipedia</div>' +
+        `<div class="news-sub">${d.month}월 ${d.day}일, 한국의 역사 속 오늘<span class="sub-en">On This Day in Korea · ${MON[d.month - 1]} ${d.day}</span></div>` +
+        histList(d.events, '오늘은 한국 자료가 없어요. · No Korean entries today.') +
+        `<div class="news-sub news-sub-en">${d.month}월 ${d.day}일, 세계의 역사 속 오늘<span class="sub-en">On This Day in the World · ${MON[d.month - 1]} ${d.day}</span></div>` +
+        histList(d.eventsEn, '오늘은 세계 자료가 없어요. · No world entries today.') +
+        '<div class="news-note">출처: 위키백과 · 번역: MyMemory 자동 번역 · Source: Wikipedia</div>' +
         writeLinkHtml(`#${d.month}월${d.day}일 `, '이 날에 한 줄 남기기', 'Leave a line for this day');
     }
   }
