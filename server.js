@@ -291,14 +291,45 @@ function visitStats(day){
   return { visitors: v.length, writers, lookers: v.filter(k => !w[k]).length };
 }
 // kind: 'v' = 방문, 'w' = 낙서 작성 (작성자는 방문자로도 함께 기록)
+// 저장 횟수 줄이기 (Vercel 무료 요금제: Blob 쓰기 한 달 2,000번):
+// 새 방문자를 바로 저장하지 않고 서버 메모리에 모았다가 5분에 한 번(또는 30명이 모이면) 한꺼번에 저장합니다.
+// 저장할 때 Blob의 최신 기록을 다시 읽어 합치므로 서버가 여러 개여도 서로 덮어쓰지 않습니다.
+const VISIT_FLUSH_MS = 5 * 60 * 1000, VISIT_FLUSH_COUNT = 30, VISIT_READ_CACHE_MS = 60 * 1000;
+const visitMem = { v: null, at: 0, pending: [], lastFlush: 0 };
+function applyVisitPending(v){
+  for(const p of visitMem.pending){
+    const day = v.days[p.date] = v.days[p.date] || { v: {}, w: {} };
+    day.v = day.v || {}; day.w = day.w || {};
+    day.v[p.key] = 1;
+    if(p.kind === 'w') day.w[p.key] = 1;
+  }
+  return v;
+}
+async function getVisits(){
+  if(visitMem.v && Date.now() - visitMem.at < VISIT_READ_CACHE_MS) return visitMem.v;
+  visitMem.v = applyVisitPending(await loadVisits());
+  visitMem.at = Date.now();
+  return visitMem.v;
+}
+async function flushVisits(force){
+  if(!visitMem.pending.length) return;
+  if(!force && Date.now() - visitMem.lastFlush < VISIT_FLUSH_MS && visitMem.pending.length < VISIT_FLUSH_COUNT) return;
+  const v = applyVisitPending(await loadVisits());
+  await saveVisits(v);
+  visitMem.pending = [];
+  visitMem.v = v; visitMem.at = Date.now(); visitMem.lastFlush = Date.now();
+}
 async function recordVisit(key, kind){
-  const v = await loadVisits();
+  const v = await getVisits();
   const today = kstDateString(Date.now());
   const day = v.days[today] = v.days[today] || { v: {}, w: {} };
   const changed = !day.v[key] || (kind === 'w' && !day.w[key]);
   day.v[key] = 1;
   if(kind === 'w') day.w[key] = 1;
-  if(changed) await saveVisits(v); // 이미 오늘 기록된 사람이면 저장하지 않음
+  if(changed){                                   // 이미 오늘 기록된 사람이면 저장할 것 없음
+    visitMem.pending.push({ date: today, key, kind });
+    try{ await flushVisits(false); }catch(e){ console.error('visits flush', e && e.message); }
+  }
   return { date: today, ...visitStats(day) };
 }
 app.post('/api/visit', async (req, res) => {
@@ -311,7 +342,8 @@ app.post('/api/visit', async (req, res) => {
 });
 app.get('/api/visit/today', async (req, res) => {
   try{
-    const v = await loadVisits();
+    flushVisits(false).catch(e => console.error('visits flush', e && e.message));
+    const v = await getVisits();
     const today = kstDateString(Date.now());
     res.json({ date: today, ...visitStats(v.days[today]) });
   }catch(e){
