@@ -933,7 +933,7 @@ function quizToday(){
   const idx = (((dayNo - QUIZ_START) % QUIZ.length) + QUIZ.length) % QUIZ.length;
   return { date, idx, item: QUIZ[idx] };
 }
-async function quizLoad(date){
+async function quizLoadBlob(date){
   try{
     const { get } = require('@vercel/blob');
     const res = await get(QUIZ_BLOB, { access: 'private' });
@@ -945,6 +945,30 @@ async function quizLoad(date){
 async function quizSave(d){
   const { put } = require('@vercel/blob');
   await put(QUIZ_BLOB, JSON.stringify(d), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+}
+// 저장 횟수 줄이기: 답을 바로 저장하지 않고 모았다가 5분에 한 번(또는 30명마다) 한꺼번에 저장
+const quizMem = { d: null, at: 0, pending: [], lastFlush: 0 };
+function quizApply(d){
+  d.voters = d.voters || {};
+  for(const p of quizMem.pending){
+    if(p.date !== d.date || d.voters[p.vid]) continue;
+    d.voters[p.vid] = 1; d.total = (d.total || 0) + 1; if(p.correct) d.right = (d.right || 0) + 1;
+  }
+  return d;
+}
+async function quizLoad(date){
+  if(quizMem.d && quizMem.d.date === date && Date.now() - quizMem.at < 60 * 1000) return quizMem.d;
+  quizMem.pending = quizMem.pending.filter(p => p.date === date);   // 날이 바뀐 답은 버림
+  quizMem.d = quizApply(await quizLoadBlob(date));
+  quizMem.at = Date.now();
+  return quizMem.d;
+}
+async function quizFlush(date){
+  if(!quizMem.pending.length) return;
+  if(Date.now() - quizMem.lastFlush < 5 * 60 * 1000 && quizMem.pending.length < 30) return;
+  const d = quizApply(await quizLoadBlob(date));
+  await quizSave(d);
+  quizMem.pending = []; quizMem.d = d; quizMem.at = Date.now(); quizMem.lastFlush = Date.now();
 }
 function quizStats(d){ return { total: d.total || 0, right: d.right || 0 }; }
 function mountQuiz(app){
@@ -963,7 +987,8 @@ function mountQuiz(app){
     try{
       if(vid && !d.voters[vid] && Object.keys(d.voters).length < 20000){
         d.voters[vid] = 1; d.total = (d.total || 0) + 1; if(correct) d.right = (d.right || 0) + 1;
-        await quizSave(d);
+        quizMem.pending.push({ date, vid, correct });
+        await quizFlush(date);
       }
     }catch(e){ console.error('quiz save', e && e.message); }
     res.json({ date, correct, a: item.a, x: item.x, xEn: item.xEn, stats: quizStats(d) });
