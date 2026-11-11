@@ -67,6 +67,48 @@ module.exports = function mountCosmos(app, deps){
     });
   }
 
+  // ---------- 저장 횟수 줄이기 (Vercel 무료 요금제: Blob 쓰기 한 달 2,000번) ----------
+  // 자동 획은 바로 저장하지 않고 서버 메모리에 모았다가, 5분에 한 번(또는 30획이 모이면) 한꺼번에 저장합니다.
+  // 읽기도 1분 동안은 메모리에 있는 은하를 그대로 보여 줍니다.
+  // 저장할 때는 Blob의 최신 은하를 다시 읽어 와서 모아 둔 획을 덧붙이므로, 서버가 여러 개 떠 있어도 서로 덮어쓰지 않습니다.
+  const FLUSH_MS = 5 * 60 * 1000, FLUSH_COUNT = 30, READ_CACHE_MS = 60 * 1000;
+  const mem = { c: null, at: 0, pending: [], meta: {}, lastFlush: 0 };
+  function trim(c){
+    while(c.strokes.length > MAX_STROKES){                  // 넘치면 가장 오래된 자동 획부터 정리
+      const idx = c.strokes.findIndex(s => s.auto);
+      c.strokes.splice(idx >= 0 ? idx : 0, 1);
+    }
+  }
+  function applyPending(c){
+    const ids = new Set(c.strokes.map(s => s.id));
+    for(const s of mem.pending) if(!ids.has(s.id)) c.strokes.push(s);
+    c.autoLast = c.autoLast || {}; c.autoCount = c.autoCount || {};
+    for(const [k, m] of Object.entries(mem.meta)){
+      c.autoLast[k] = Math.max(c.autoLast[k] || 0, m.last || 0);
+      const cur = c.autoCount[k];
+      if(!cur || cur.d !== m.d || cur.n < m.n) c.autoCount[k] = { d: m.d, n: m.n };
+    }
+    trim(c);
+    return c;
+  }
+  async function getGalaxy(){
+    if(mem.c && Date.now() - mem.at < READ_CACHE_MS) return mem.c;
+    mem.c = applyPending(await load());
+    mem.at = Date.now();
+    return mem.c;
+  }
+  async function flush(force){
+    if(!mem.pending.length && !Object.keys(mem.meta).length) return;
+    if(!force && Date.now() - mem.lastFlush < FLUSH_MS && mem.pending.length < FLUSH_COUNT) return;
+    const c = applyPending(await load());
+    await save(c);
+    mem.pending = []; mem.meta = {};
+    mem.c = c; mem.at = Date.now(); mem.lastFlush = Date.now();
+  }
+  // 관리자 작업(완성·리셋·지우기·한 획) 전에는 모아 둔 획부터 저장하고, 끝나면 메모리를 새로 맞춤
+  async function loadForWrite(){ await flush(true); return load(); }
+  async function saveAndRemember(c){ await save(c); mem.c = c; mem.at = Date.now(); }
+
   // 같은 사람은 늘 같은 색 (아이디에서 색 번호를 뽑음)
   function hueOf(name){
     let h = 2166136261;
@@ -104,7 +146,10 @@ module.exports = function mountCosmos(app, deps){
 
   // 우주 전체 보기 (로그인 없이 누구나)
   app.get('/api/cosmos', async (req, res) => {
-    try{ res.json(publicView(await load())); }
+    try{
+      flush(false).catch(e => console.error('cosmos flush', e && e.message));
+      res.json(publicView(await getGalaxy()));
+    }
     catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
 
@@ -113,7 +158,7 @@ module.exports = function mountCosmos(app, deps){
     const name = await verifyUser((req.body || {}).accessToken);
     if(!name) return res.status(401).json(LOGIN_EXPIRED);
     try{
-      const c = await load();
+      const c = await getGalaxy();
       const key = name.trim().toLowerCase();
       res.json({ drewToday: c.last[key] === kstDateString(Date.now()), admin: isAdmin(name), h: hueOf(key) });
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
@@ -152,7 +197,7 @@ module.exports = function mountCosmos(app, deps){
     const name = await verifyUser((req.body || {}).accessToken);
     if(!name) return res.status(401).json(LOGIN_EXPIRED);
     try{
-      const c = await load();
+      const c = await getGalaxy();
       const key = name.trim().toLowerCase();
       const today = kstDateString(Date.now());
       c.autoLast = c.autoLast || {};
@@ -162,15 +207,14 @@ module.exports = function mountCosmos(app, deps){
       if(cnt >= AUTO_PER_DAY) return res.json({ ok: false, reason: 'daily_limit' });
       const stroke = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), a: key, h: hueOf(key), p: randomStroke(), t: Date.now(), auto: 1 };
       c.strokes.push(stroke);
-      if(c.strokes.length > MAX_STROKES){                     // 넘치면 가장 오래된 자동 획부터 정리
-        const idx = c.strokes.findIndex(s => s.auto);
-        c.strokes.splice(idx >= 0 ? idx : 0, 1);
-      }
+      trim(c);
       c.autoLast[key] = Date.now();
       c.autoCount[key] = { d: today, n: cnt + 1 };
-      // 날이 바뀐 기록은 정리
       for(const k of Object.keys(c.autoCount)) if(c.autoCount[k].d !== today) delete c.autoCount[k];
-      await save(c);
+      // 바로 저장하지 않고 모아 둠 → 5분에 한 번 또는 30획마다 한꺼번에 저장
+      mem.pending.push(stroke);
+      mem.meta[key] = { last: c.autoLast[key], d: today, n: cnt + 1 };
+      await flush(false);
       res.json({ ok: true, stroke: { id: stroke.id, h: stroke.h, p: stroke.p, t: stroke.t }, total: c.strokes.length });
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
@@ -182,7 +226,7 @@ module.exports = function mountCosmos(app, deps){
     if(!name) return res.status(401).json(LOGIN_EXPIRED);
     if(!isAdmin(name)) return res.status(403).json({ error: 'forbidden' });
     try{
-      const c = await load();
+      const c = await loadForWrite();
       if(!c.strokes.length) return res.status(400).json({ error: 'empty', message: '아직 별이 없는 은하는 완성할 수 없어요.' });
       const no = (c.edition && c.edition.no) || 1;
       const t = String(title || '').trim().slice(0, 60) || `파이오니어들의 은하 제${no}호`;
@@ -192,7 +236,7 @@ module.exports = function mountCosmos(app, deps){
       const eds = await loadEditions();
       eds.list = eds.list.filter(x => x.no !== no).concat({ no, title: t, startedAt: archive.startedAt, endedAt: archive.endedAt, count: archive.strokes.length, hands: archive.hands });
       await put(EDITIONS_BLOB, JSON.stringify(eds), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
-      await save(freshGalaxy(no + 1));
+      await saveAndRemember(freshGalaxy(no + 1));
       res.json({ ok: true, completed: { no, title: t, count: archive.strokes.length }, next: no + 1 });
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
@@ -223,7 +267,7 @@ module.exports = function mountCosmos(app, deps){
     const pts = cleanPoints(p);
     if(!pts) return res.status(400).json({ error: 'bad_stroke', message: '획을 읽지 못했어요. 조금 더 길게 그려 주세요.' });
     try{
-      const c = await load();
+      const c = await loadForWrite();
       const key = name.trim().toLowerCase();
       const today = kstDateString(Date.now());
       if(c.last[key] === today && !isAdmin(name)){
@@ -235,7 +279,7 @@ module.exports = function mountCosmos(app, deps){
       const stroke = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), a: key, h: hueOf(key), p: pts, t: Date.now() };
       c.strokes.push(stroke);
       c.last[key] = today;
-      await save(c);
+      await saveAndRemember(c);
       res.json({ ok: true, stroke: { id: stroke.id, h: stroke.h, p: stroke.p, t: stroke.t } });
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
@@ -246,14 +290,14 @@ module.exports = function mountCosmos(app, deps){
     if(!name) return res.status(401).json(LOGIN_EXPIRED);
     if(!isAdmin(name)) return res.status(403).json({ error: 'forbidden' });
     try{
-      const c = await load();
+      const c = await loadForWrite();
       const count = c.strokes.length;
       let backup = null;
       if(count){
         backup = 'dibutades-cosmos-backup-' + new Date(Date.now() + 9*3600*1000).toISOString().replace(/[-:]/g, '').slice(0, 15) + '.json';
         await put(backup, JSON.stringify(c), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
       }
-      await save({ strokes: [], last: {}, edition: { no: (c.edition && c.edition.no) || 1, startedAt: Date.now() }, resetAt: Date.now(), previous: backup });
+      await saveAndRemember({ strokes: [], last: {}, edition: { no: (c.edition && c.edition.no) || 1, startedAt: Date.now() }, resetAt: Date.now(), previous: backup });
       res.json({ ok: true, cleared: count, backup });
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
@@ -264,10 +308,10 @@ module.exports = function mountCosmos(app, deps){
     if(!name) return res.status(401).json(LOGIN_EXPIRED);
     if(!isAdmin(name)) return res.status(403).json({ error: 'forbidden' });
     try{
-      const c = await load();
+      const c = await loadForWrite();
       const before = c.strokes.length;
       c.strokes = c.strokes.filter(s => s.id !== req.params.id);
-      if(c.strokes.length !== before) await save(c);
+      if(c.strokes.length !== before) await saveAndRemember(c);
       res.json({ ok: true, removed: before - c.strokes.length });
     }catch(e){ console.error(e); res.status(500).json({ error: e.message }); }
   });
