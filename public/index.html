@@ -508,6 +508,13 @@
   .poll.voted .poll-opt{ cursor:default; }
   .poll-foot{ margin-top:7px; font-size:11px; color:var(--chalk-dim); line-height:1.5; }
 
+
+  .poll-cc{ margin:-2px 0 2px; padding:8px 12px; border-radius:0 0 12px 12px; border:1px solid var(--line); border-top:none; display:grid; gap:4px; font-size:12.5px; }
+  .poll-cc .cc-row{ display:flex; align-items:center; gap:8px; }
+  .poll-cc .cc-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .poll-cc .cc-n{ font-variant-numeric:tabular-nums; color:var(--spray-y); font-weight:700; }
+  .poll-cc .cc-note{ font-size:10.5px; color:var(--chalk-dim); }
+  .poll-opt.open{ border-bottom-left-radius:4px; border-bottom-right-radius:4px; }
   .poll-admin{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
   .poll-admin-toggle{ background:none; border:1px dashed var(--spray-y); color:var(--spray-y); border-radius:10px; padding:8px 12px; min-height:40px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; }
   .poll-admin-toggle small{ font-weight:400; opacity:.8; margin-left:4px; }
@@ -1396,7 +1403,7 @@
       <ul>
         <li>Pi 공식 로그인만 써요. 비밀번호는 받지 않아요.<span class="wc-en">Only the official Pi login is used. We never take your password.</span></li>
         <li>24단어 패스프레이즈는 절대 묻지 않아요. 묻는 곳이 있다면 사기예요.<span class="wc-en">We will never ask for your 24-word passphrase. Anyone who does is a scammer.</span></li>
-        <li>앱이 받는 건 Pi 사용자 이름뿐이에요. 이메일·전화번호·위치는 받지 않아요.<span class="wc-en">We only receive your Pi username — no email, phone number or location.</span></li>
+        <li>앱이 받는 건 Pi 사용자 이름뿐이에요. 이메일·전화번호는 받지 않고 정확한 위치도 받지 않아요. 투표 통계에는 접속한 나라 이름만 합계로 쓰여요.<span class="wc-en">We only receive your Pi username — no email, phone number or precise location. Poll stats use only your country, counted in totals.</span></li>
         <li>낙서는 무료예요. 결제는 내가 Pi 지갑에서 직접 승인할 때만 이뤄져요.<span class="wc-en">Writing is free. A payment only happens if you approve it yourself in your Pi wallet.</span></li>
         <li>구경은 로그인 없이도 자유롭게 할 수 있어요.<span class="wc-en">You can look around freely without logging in.</span></li>
       </ul>
@@ -2149,7 +2156,18 @@ setInterval(loadLaunchpadTop5, 60000);
 setInterval(loadStakingTop5, 60000);
 
 // ---------- 오늘의 투표 (로그인 없이 누구나 한 번, 결과는 투표 후 표시) ----------
-const pollState = { data: null, busy: false };
+const pollState = { data: null, busy: false, openCc: null };
+// 나라 코드 → 국기 + 이름 (이름은 브라우저가 한국어로 바꿔 줌)
+function ccFlag(code){ return /^[A-Z]{2}$/.test(code) && code !== 'XX' ? String.fromCodePoint(...[...code].map(c => 127397 + c.charCodeAt(0))) : '🌐'; }
+function ccName(code){
+  if(code === 'XX') return '알 수 없음';
+  try{ return new Intl.DisplayNames(['ko'], { type: 'region' }).of(code) || code; }catch(e){ return code; }
+}
+function pollCountryHtml(d, i){
+  const list = (d.byCountry && d.byCountry[i]) || [];
+  if(!list.length) return `<div class="poll-cc"><div class="cc-note">아직 이 보기를 고른 사람이 없어요 · No votes yet</div></div>`;
+  return `<div class="poll-cc">${list.map(([c, n]) => `<div class="cc-row"><span aria-hidden="true">${ccFlag(c)}</span><span class="cc-name">${escapeHtml(ccName(c))}</span><span class="cc-n">${n}표</span></div>`).join('')}<div class="cc-note">접속 위치 기준 나라 · 정확한 위치는 받지 않아요</div></div>`;
+}
 function renderPoll(){
   const d = pollState.data, box = document.getElementById('poll'); if(!d) return;
   document.getElementById('todayQTag').textContent = `오늘의 투표 · ${d.special && !d.override ? '🎉 ' : ''}${d.theme}`;
@@ -2159,14 +2177,15 @@ function renderPoll(){
   const total = d.total || 0;
   document.getElementById('pollOpts').innerHTML = d.options.map((o, i) => {
     const pct = total ? Math.round((d.counts[i] || 0) / total * 100) : 0;
-    return `<button type="button" class="poll-opt${o.other ? ' other' : ''}${voted && d.myChoice === i ? ' mine' : ''}" data-i="${i}"${voted ? ' aria-disabled="true"' : ''}>
+    const open = voted && pollState.openCc === i;
+    return `<button type="button" class="poll-opt${o.other ? ' other' : ''}${voted && d.myChoice === i ? ' mine' : ''}${open ? ' open' : ''}" data-i="${i}"${voted ? ` aria-expanded="${open}"` : ''}>
       <span class="po-fill" style="width:${voted ? pct : 0}%"></span>
       <span class="po-t">${escapeHtml(o.ko)}<small>${escapeHtml(o.en)}</small></span>
       ${voted ? `<span class="po-p">${pct}%</span>` : ''}
-    </button>`;
+    </button>${open ? pollCountryHtml(d, i) : ''}`;
   }).join('');
   document.getElementById('pollFoot').innerHTML = voted
-    ? `지금까지 ${total}명 참여 · ${d.options[d.myChoice] && d.options[d.myChoice].other ? '아래 칸에 다른 생각을 한마디 남겨 주세요 ✏️' : '투표한 이유를 아래 한마디로 남겨도 좋아요'}<br><span style="opacity:.85">${total} votes · Share your reason below</span>`
+    ? `지금까지 ${total}명 참여 · 막대를 누르면 나라별로 볼 수 있어요 · ${d.options[d.myChoice] && d.options[d.myChoice].other ? '아래 칸에 다른 생각을 한마디 남겨 주세요 ✏️' : '투표한 이유를 아래 한마디로 남겨도 좋아요'}<br><span style="opacity:.85">${total} votes · Share your reason below</span>`
     : `${total ? `지금까지 ${total}명 참여 · ` : ''}투표하면 결과가 보여요 · 보기에 없으면 ✏️ 다른 생각<br><span style="opacity:.85">Vote to see results</span>`;
   document.querySelectorAll('#pollOpts .poll-opt').forEach(b => b.addEventListener('click', () => votePoll(Number(b.dataset.i))));
   if(typeof syncPollAdmin === 'function') syncPollAdmin();
@@ -2180,7 +2199,9 @@ function focusWriteForPoll(){
 }
 async function votePoll(i){
   const d = pollState.data; if(!d || pollState.busy) return;
-  if(d.myChoice !== null && d.myChoice !== undefined){ if(d.options[d.myChoice].other) focusWriteForPoll(); return; }
+  if(d.myChoice !== null && d.myChoice !== undefined){   // 투표한 뒤에는 막대를 눌러 나라별 표를 펼치고 접음
+    pollState.openCc = pollState.openCc === i ? null : i; renderPoll(); return;
+  }
   if(!visitorId){ document.getElementById('pollFoot').textContent = '이 브라우저에서는 투표를 저장할 수 없어요.'; return; }
   pollState.busy = true;
   try{
