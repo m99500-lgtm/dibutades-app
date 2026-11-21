@@ -507,6 +507,19 @@
   .poll-opt.other{ border-style:dashed; }
   .poll.voted .poll-opt{ cursor:default; }
   .poll-foot{ margin-top:7px; font-size:11px; color:var(--chalk-dim); line-height:1.5; }
+
+  .poll-admin{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .poll-admin-toggle{ background:none; border:1px dashed var(--spray-y); color:var(--spray-y); border-radius:10px; padding:8px 12px; min-height:40px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+  .poll-admin-toggle small{ font-weight:400; opacity:.8; margin-left:4px; }
+  .poll-admin-form{ display:grid; gap:6px; margin-top:10px; }
+  .poll-admin-form label{ font-size:11.5px; color:var(--chalk-dim); }
+  .poll-admin-form input{ width:100%; box-sizing:border-box; padding:9px 10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--chalk); font-family:inherit; font-size:14px; min-width:0; }
+  .pa-opts{ display:grid; gap:6px; margin-top:4px; }
+  .pa-row{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .pa-note{ margin:2px 0 0; font-size:11.5px; color:var(--chalk-dim); line-height:1.5; }
+  .pa-clear{ background:none; border:none; color:var(--chalk-dim); text-decoration:underline; text-underline-offset:3px; font-family:inherit; font-size:12.5px; padding:8px 0; cursor:pointer; justify-self:start; }
+  .pa-status{ font-size:12.5px; min-height:1em; }
+  .pa-status.err{ color:#ff7a8a; } .pa-status.ok{ color:#5dffa8; }
   @media (prefers-reduced-motion:reduce){ .poll-opt .po-fill{ transition:none; } }
   .self-cert{
     display:flex;
@@ -1484,6 +1497,26 @@
             <div class="qtext" id="todayQText">불러오는 중...<span class="en">Loading...</span></div>
             <div class="poll-opts" id="pollOpts"></div>
             <div class="poll-foot" id="pollFoot"></div>
+            <!-- 관리자에게만 보임 (서버에서도 한 번 더 확인) -->
+            <div class="poll-admin" id="pollAdmin" hidden>
+              <button type="button" class="poll-admin-toggle" id="pollAdminToggle" aria-expanded="false">🎤 오늘의 투표 바꾸기 <small>관리자</small></button>
+              <div class="poll-admin-form" id="pollAdminForm" hidden>
+                <label for="paQ">질문 (한국어)</label>
+                <input id="paQ" type="text" maxlength="80" placeholder="예: 오늘 서밋 발표 중 가장 기대되는 건?">
+                <label for="paQEn">질문 (영어, 비워도 돼요)</label>
+                <input id="paQEn" type="text" maxlength="120" placeholder="e.g. Which Summit announcement excites you most?">
+                <div class="pa-opts">
+                  <div class="pa-row"><input id="paO1" type="text" maxlength="30" placeholder="보기 1 (필수)" aria-label="보기 1"><input id="paO1en" type="text" maxlength="40" placeholder="Option 1" aria-label="보기 1 영어"></div>
+                  <div class="pa-row"><input id="paO2" type="text" maxlength="30" placeholder="보기 2 (필수)" aria-label="보기 2"><input id="paO2en" type="text" maxlength="40" placeholder="Option 2" aria-label="보기 2 영어"></div>
+                  <div class="pa-row"><input id="paO3" type="text" maxlength="30" placeholder="보기 3 (선택)" aria-label="보기 3"><input id="paO3en" type="text" maxlength="40" placeholder="Option 3" aria-label="보기 3 영어"></div>
+                  <div class="pa-row"><input id="paO4" type="text" maxlength="30" placeholder="보기 4 (선택)" aria-label="보기 4"><input id="paO4en" type="text" maxlength="40" placeholder="Option 4" aria-label="보기 4 영어"></div>
+                </div>
+                <p class="pa-note">"✏️ 다른 생각"은 자동으로 붙어요. 오늘 하루만 나오고, 자정이 지나면 원래 요일 투표로 돌아가요.</p>
+                <button type="button" class="btn btn-primary" id="paSet">오늘 투표로 걸기</button>
+                <button type="button" class="pa-clear" id="paClear" hidden>원래 요일 투표로 되돌리기</button>
+                <div class="pa-status" id="paStatus" role="status"></div>
+              </div>
+            </div>
           </div>
           <label for="writeMsg" class="sr-only">낙서 내용</label>
           <textarea id="writeMsg" maxlength="200" placeholder="보기에 없는 생각이나 투표한 이유를 한마디 남겨 보세요"></textarea>
@@ -2119,7 +2152,7 @@ setInterval(loadStakingTop5, 60000);
 const pollState = { data: null, busy: false };
 function renderPoll(){
   const d = pollState.data, box = document.getElementById('poll'); if(!d) return;
-  document.getElementById('todayQTag').textContent = `오늘의 투표 · ${d.special ? '🎉 ' : ''}${d.theme}`;
+  document.getElementById('todayQTag').textContent = `오늘의 투표 · ${d.special && !d.override ? '🎉 ' : ''}${d.theme}`;
   document.getElementById('todayQText').innerHTML = `${escapeHtml(d.ko)}<span class="en">${escapeHtml(d.en)}</span>`;
   const voted = d.myChoice !== null && d.myChoice !== undefined;
   box.classList.toggle('voted', voted);
@@ -2136,6 +2169,7 @@ function renderPoll(){
     ? `지금까지 ${total}명 참여 · ${d.options[d.myChoice] && d.options[d.myChoice].other ? '아래 칸에 다른 생각을 한마디 남겨 주세요 ✏️' : '투표한 이유를 아래 한마디로 남겨도 좋아요'}<br><span style="opacity:.85">${total} votes · Share your reason below</span>`
     : `${total ? `지금까지 ${total}명 참여 · ` : ''}투표하면 결과가 보여요 · 보기에 없으면 ✏️ 다른 생각<br><span style="opacity:.85">Vote to see results</span>`;
   document.querySelectorAll('#pollOpts .poll-opt').forEach(b => b.addEventListener('click', () => votePoll(Number(b.dataset.i))));
+  if(typeof syncPollAdmin === 'function') syncPollAdmin();
 }
 function focusWriteForPoll(){
   const ta = document.getElementById('writeMsg'); if(!ta) return;
@@ -2167,6 +2201,61 @@ async function loadTodayQuestion(){
   }
 }
 loadTodayQuestion();
+
+// ---------- 관리자: 오늘의 특별 투표 (로저님 계정에만 보임) ----------
+let pollIsAdmin = false, paArmed = false;
+async function checkPollAdmin(){
+  const box = document.getElementById('pollAdmin'); if(!box) return;
+  if(!currentUser){ box.hidden = true; pollIsAdmin = false; return; }
+  try{
+    const r = await fetch(API_BASE + '/api/poll/admin/me', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accessToken: currentUser.accessToken }) });
+    const d = await r.json().catch(() => ({}));
+    pollIsAdmin = !!d.admin; box.hidden = !pollIsAdmin; syncPollAdmin();
+  }catch(e){ box.hidden = true; }
+}
+function syncPollAdmin(){
+  const d = pollState.data; const clear = document.getElementById('paClear');
+  if(clear) clear.hidden = !(d && d.override);
+}
+function paStatus(cls, msg){ const el = document.getElementById('paStatus'); el.className = 'pa-status ' + cls; el.textContent = msg; }
+document.getElementById('pollAdminToggle').addEventListener('click', () => {
+  const f = document.getElementById('pollAdminForm'), t = document.getElementById('pollAdminToggle');
+  f.hidden = !f.hidden; t.setAttribute('aria-expanded', String(!f.hidden)); syncPollAdmin();
+});
+document.getElementById('paSet').addEventListener('click', async () => {
+  if(!currentUser || !pollIsAdmin) return;
+  const v = id => document.getElementById(id).value.trim();
+  const options = [1,2,3,4].map(n => ({ ko: v('paO' + n), en: v('paO' + n + 'en') })).filter(o => o.ko);
+  if(!v('paQ')) return paStatus('err', '질문을 적어 주세요.');
+  if(options.length < 2) return paStatus('err', '보기를 2개 이상 적어 주세요.');
+  const btn = document.getElementById('paSet'), votes = (pollState.data && pollState.data.total) || 0;
+  if(votes > 0 && !paArmed){
+    paArmed = true; btn.textContent = `정말 바꿀까요? 오늘 받은 ${votes}표가 사라져요 · 한 번 더 누르기`;
+    setTimeout(() => { paArmed = false; btn.textContent = '오늘 투표로 걸기'; }, 6000);
+    return;
+  }
+  paArmed = false; btn.disabled = true; paStatus('', '거는 중…');
+  try{
+    const r = await fetch(API_BASE + '/api/poll/admin/set', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accessToken: currentUser.accessToken, ko: v('paQ'), en: v('paQEn'), options }) });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok) throw new Error(d.message || '걸지 못했어요.');
+    paStatus('ok', '오늘의 투표로 걸었어요. 다른 사람 화면에는 1분쯤 뒤에 보여요.');
+    ['paQ','paQEn','paO1','paO1en','paO2','paO2en','paO3','paO3en','paO4','paO4en'].forEach(id => document.getElementById(id).value = '');
+    await loadTodayQuestion();
+  }catch(e){ paStatus('err', e.message); }
+  btn.disabled = false; btn.textContent = '오늘 투표로 걸기';
+});
+document.getElementById('paClear').addEventListener('click', async () => {
+  if(!currentUser || !pollIsAdmin) return;
+  paStatus('', '되돌리는 중…');
+  try{
+    const r = await fetch(API_BASE + '/api/poll/admin/clear', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accessToken: currentUser.accessToken }) });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok) throw new Error(d.message || '되돌리지 못했어요.');
+    paStatus('ok', '원래 요일 투표로 되돌렸어요.');
+    await loadTodayQuestion();
+  }catch(e){ paStatus('err', e.message); }
+});
 
 // ---------- 탭 전환 ----------
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -2452,6 +2541,7 @@ async function loginWithPi(opts){
     // 앱 홍보 화면이 이미 열려 있으면 내 무료권 정보를 다시 불러옴
     if(document.getElementById('pagePromo').classList.contains('show')) loadMyTickets();
     if(document.getElementById('pageScam') && document.getElementById('pageScam').classList.contains('show')) checkScamAdmin();
+    if(typeof checkPollAdmin === 'function') checkPollAdmin();
   }catch(e){
     console.error(e);
     if(silent){ rememberLogin(false); return; } // 조용한 재로그인 실패는 안내 없이 넘어감
@@ -2466,6 +2556,7 @@ if(shouldAutoLogin() && isPiBrowser()) loginWithPi({ silent:true });
 // 서버가 로그인을 확인하지 못했을 때(토큰 만료 등): 로그인 상태를 풀고 다시 로그인하게 안내
 function handleLoginExpired(statusId){
   currentUser = null;
+  { const pa = document.getElementById('pollAdmin'); if(pa) pa.hidden = true; pollIsAdmin = false; }
   rememberLogin(false);
   document.getElementById('whoamiText').textContent = '낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.';
   document.getElementById('loginBtn').style.display = '';
