@@ -1136,14 +1136,9 @@
   .news-time{ font-size:11px; color:var(--chalk-dim); font-variant-numeric:tabular-nums; white-space:nowrap; }
   .news-time span[id]{ color:var(--chalk); font-weight:700; }
   .news-sep{ opacity:0.5; margin:0 2px; }
-  .news-toggle{ width:100%; box-sizing:border-box; padding:12px 14px; border-radius:14px; border:1px solid var(--line); background:transparent; color:var(--chalk);
-    font-family:inherit; text-align:left; cursor:pointer; align-items:center; margin-bottom:0; }
-  .news-toggle:focus-visible{ outline:2px solid var(--spray-y); outline-offset:2px; }
-  .news-toggle .news-hint{ display:block; font-size:11px; font-weight:400; color:var(--chalk-dim); margin-top:2px; }
-  .news-chev{ font-size:14px; color:var(--chalk-dim); transition:transform .2s; }
-  .news-toggle[aria-expanded="true"] .news-chev{ transform:rotate(180deg); }
-  .news-toggle[aria-expanded="true"]{ margin-bottom:10px; }
-  .news-panel[hidden]{ display:none; }
+  .news-hint{ display:block; font-size:11px; font-weight:400; color:var(--chalk-dim); margin-top:2px; }
+  .news-body[hidden]{ display:none !important; }
+  .news-tabs{ margin-bottom:0; }
   .news-tabs{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
   .news-tab{
     min-height:58px; padding:8px 6px; border-radius:12px; cursor:pointer; text-align:center;
@@ -1554,14 +1549,12 @@
         <div class="quiz-box" data-quiz="main" aria-live="polite"></div>
 
         <div class="news">
-          <button type="button" class="news-head news-toggle" id="newsToggle" aria-expanded="false" aria-controls="newsPanel">
-            <span class="news-title">📰 오늘의 소식 <small class="news-hint">파이 · 암호화폐 · 역사 속 오늘 · 오늘 뭐 먹지?</small></span>
+          <div class="news-head">
+            <span class="news-title">📰 오늘의 소식 <small class="news-hint">버튼을 누르면 펼쳐져요</small></span>
             <span class="news-time"><span id="nowKst">--.-- --:--</span> KST <span class="news-sep">·</span> <span id="nowUtc">--:--</span> UTC</span>
-            <span class="news-chev" aria-hidden="true">▾</span>
-          </button>
-          <div class="news-panel" id="newsPanel" hidden>
-          <div class="news-tabs" role="tablist" aria-label="오늘의 소식 종류">
-            <button type="button" class="news-tab active" role="tab" aria-selected="true" data-topic="pi">
+          </div>
+          <div class="news-tabs" role="tablist" aria-label="오늘의 소식 종류" id="newsTabs">
+            <button type="button" class="news-tab" role="tab" aria-selected="false" data-topic="pi">
               <span class="nt-name">파이</span><span class="nt-en">Pi</span></button>
             <button type="button" class="news-tab" role="tab" aria-selected="false" data-topic="crypto">
               <span class="nt-name">암호화폐</span><span class="nt-en">Crypto</span></button>
@@ -1570,8 +1563,7 @@
             <button type="button" class="news-tab" role="tab" aria-selected="false" data-topic="meal">
               <span class="nt-name">오늘 뭐 먹지?</span><span class="nt-en">What to Eat?</span></button>
           </div>
-          <div class="news-body" id="newsBody" role="tabpanel" aria-live="polite"><div class="news-empty">불러오는 중…</div></div>
-          </div>
+          <div class="news-body" id="newsBody" role="tabpanel" aria-live="polite" hidden><div class="news-empty">불러오는 중…</div></div>
         </div>
 
         <!-- 오늘 한눈에: 낙서 수 · 방문 · Pi 시세 (화면 맨 아래) -->
@@ -3150,14 +3142,12 @@ function formatTime(ts){
       // 가격은 화면 맨 아래 숫자 줄에서만 보여 줌
       body.innerHTML =
         '<div class="news-sub">파이 소식 · 최근 7일</div>' + newsList(d.news, '최근 7일 안의 한국어 소식이 없어요.') +
-        '<div class="news-sub news-sub-en">Pi News · last 7 days</div>' + newsList(d.newsEn, 'No English news in the last 7 days.') +
-        writeLinkHtml('#파이소식 ', '이 소식에 한 줄 남기기', 'Leave a line about it');
+        '<div class="news-sub news-sub-en">Pi News · last 7 days</div>' + newsList(d.newsEn, 'No English news in the last 7 days.');
     }else if(topic === 'crypto'){
       // 가격 순위는 빼고 소식만
       body.innerHTML =
         '<div class="news-sub">암호화폐 소식 · 최근 3일</div>' + newsList(d.news, '최근 3일 안의 한국어 소식이 없어요.') +
-        '<div class="news-sub news-sub-en">Crypto News · last 3 days</div>' + newsList(d.newsEn, 'No English news in the last 3 days.') +
-        writeLinkHtml('#암호화폐 ', '이 소식에 한 줄 남기기', 'Leave a line about it');
+        '<div class="news-sub news-sub-en">Crypto News · last 3 days</div>' + newsList(d.newsEn, 'No English news in the last 3 days.');
     }else{
       const histList = (list, emptyMsg) => {
         const li = (list || []).map(e => {
@@ -3195,13 +3185,18 @@ function formatTime(ts){
     if(current === 'meal') return; // 오늘 뭐 먹지?는 아래 별도 코드가 그림
     load(current, store[current] === null);
   }));
-  // 버튼을 눌러 펼칠 때 처음 불러옴 (메인 화면을 짧게, 불필요한 호출도 줄임)
+  // 버튼 4개는 늘 보이고, 누르면 그 소식이 펼쳐짐 · 펼쳐진 버튼을 한 번 더 누르면 접힘
   let opened = false;
-  const tog = document.getElementById('newsToggle'), panel = document.getElementById('newsPanel');
-  if(tog && panel) tog.addEventListener('click', () => {
-    const open = panel.hidden; panel.hidden = !open; tog.setAttribute('aria-expanded', String(open));
-    if(open && !opened){ opened = true; if(current === 'meal'){ const mt = document.querySelector('.news-tab[data-topic="meal"]'); if(mt) mt.click(); } else load(current); }
-  });
+  const tabsEl = document.getElementById('newsTabs');
+  if(tabsEl) tabsEl.addEventListener('click', e => {
+    const btn = e.target.closest('.news-tab'); if(!btn) return;
+    if(btn.classList.contains('active') && !body.hidden){
+      e.stopPropagation();   // 아래쪽 탭 처리로 넘기지 않고 접기만 함
+      body.hidden = true; btn.classList.remove('active'); btn.setAttribute('aria-selected', 'false');
+      return;
+    }
+    body.hidden = false; opened = true;
+  }, true);
   setInterval(() => { if(opened && current !== 'meal') load(current, true); }, 10 * 60 * 1000);
 })();
 
