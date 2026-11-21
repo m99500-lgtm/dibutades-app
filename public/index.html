@@ -1503,7 +1503,7 @@
               <div class="poll-admin-form" id="pollAdminForm" hidden>
                 <label for="paQ">질문 (한국어)</label>
                 <input id="paQ" type="text" maxlength="80" placeholder="예: 오늘 서밋 발표 중 가장 기대되는 건?">
-                <label for="paQEn">질문 (영어, 비워도 돼요)</label>
+                <label for="paQEn">질문 (영어 · 한국어를 쓰면 자동으로 채워져요)</label>
                 <input id="paQEn" type="text" maxlength="120" placeholder="e.g. Which Summit announcement excites you most?">
                 <div class="pa-opts">
                   <div class="pa-row"><input id="paO1" type="text" maxlength="30" placeholder="보기 1 (필수)" aria-label="보기 1"><input id="paO1en" type="text" maxlength="40" placeholder="Option 1" aria-label="보기 1 영어"></div>
@@ -1511,7 +1511,7 @@
                   <div class="pa-row"><input id="paO3" type="text" maxlength="30" placeholder="보기 3 (선택)" aria-label="보기 3"><input id="paO3en" type="text" maxlength="40" placeholder="Option 3" aria-label="보기 3 영어"></div>
                   <div class="pa-row"><input id="paO4" type="text" maxlength="30" placeholder="보기 4 (선택)" aria-label="보기 4"><input id="paO4en" type="text" maxlength="40" placeholder="Option 4" aria-label="보기 4 영어"></div>
                 </div>
-                <p class="pa-note">"✏️ 다른 생각"은 자동으로 붙어요. 오늘 하루만 나오고, 자정이 지나면 원래 요일 투표로 돌아가요.</p>
+                <p class="pa-note">영어 칸은 한국어 칸에서 손을 떼면 자동으로 채워져요. 어색하면 직접 고치면 돼요. 비워 둔 채 걸어도 자동으로 채워져요. "✏️ 다른 생각"은 자동으로 붙어요. 오늘 하루만 나오고, 자정이 지나면 원래 요일 투표로 돌아가요.</p>
                 <button type="button" class="btn btn-primary" id="paSet">오늘 투표로 걸기</button>
                 <button type="button" class="pa-clear" id="paClear" hidden>원래 요일 투표로 되돌리기</button>
                 <div class="pa-status" id="paStatus" role="status"></div>
@@ -2240,10 +2240,27 @@ document.getElementById('paSet').addEventListener('click', async () => {
     const d = await r.json().catch(() => ({}));
     if(!r.ok) throw new Error(d.message || '걸지 못했어요.');
     paStatus('ok', '오늘의 투표로 걸었어요. 다른 사람 화면에는 1분쯤 뒤에 보여요.');
-    ['paQ','paQEn','paO1','paO1en','paO2','paO2en','paO3','paO3en','paO4','paO4en'].forEach(id => document.getElementById(id).value = '');
+    ['paQ','paQEn','paO1','paO1en','paO2','paO2en','paO3','paO3en','paO4','paO4en'].forEach(id => { const el = document.getElementById(id); el.value = ''; el.dataset.manual = ''; });
     await loadTodayQuestion();
   }catch(e){ paStatus('err', e.message); }
   btn.disabled = false; btn.textContent = '오늘 투표로 걸기';
+});
+
+// 한국어 칸에서 손을 떼면 옆 영어 칸을 자동 번역으로 채움 (영어 칸이 비어 있을 때만, 직접 고친 영어는 건드리지 않음)
+[['paQ','paQEn'],['paO1','paO1en'],['paO2','paO2en'],['paO3','paO3en'],['paO4','paO4en']].forEach(([koId, enId]) => {
+  const ko = document.getElementById(koId), en = document.getElementById(enId);
+  en.addEventListener('input', () => { en.dataset.manual = en.value.trim() ? '1' : ''; });
+  ko.addEventListener('change', async () => {
+    const text = ko.value.trim();
+    if(!text || en.dataset.manual === '1' || !currentUser || !pollIsAdmin) return;
+    const ph = en.placeholder; en.placeholder = '번역 중…';
+    try{
+      const r = await fetch(API_BASE + '/api/poll/admin/translate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accessToken: currentUser.accessToken, texts: [text] }) });
+      const d = await r.json().catch(() => ({}));
+      if(r.ok && d.en && d.en[0] && en.dataset.manual !== '1' && ko.value.trim() === text) en.value = d.en[0];
+    }catch(e){}
+    en.placeholder = ph;
+  });
 });
 document.getElementById('paClear').addEventListener('click', async () => {
   if(!currentUser || !pollIsAdmin) return;
