@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -489,6 +489,25 @@
     opacity:0.8;
     margin-top:2px;
   }
+
+  /* ---------- 오늘의 투표 ---------- */
+  .poll .qtext{ font-size:15px; font-weight:700; color:var(--chalk); margin-top:4px; }
+  .poll .qtext .en{ font-size:11px; font-weight:400; color:var(--chalk-dim); }
+  .poll-opts{ display:grid; gap:7px; margin-top:10px; }
+  .poll-opt{ position:relative; display:flex; align-items:center; gap:8px; width:100%; min-height:44px; padding:8px 12px; box-sizing:border-box;
+    border-radius:12px; border:1px solid var(--line); background:transparent; color:var(--chalk); font-family:inherit; font-size:14px;
+    text-align:left; cursor:pointer; overflow:hidden; }
+  .poll-opt:focus-visible{ outline:2px solid var(--spray-y); outline-offset:2px; }
+  .poll-opt .po-fill{ position:absolute; inset:0 auto 0 0; width:0; background:rgba(255,201,60,0.18); transition:width .5s ease; }
+  .poll-opt.mine .po-fill{ background:rgba(255,201,60,0.34); }
+  .poll-opt.mine{ border-color:var(--spray-y); }
+  .poll-opt .po-t{ position:relative; flex:1; min-width:0; line-height:1.3; }
+  .poll-opt .po-t small{ display:block; font-size:10.5px; color:var(--chalk-dim); }
+  .poll-opt .po-p{ position:relative; font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--spray-y); }
+  .poll-opt.other{ border-style:dashed; }
+  .poll.voted .poll-opt{ cursor:default; }
+  .poll-foot{ margin-top:7px; font-size:11px; color:var(--chalk-dim); line-height:1.5; }
+  @media (prefers-reduced-motion:reduce){ .poll-opt .po-fill{ transition:none; } }
   .self-cert{
     display:flex;
     align-items:center;
@@ -1353,7 +1372,7 @@
     <p class="wc-lead">사람이 직접 쓴 한 줄을 모으는 Pi Network의 작은 광장이에요. 느낌 오면 낙서하면 돼요~
       <span class="wc-en">A small Pi Network square that collects lines written by real people. Feel something? Just scribble it.</span></p>
     <ul class="wc-list">
-      <li><span class="ic" aria-hidden="true">✏️</span><span><b>쓰기</b> — 오늘의 질문에 한 줄 남기기<span class="wc-en">Write — one line for today's question</span></span></li>
+      <li><span class="ic" aria-hidden="true">✏️</span><span><b>쓰기</b> — 오늘의 투표에 참여하고 한 줄 남기기<span class="wc-en">Write — vote in today's poll and leave a line</span></span></li>
       <li><span class="ic" aria-hidden="true">🧱</span><span><b>낙서벽</b> — 모두의 한 줄에 마음 하나<span class="wc-en">Wall — react to everyone's lines</span></span></li>
       <li><span class="ic" aria-hidden="true">🖼️</span><span><b>갤러리</b> — 함께 그리는 '파이오니어들의 은하'<span class="wc-en">Gallery — the Galaxy of Pioneers we draw together</span></span></li>
       <li><span class="ic" aria-hidden="true">🛡️</span><span><b>007 경보</b> — 파이 사칭·사기 알림<span class="wc-en">Scam Alert — warnings about Pi scams</span></span></li>
@@ -1460,12 +1479,14 @@
       <!-- 1. 낙서를 하자 / Write Graffiti -->
       <section id="tab-write" class="active">
         <div class="write-card">
-          <div class="today-q">
-            <div class="tag">오늘의 질문</div>
+          <div class="today-q poll" id="poll" aria-live="polite">
+            <div class="tag" id="todayQTag">오늘의 투표</div>
             <div class="qtext" id="todayQText">불러오는 중...<span class="en">Loading...</span></div>
+            <div class="poll-opts" id="pollOpts"></div>
+            <div class="poll-foot" id="pollFoot"></div>
           </div>
           <label for="writeMsg" class="sr-only">낙서 내용</label>
-          <textarea id="writeMsg" maxlength="200" placeholder="한마디 남겨보세요"></textarea>
+          <textarea id="writeMsg" maxlength="200" placeholder="보기에 없는 생각이나 투표한 이유를 한마디 남겨 보세요"></textarea>
           <div class="write-row">
             <label class="self-cert">
               <input type="checkbox" id="selfCertCheck">
@@ -2094,14 +2115,55 @@ loadStakingTop5();
 setInterval(loadLaunchpadTop5, 60000);
 setInterval(loadStakingTop5, 60000);
 
-// ---------- 오늘의 질문 불러오기 ----------
+// ---------- 오늘의 투표 (로그인 없이 누구나 한 번, 결과는 투표 후 표시) ----------
+const pollState = { data: null, busy: false };
+function renderPoll(){
+  const d = pollState.data, box = document.getElementById('poll'); if(!d) return;
+  document.getElementById('todayQTag').textContent = `오늘의 투표 · ${d.special ? '🎉 ' : ''}${d.theme}`;
+  document.getElementById('todayQText').innerHTML = `${escapeHtml(d.ko)}<span class="en">${escapeHtml(d.en)}</span>`;
+  const voted = d.myChoice !== null && d.myChoice !== undefined;
+  box.classList.toggle('voted', voted);
+  const total = d.total || 0;
+  document.getElementById('pollOpts').innerHTML = d.options.map((o, i) => {
+    const pct = total ? Math.round((d.counts[i] || 0) / total * 100) : 0;
+    return `<button type="button" class="poll-opt${o.other ? ' other' : ''}${voted && d.myChoice === i ? ' mine' : ''}" data-i="${i}"${voted ? ' aria-disabled="true"' : ''}>
+      <span class="po-fill" style="width:${voted ? pct : 0}%"></span>
+      <span class="po-t">${escapeHtml(o.ko)}<small>${escapeHtml(o.en)}</small></span>
+      ${voted ? `<span class="po-p">${pct}%</span>` : ''}
+    </button>`;
+  }).join('');
+  document.getElementById('pollFoot').innerHTML = voted
+    ? `지금까지 ${total}명 참여 · ${d.options[d.myChoice] && d.options[d.myChoice].other ? '아래 칸에 다른 생각을 한마디 남겨 주세요 ✏️' : '투표한 이유를 아래 한마디로 남겨도 좋아요'}<br><span style="opacity:.85">${total} votes · Share your reason below</span>`
+    : `${total ? `지금까지 ${total}명 참여 · ` : ''}투표하면 결과가 보여요 · 보기에 없으면 ✏️ 다른 생각<br><span style="opacity:.85">Vote to see results</span>`;
+  document.querySelectorAll('#pollOpts .poll-opt').forEach(b => b.addEventListener('click', () => votePoll(Number(b.dataset.i))));
+}
+function focusWriteForPoll(){
+  const ta = document.getElementById('writeMsg'); if(!ta) return;
+  const tag = '#오늘의투표 ';
+  if(!ta.value.trim()) ta.value = tag;
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+  ta.focus(); try{ ta.setSelectionRange(ta.value.length, ta.value.length); }catch(e){}
+}
+async function votePoll(i){
+  const d = pollState.data; if(!d || pollState.busy) return;
+  if(d.myChoice !== null && d.myChoice !== undefined){ if(d.options[d.myChoice].other) focusWriteForPoll(); return; }
+  if(!visitorId){ document.getElementById('pollFoot').textContent = '이 브라우저에서는 투표를 저장할 수 없어요.'; return; }
+  pollState.busy = true;
+  try{
+    const r = await fetch(API_BASE + '/api/poll/vote', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ choice: i, visitorId }) });
+    const j = await r.json(); if(!r.ok) throw new Error(j.error || 'vote');
+    pollState.data = j; renderPoll();
+    if(d.options[i] && d.options[i].other) focusWriteForPoll();
+  }catch(e){ document.getElementById('pollFoot').textContent = '투표를 저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.'; }
+  pollState.busy = false;
+}
 async function loadTodayQuestion(){
   try{
-    const res = await fetch(API_BASE + '/api/question/today');
-    const q = await res.json();
-    document.getElementById('todayQText').innerHTML = `${escapeHtml(q.ko)}<span class="en">${escapeHtml(q.en)}</span>`;
+    const res = await fetch(API_BASE + '/api/poll/today?vid=' + encodeURIComponent(visitorId || '') + '&_=' + Date.now());
+    if(!res.ok) throw new Error();
+    pollState.data = await res.json(); renderPoll();
   }catch(e){
-    document.getElementById('todayQText').innerHTML = '질문을 불러오지 못했어요.<span class="en">Failed to load question.</span>';
+    document.getElementById('todayQText').innerHTML = '오늘의 투표를 불러오지 못했어요.<span class="en">Failed to load today\'s poll.</span>';
   }
 }
 loadTodayQuestion();
