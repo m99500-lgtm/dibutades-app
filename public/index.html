@@ -1399,7 +1399,7 @@
       <li><span class="ic" aria-hidden="true">✏️</span><span><b>쓰기</b> — 오늘의 투표에 참여하고 한 줄 남기기<span class="wc-en">Write — vote in today's poll and leave a line</span></span></li>
       <li><span class="ic" aria-hidden="true">🧱</span><span><b>낙서벽</b> — 모두의 한 줄에 마음 하나<span class="wc-en">Wall — react to everyone's lines</span></span></li>
       <li><span class="ic" aria-hidden="true">🖼️</span><span><b>갤러리</b> — 함께 그리는 '파이오니어들의 은하'<span class="wc-en">Gallery — the Galaxy of Pioneers we draw together</span></span></li>
-      <li><span class="ic" aria-hidden="true">🛡️</span><span><b>007 경보</b> — 파이 사칭·사기 알림<span class="wc-en">Scam Alert — warnings about Pi scams</span></span></li>
+      <li><span class="ic" aria-hidden="true">🎮</span><span><b>007 게임</b> — 새 게임 준비 중<span class="wc-en">007 Game — coming soon</span></span></li>
       <li><span class="ic" aria-hidden="true">📰</span><span><b>오늘의 소식</b> — 파이·암호화폐·역사 속 오늘·오늘 뭐 먹지?<span class="wc-en">Today — Pi, crypto, on this day, and world meals</span></span></li>
     </ul>
     <div class="wc-safe">
@@ -1494,8 +1494,8 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
         <span class="nl">갤러리<small>Gallery</small></span></a>
       <button class="tab-btn" data-tab="scam">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/><path d="M12 8v5M12 16h.01"/></svg>
-        <span class="nl">007 경보<small>Scam Alert</small></span></button>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r="1"/><circle cx="18.5" cy="13.5" r="1"/></svg>
+        <span class="nl">007 게임<small>007 Game</small></span></button>
     </nav>
 
     <main>
@@ -1584,37 +1584,11 @@
 
 
     <!-- 007 사기 경보: 007로저가 직접 확인한 파이 사기 수법과 경보 -->
+    <!-- 007 게임: 새 게임을 넣을 자리 (예전 007 경보 글은 서버 저장소에 그대로 남아 있음) -->
     <div id="pageScam" class="fullpage">
       <div class="scam-head">
-        <div class="scam-title">007 사기 경보<span>Scam Alert</span></div>
-        <p class="scam-lead">007로저가 직접 확인한 파이 사기 수법과 경보예요. 의심되면 보내기 전에 여기부터 보세요.</p>
-      </div>
-      <div class="quiz-box" data-quiz="scam" aria-live="polite"></div>
-      <div class="scam-rules">
-        <div class="scam-sub">꼭 지켜야 할 다섯 가지<span class="sub-en">Five rules that always apply</span></div>
-        <ol>
-          <li><b>패스프레이즈(24단어)는 누구에게도 알려주지 않아요.</b> 코어팀도, 앱도, 친구도 묻지 않아요.</li>
-          <li><b>Pi 코어팀은 DM·텔레그램으로 먼저 연락하지 않아요.</b> "지원팀입니다"는 사칭이에요.</li>
-          <li><b>"보내면 두 배로 돌려준다"는 100% 사기예요.</b> 에어드롭·이벤트도 먼저 보내라고 하면 의심하세요.</li>
-          <li><b>KYC·마이그레이션 대행은 없어요.</b> 수수료를 받고 빨리 해 준다는 건 모두 사기예요.</li>
-          <li><b>링크 주소를 한 글자씩 확인하세요.</b> minepi.com처럼 보이는 비슷한 주소의 가짜 사이트가 많아요.</li>
-        </ol>
-      </div>
-      <div class="scam-sub">최근 경보<span class="sub-en">Latest alerts</span></div>
-      <div id="scamList"><div class="news-empty">불러오는 중…</div></div>
-      <div id="scamAdmin" class="scam-admin" hidden>
-        <div class="scam-sub">경보 올리기 (관리자)</div>
-        <div class="scam-levels" role="group" aria-label="경보 단계">
-          <button type="button" class="scam-lv" data-lv="위험" aria-pressed="false">위험</button>
-          <button type="button" class="scam-lv" data-lv="주의" aria-pressed="true">주의</button>
-          <button type="button" class="scam-lv" data-lv="참고" aria-pressed="false">참고</button>
-        </div>
-        <label class="sr-only" for="scamTitle">제목</label>
-        <input id="scamTitle" type="text" maxlength="80" placeholder="제목 (예: 가짜 마이그레이션 지원 텔레그램 주의)">
-        <label class="sr-only" for="scamBody">내용</label>
-        <textarea id="scamBody" maxlength="1200" placeholder="수법, 실제 문구, 대처 방법을 적어 주세요."></textarea>
-        <button type="button" class="btn btn-primary" id="scamSend">경보 올리기</button>
-        <div class="status" id="scamStatus"></div>
+        <div class="scam-title">007 게임<span>007 Game</span></div>
+        <p class="scam-lead">새로운 게임을 준비하고 있어요. 곧 만나요 🍀<br><span style="opacity:.8">A new game is on its way. See you soon!</span></p>
       </div>
     </div>
 
@@ -3351,68 +3325,9 @@ document.addEventListener('click', e => {
 });
 document.getElementById('openPromo').addEventListener('click', () => showPromoPage());
 
-// ---------- 007 사기 경보 ----------
-let scamIsAdminUser = false, scamLevel = '주의';
-function scamDate(t){ const d = new Date(t + 9*3600*1000); return `${d.getUTCFullYear()}.${String(d.getUTCMonth()+1).padStart(2,'0')}.${String(d.getUTCDate()).padStart(2,'0')}`; }
-async function loadScam(){
-  const list = document.getElementById('scamList');
-  try{
-    const r = await fetch(API_BASE + '/api/scam?_=' + Date.now());
-    if(!r.ok) throw new Error();
-    const d = await r.json();
-    const items = d.items || [];
-    list.innerHTML = items.length ? items.map(it =>
-      `<article class="scam-item"><div class="scam-item-head"><span class="scam-badge lv-${escapeHtml(it.level)}">${escapeHtml(it.level)}</span><span class="scam-date">${scamDate(it.t)}</span></div>` +
-      `<div class="scam-item-title">${escapeHtml(it.title)}</div>${it.body ? `<div class="scam-item-body">${escapeHtml(it.body)}</div>` : ''}` +
-      (scamIsAdminUser ? `<button type="button" class="scam-del" data-id="${escapeHtml(it.id)}">이 경보 지우기</button>` : '') + `</article>`
-    ).join('') : '<div class="news-empty">아직 올라온 경보가 없어요. 위의 다섯 가지만 지켜도 대부분의 사기를 피할 수 있어요.</div>';
-  }catch(e){ list.innerHTML = '<div class="news-empty">경보를 불러오지 못했어요. 잠시 후 다시 열어 주세요.</div>'; }
-  checkScamAdmin();
-}
-async function checkScamAdmin(){
-  const box = document.getElementById('scamAdmin');
-  if(!currentUser){ box.hidden = true; return; }
-  try{
-    const r = await fetch(API_BASE + '/api/scam/me', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accessToken: currentUser.accessToken }) });
-    const d = await r.json().catch(() => ({}));
-    const was = scamIsAdminUser;
-    scamIsAdminUser = !!d.admin;
-    box.hidden = !scamIsAdminUser;
-    if(scamIsAdminUser && !was) loadScam();
-  }catch(e){ box.hidden = true; }
-}
-document.querySelectorAll('.scam-lv').forEach(b => b.addEventListener('click', () => {
-  scamLevel = b.dataset.lv;
-  document.querySelectorAll('.scam-lv').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
-}));
-document.getElementById('scamSend').addEventListener('click', async () => {
-  const title = document.getElementById('scamTitle').value.trim();
-  const body = document.getElementById('scamBody').value.trim();
-  if(!title){ showStatus('scamStatus','err','제목을 적어 주세요.','Please enter a title.'); return; }
-  if(!currentUser){ showStatus('scamStatus','err','먼저 로그인해 주세요.','Please log in first.'); return; }
-  const btn = document.getElementById('scamSend'); btn.disabled = true;
-  try{
-    const r = await fetch(API_BASE + '/api/scam', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ accessToken: currentUser.accessToken, level: scamLevel, title, body }) });
-    const d = await r.json().catch(() => ({}));
-    if(r.status === 401){ handleLoginExpired('scamStatus'); return; }
-    if(!r.ok) throw new Error(d.message || '올리지 못했어요.');
-    document.getElementById('scamTitle').value = ''; document.getElementById('scamBody').value = '';
-    showStatus('scamStatus','ok','경보를 올렸어요.','Alert posted.');
-    loadScam();
-  }catch(e){ showStatus('scamStatus','err', e.message, e.message); }
-  finally{ btn.disabled = false; }
-});
-document.getElementById('scamList').addEventListener('click', async e => {
-  const b = e.target.closest('.scam-del'); if(!b || !currentUser) return;
-  if(b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = '정말 지울까요? 한 번 더 누르기'; return; }
-  b.disabled = true;
-  try{
-    const r = await fetch(API_BASE + '/api/scam/' + encodeURIComponent(b.dataset.id) + '/remove', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ accessToken: currentUser.accessToken }) });
-    if(!r.ok) throw new Error();
-    loadScam();
-  }catch(err){ b.disabled = false; b.textContent = '지우지 못했어요. 다시 누르기'; b.dataset.armed = ''; }
-});
+// ---------- 007 게임 탭 (예전 경보 기능은 화면에서 뺐음, 호출하는 곳이 남아 있어 빈 함수로 둠) ----------
+function loadScam(){}
+function checkScamAdmin(){}
 
 // ---------- 파이오니어들의 은하: 버튼을 누를 때마다 은하에 별 획이 저절로 ----------
 // 로그인한 파이오니어만, 15초에 한 번까지 (서버에서도 같은 제한 + 하루 40번)
@@ -3480,7 +3395,7 @@ document.addEventListener('click', e => {
         html += `<div class="quiz-res"><div class="quiz-verdict ${r.correct ? 'ok' : 'no'}">${r.correct ? '정답이에요! 🍀' : '아쉬워요, 다시 볼까요?'} <small style="font-weight:500;font-size:11px;color:var(--chalk-dim)">${r.correct ? 'Correct!' : 'Not quite'}</small></div>` +
           `<p class="quiz-x"><b>정답: ${r.a === 'scam' ? '🚨 사기다' : '✅ 괜찮다'}</b> · ${escapeHtml(r.x)}<small>${escapeHtml(r.xEn)}</small></p>` +
           (p != null ? `<div class="quiz-stat">오늘 ${r.stats.total}명 중 ${p}%가 맞혔어요 · ${p}% got it right today</div>` : '') +
-          (box.dataset.quiz === 'main' ? `<button type="button" class="quiz-more">007 경보에서 더 알아보기 → <span style="font-weight:400;font-size:11px">More scam alerts</span></button>` : '<div class="quiz-stat">내일 새 문제가 나와요 · A new question tomorrow</div>') +
+          '<div class="quiz-stat">내일 새 문제가 나와요 · A new question tomorrow</div>' +
           `</div>`;
       }
       box.innerHTML = html;
