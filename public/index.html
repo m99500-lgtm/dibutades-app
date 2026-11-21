@@ -519,6 +519,7 @@
   .poll-admin-toggle{ background:none; border:1px dashed var(--spray-y); color:var(--spray-y); border-radius:10px; padding:8px 12px; min-height:40px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; }
   .poll-admin-toggle small{ font-weight:400; opacity:.8; margin-left:4px; }
   .poll-admin-form{ display:grid; gap:6px; margin-top:10px; }
+  .poll-admin-form[hidden]{ display:none; }
   .poll-admin-form label{ font-size:11.5px; color:var(--chalk-dim); }
   .poll-admin-form input{ width:100%; box-sizing:border-box; padding:9px 10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--chalk); font-family:inherit; font-size:14px; min-width:0; }
   .pa-opts{ display:grid; gap:6px; margin-top:4px; }
@@ -1135,6 +1136,14 @@
   .news-time{ font-size:11px; color:var(--chalk-dim); font-variant-numeric:tabular-nums; white-space:nowrap; }
   .news-time span[id]{ color:var(--chalk); font-weight:700; }
   .news-sep{ opacity:0.5; margin:0 2px; }
+  .news-toggle{ width:100%; box-sizing:border-box; padding:12px 14px; border-radius:14px; border:1px solid var(--line); background:transparent; color:var(--chalk);
+    font-family:inherit; text-align:left; cursor:pointer; align-items:center; margin-bottom:0; }
+  .news-toggle:focus-visible{ outline:2px solid var(--spray-y); outline-offset:2px; }
+  .news-toggle .news-hint{ display:block; font-size:11px; font-weight:400; color:var(--chalk-dim); margin-top:2px; }
+  .news-chev{ font-size:14px; color:var(--chalk-dim); transition:transform .2s; }
+  .news-toggle[aria-expanded="true"] .news-chev{ transform:rotate(180deg); }
+  .news-toggle[aria-expanded="true"]{ margin-bottom:10px; }
+  .news-panel[hidden]{ display:none; }
   .news-tabs{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
   .news-tab{
     min-height:58px; padding:8px 6px; border-radius:12px; cursor:pointer; text-align:center;
@@ -1545,10 +1554,12 @@
         <div class="quiz-box" data-quiz="main" aria-live="polite"></div>
 
         <div class="news">
-          <div class="news-head">
-            <span class="news-title">오늘의 소식</span>
+          <button type="button" class="news-head news-toggle" id="newsToggle" aria-expanded="false" aria-controls="newsPanel">
+            <span class="news-title">📰 오늘의 소식 <small class="news-hint">파이 · 암호화폐 · 역사 속 오늘 · 오늘 뭐 먹지?</small></span>
             <span class="news-time"><span id="nowKst">--.-- --:--</span> KST <span class="news-sep">·</span> <span id="nowUtc">--:--</span> UTC</span>
-          </div>
+            <span class="news-chev" aria-hidden="true">▾</span>
+          </button>
+          <div class="news-panel" id="newsPanel" hidden>
           <div class="news-tabs" role="tablist" aria-label="오늘의 소식 종류">
             <button type="button" class="news-tab active" role="tab" aria-selected="true" data-topic="pi">
               <span class="nt-name">파이</span><span class="nt-en">Pi</span></button>
@@ -1560,6 +1571,7 @@
               <span class="nt-name">오늘 뭐 먹지?</span><span class="nt-en">What to Eat?</span></button>
           </div>
           <div class="news-body" id="newsBody" role="tabpanel" aria-live="polite"><div class="news-empty">불러오는 중…</div></div>
+          </div>
         </div>
 
         <!-- 오늘 한눈에: 낙서 수 · 방문 · Pi 시세 (화면 맨 아래) -->
@@ -3183,8 +3195,14 @@ function formatTime(ts){
     if(current === 'meal') return; // 오늘 뭐 먹지?는 아래 별도 코드가 그림
     load(current, store[current] === null);
   }));
-  load('pi');
-  setInterval(() => { if(current !== 'meal') load(current, true); }, 10 * 60 * 1000);
+  // 버튼을 눌러 펼칠 때 처음 불러옴 (메인 화면을 짧게, 불필요한 호출도 줄임)
+  let opened = false;
+  const tog = document.getElementById('newsToggle'), panel = document.getElementById('newsPanel');
+  if(tog && panel) tog.addEventListener('click', () => {
+    const open = panel.hidden; panel.hidden = !open; tog.setAttribute('aria-expanded', String(open));
+    if(open && !opened){ opened = true; if(current === 'meal'){ const mt = document.querySelector('.news-tab[data-topic="meal"]'); if(mt) mt.click(); } else load(current); }
+  });
+  setInterval(() => { if(opened && current !== 'meal') load(current, true); }, 10 * 60 * 1000);
 })();
 
 // ---------- 오늘 뭐 먹지? (세계 밥상 · 지도 · 한 끼 올리기) ----------
