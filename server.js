@@ -136,7 +136,7 @@ const SPECIAL_DAYS = {
   '12-31': ['올해를 한 단어로 고른다면?', 'This year in one word?', [['🌱 성장', 'Growth'], ['🪨 버팀', 'Endurance'], ['😊 행복', 'Happiness'], ['🔄 변화', 'Change']], '한 해의 마지막 날', "New Year's Eve"]
 };
 
-function getTodayPoll(){
+function getBasePoll(){
   const kst = new Date(Date.now() + 9 * 3600 * 1000);          // 한국 시간 기준
   const date = kst.toISOString().slice(0, 10);
   const sp = SPECIAL_DAYS[date.slice(5)];
@@ -148,14 +148,41 @@ function getTodayPoll(){
     q = t.qs[week % t.qs.length]; theme = `${t.day} · ${t.ko}`; themeEn = t.en;
   }
   const options = q[2].map(o => ({ ko: o[0], en: o[1] })).concat([{ ko: '✏️ 다른 생각', en: 'Something else', other: true }]);
-  return { date, ko: q[0], en: q[1], theme, themeEn, special, options };
+  return { date, key: date, ko: q[0], en: q[1], theme, themeEn, special, options, override: false };
+}
+
+
+// ---------- 관리자 특별 투표 (그날 하루만 요일 테마 대신 나옴, 자정에 저절로 원래대로) ----------
+// 관리자: Vercel 환경변수 COSMOS_ADMIN, 없으면 minkyeungsoon (007 경보·은하 관리자와 같음)
+const POLL_OVERRIDE_BLOB = 'dibutades-poll-override.json';
+const overrideMem = { d: undefined, at: 0 };
+async function loadOverride(){
+  if(overrideMem.d !== undefined && Date.now() - overrideMem.at < 60 * 1000) return overrideMem.d;
+  let d = null;
+  try{ const r = await get(POLL_OVERRIDE_BLOB, { access: 'private' }); d = JSON.parse(await new Response(r.stream).text()); }catch(e){}
+  overrideMem.d = d; overrideMem.at = Date.now();
+  return d;
+}
+async function getTodayPoll(){
+  const p = getBasePoll();
+  const o = await loadOverride().catch(() => null);
+  if(o && o.date === p.date && Array.isArray(o.options) && o.options.length >= 2){
+    const options = o.options.map(x => ({ ko: x.ko, en: x.en || '' })).concat([{ ko: '✏️ 다른 생각', en: 'Something else', other: true }]);
+    return { date: p.date, key: p.date + ':' + o.setAt, ko: o.ko, en: o.en || '', theme: '🎤 오늘의 특별 투표', themeEn: 'Special poll', special: true, options, override: true };
+  }
+  return p;
+}
+function pollAdminName(){ return String(process.env.COSMOS_ADMIN || 'minkyeungsoon').trim().toLowerCase(); }
+async function isPollAdmin(accessToken){
+  const name = await verifyUser(accessToken);
+  return !!name && name.trim().toLowerCase() === pollAdminName();
 }
 
 // ---------- 투표 집계 (저장 횟수를 아끼려고 5분에 한 번, 또는 30표마다 한꺼번에 저장) ----------
 const POLL_BLOB_NAME = 'dibutades-poll.json';
 const pollMem = { d: null, at: 0, pending: [], lastFlush: 0 };
-function pollEmpty(date, n){ return { date, counts: Array(n).fill(0), voters: {} }; }
-async function pollLoadBlob(date, n){
+function pollEmpty(key, n){ return { date: key, counts: Array(n).fill(0), voters: {} }; }
+async function pollLoadBlob(date, n){   // date 자리에는 투표 열쇠(날짜, 특별 투표면 날짜:시각)가 들어옴
   try{
     const r = await get(POLL_BLOB_NAME, { access: 'private' });
     const d = JSON.parse(await new Response(r.stream).text());
@@ -190,33 +217,66 @@ function pollView(p, d, vid){
 }
 
 app.get('/api/poll/today', async (req, res) => {
-  const p = getTodayPoll();
+  const p = await getTodayPoll();
   try{
-    const d = await pollLoad(p.date, p.options.length);
+    flushOldPoll(p.key);
+    const d = await pollLoad(p.key, p.options.length);
     res.set('Cache-Control', 'no-store');
     res.json(pollView(p, d, String(req.query.vid || '').slice(0, 64)));
   }catch(e){ res.json({ ...p, counts: Array(p.options.length).fill(0), total: 0, myChoice: null }); }
 });
 app.post('/api/poll/vote', async (req, res) => {
-  const p = getTodayPoll();
+  const p = await getTodayPoll();
   const { choice, visitorId } = req.body || {};
   const c = Number(choice), vid = String(visitorId || '').slice(0, 64);
   if(!Number.isInteger(c) || c < 0 || c >= p.options.length) return res.status(400).json({ error: 'bad_choice' });
   if(!vid) return res.status(400).json({ error: 'no_visitor' });
   try{
-    const d = await pollLoad(p.date, p.options.length);
+    const d = await pollLoad(p.key, p.options.length);
     if(d.voters[vid] === undefined && Object.keys(d.voters).length < 20000){
       d.voters[vid] = c; d.counts[c] = (d.counts[c] || 0) + 1;
-      pollMem.pending.push({ date: p.date, vid, choice: c });
-      try{ await pollFlush(p.date, p.options.length); }catch(e){ console.error('poll save', e && e.message); }
+      pollMem.pending.push({ date: p.key, vid, choice: c });
+      try{ await pollFlush(p.key, p.options.length); }catch(e){ console.error('poll save', e && e.message); }
     }
     res.json(pollView(p, d, vid));
   }catch(e){ console.error('poll vote', e && e.message); res.status(500).json({ error: 'server' }); }
 });
 
+
+// 열쇠가 바뀌면(자정 또는 특별 투표) 모아 둔 이전 표는 버림
+function flushOldPoll(key){ if(pollMem.pending.some(p => p.date !== key)) pollMem.pending = pollMem.pending.filter(p => p.date === key); }
+
+// ---------- 관리자 전용: 오늘의 특별 투표 걸기 / 되돌리기 ----------
+app.post('/api/poll/admin/me', async (req, res) => {
+  res.json({ admin: await isPollAdmin((req.body || {}).accessToken) });
+});
+app.post('/api/poll/admin/set', async (req, res) => {
+  const { accessToken, ko, en, options } = req.body || {};
+  if(!(await isPollAdmin(accessToken))) return res.status(403).json({ error: 'forbidden', message: '관리자만 바꿀 수 있어요.' });
+  const q = String(ko || '').trim().slice(0, 80), qEn = String(en || '').trim().slice(0, 120);
+  const opts = (Array.isArray(options) ? options : []).map(o => ({ ko: String((o && o.ko) || '').trim().slice(0, 30), en: String((o && o.en) || '').trim().slice(0, 40) })).filter(o => o.ko).slice(0, 4);
+  if(!q) return res.status(400).json({ error: 'bad_question', message: '질문을 적어 주세요.' });
+  if(opts.length < 2) return res.status(400).json({ error: 'bad_options', message: '보기를 2개 이상 적어 주세요.' });
+  const date = getBasePoll().date;
+  const o = { date, setAt: Date.now(), ko: q, en: qEn, options: opts };
+  try{
+    await put(POLL_OVERRIDE_BLOB, JSON.stringify(o), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+    overrideMem.d = o; overrideMem.at = Date.now();
+    res.json({ ok: true });
+  }catch(e){ console.error('poll override', e && e.message); res.status(500).json({ error: 'server', message: '저장하지 못했어요. 잠시 뒤 다시 해 주세요.' }); }
+});
+app.post('/api/poll/admin/clear', async (req, res) => {
+  if(!(await isPollAdmin((req.body || {}).accessToken))) return res.status(403).json({ error: 'forbidden', message: '관리자만 바꿀 수 있어요.' });
+  try{
+    await put(POLL_OVERRIDE_BLOB, JSON.stringify({ date: '', setAt: Date.now(), cleared: true }), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+    overrideMem.d = null; overrideMem.at = Date.now();
+    res.json({ ok: true });
+  }catch(e){ res.status(500).json({ error: 'server', message: '되돌리지 못했어요. 잠시 뒤 다시 해 주세요.' }); }
+});
+
 // 예전 화면과의 호환용 (오늘의 투표 질문만 돌려줌)
-app.get('/api/question/today', (req, res) => {
-  const p = getTodayPoll();
+app.get('/api/question/today', async (req, res) => {
+  const p = await getTodayPoll();
   res.json({ ko: p.ko, en: p.en, theme: p.theme, themeEn: p.themeEn, special: p.special, date: p.date });
 });
 
