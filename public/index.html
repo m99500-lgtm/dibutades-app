@@ -3165,8 +3165,7 @@ function formatTime(ts){
         histList(d.events, '오늘은 한국 자료가 없어요. · No Korean entries today.') +
         `<div class="news-sub news-sub-en">${d.month}월 ${d.day}일, 세계의 역사 속 오늘<span class="sub-en">On This Day in the World · ${MON[d.month - 1]} ${d.day}</span></div>` +
         histList(d.eventsEn, '오늘은 세계 자료가 없어요. · No world entries today.') +
-        '<div class="news-note">출처: 위키백과 · 번역: MyMemory 자동 번역 · Source: Wikipedia</div>' +
-        writeLinkHtml(`#${d.month}월${d.day}일 `, '이 날에 한 줄 남기기', 'Leave a line for this day');
+        '<div class="news-note">출처: 위키백과 · 번역: MyMemory 자동 번역 · Source: Wikipedia</div>';
     }
   }
   async function load(topic, force){
@@ -3251,7 +3250,6 @@ function renderMeal(body){
       `<div class="meal-dish">${escapeHtml(k.dish || '')}<small>${escapeHtml(k.dishEn || '')}</small></div>` +
       `<div class="meal-items">주로 ${escapeHtml(k.when || '')} · ${escapeHtml(k.items || '')}</div></div></div>` +
     `<p class="meal-desc">${escapeHtml(k.desc || '')}</p><p class="meal-desc-en">${escapeHtml(k.descEn || '')}</p>` +
-    writeLinkHtml(`#${(k.dish || '').replace(/\s+/g, '')} `, '이 음식 먹어 봤어요? 한 줄 남기기', 'Tried it? Leave a line') +
     `<div class="news-sub" style="display:flex;align-items:flex-end;gap:8px"><span style="flex:1">지금 세계의 밥상<span class="sub-en">Today on the map</span></span><span class="meal-count">오늘 <b>${d.countries || 0}</b>개 나라 · <b>${d.total || 0}</b>끼</span></div>` +
     `<div class="meal-map"><svg viewBox="0 0 358 180" role="img" aria-label="오늘 사람들이 올린 한 끼가 표시된 세계 지도">${mealLandSvg()}${dots}</svg></div><div class="meal-note" style="margin-top:4px">점 하나 = 그 나라에서 오늘 올라온 한 끼</div>` +
     `<div class="news-sub">오늘 뭐 먹었어?<span class="sub-en">What did you eat today?</span></div>` +
