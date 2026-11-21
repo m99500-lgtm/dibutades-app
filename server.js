@@ -181,12 +181,12 @@ async function isPollAdmin(accessToken){
 // ---------- 투표 집계 (저장 횟수를 아끼려고 5분에 한 번, 또는 30표마다 한꺼번에 저장) ----------
 const POLL_BLOB_NAME = 'dibutades-poll.json';
 const pollMem = { d: null, at: 0, pending: [], lastFlush: 0 };
-function pollEmpty(key, n){ return { date: key, counts: Array(n).fill(0), voters: {} }; }
+function pollEmpty(key, n){ return { date: key, counts: Array(n).fill(0), voters: {}, cc: {} }; }
 async function pollLoadBlob(date, n){   // date 자리에는 투표 열쇠(날짜, 특별 투표면 날짜:시각)가 들어옴
   try{
     const r = await get(POLL_BLOB_NAME, { access: 'private' });
     const d = JSON.parse(await new Response(r.stream).text());
-    if(d && d.date === date && Array.isArray(d.counts)){ while(d.counts.length < n) d.counts.push(0); d.voters = d.voters || {}; return d; }
+    if(d && d.date === date && Array.isArray(d.counts)){ while(d.counts.length < n) d.counts.push(0); d.voters = d.voters || {}; d.cc = d.cc || {}; return d; }
   }catch(e){}
   return pollEmpty(date, n);
 }
@@ -194,6 +194,7 @@ function pollApply(d){
   for(const p of pollMem.pending){
     if(p.date !== d.date || d.voters[p.vid] !== undefined) continue;
     d.voters[p.vid] = p.choice; d.counts[p.choice] = (d.counts[p.choice] || 0) + 1;
+    pollCountryAdd(d, p.choice, p.cc);
   }
   return d;
 }
@@ -211,9 +212,17 @@ async function pollFlush(date, n){
   await put(POLL_BLOB_NAME, JSON.stringify(d), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
   pollMem.pending = []; pollMem.d = d; pollMem.at = Date.now(); pollMem.lastFlush = Date.now();
 }
+// 나라별 합계: 누가 어느 나라인지는 저장하지 않고, 보기마다 "나라 코드: 표 수" 합계만 남김
+function pollCountryAdd(d, choice, cc){
+  d.cc = d.cc || {};
+  const k = /^[A-Z]{2}$/.test(cc || '') ? cc : 'XX';
+  const m = d.cc[choice] = d.cc[choice] || {};
+  m[k] = (m[k] || 0) + 1;
+}
 function pollView(p, d, vid){
   const total = d.counts.reduce((a, b) => a + b, 0);
-  return { ...p, counts: d.counts.slice(0, p.options.length), total, myChoice: vid && d.voters[vid] !== undefined ? d.voters[vid] : null };
+  const byCountry = p.options.map((_, i) => Object.entries((d.cc && d.cc[i]) || {}).sort((a, b) => b[1] - a[1]).slice(0, 8));
+  return { ...p, byCountry, counts: d.counts.slice(0, p.options.length), total, myChoice: vid && d.voters[vid] !== undefined ? d.voters[vid] : null };
 }
 
 app.get('/api/poll/today', async (req, res) => {
@@ -229,13 +238,14 @@ app.post('/api/poll/vote', async (req, res) => {
   const p = await getTodayPoll();
   const { choice, visitorId } = req.body || {};
   const c = Number(choice), vid = String(visitorId || '').slice(0, 64);
+  const cc = String(req.headers['x-vercel-ip-country'] || '').toUpperCase().slice(0, 2);   // Vercel이 알려 주는 접속 나라 (나라 단위)
   if(!Number.isInteger(c) || c < 0 || c >= p.options.length) return res.status(400).json({ error: 'bad_choice' });
   if(!vid) return res.status(400).json({ error: 'no_visitor' });
   try{
     const d = await pollLoad(p.key, p.options.length);
     if(d.voters[vid] === undefined && Object.keys(d.voters).length < 20000){
-      d.voters[vid] = c; d.counts[c] = (d.counts[c] || 0) + 1;
-      pollMem.pending.push({ date: p.key, vid, choice: c });
+      d.voters[vid] = c; d.counts[c] = (d.counts[c] || 0) + 1; pollCountryAdd(d, c, cc);
+      pollMem.pending.push({ date: p.key, vid, choice: c, cc });
       try{ await pollFlush(p.key, p.options.length); }catch(e){ console.error('poll save', e && e.message); }
     }
     res.json(pollView(p, d, vid));
