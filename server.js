@@ -250,6 +250,25 @@ function flushOldPoll(key){ if(pollMem.pending.some(p => p.date !== key)) pollMe
 app.post('/api/poll/admin/me', async (req, res) => {
   res.json({ admin: await isPollAdmin((req.body || {}).accessToken) });
 });
+
+// 관리자 투표용 한→영 자동 번역 (MyMemory 무료 번역, 실패하면 빈칸)
+async function koToEn(text){
+  const q = String(text || '').trim().slice(0, 200);
+  if(!q) return '';
+  try{
+    const r = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(q) + '&langpair=ko|en', { headers: { 'User-Agent': 'DibutadesApp/1.0' } });
+    const j = await r.json();
+    const out = j && j.responseData && j.responseData.translatedText;
+    if(!out || j.quotaFinished || Number(j.responseStatus) !== 200 || /MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(out)) return '';
+    return String(out).replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/<[^>]*>/g, '').trim();
+  }catch(e){ return ''; }
+}
+app.post('/api/poll/admin/translate', async (req, res) => {
+  const { accessToken, texts } = req.body || {};
+  if(!(await isPollAdmin(accessToken))) return res.status(403).json({ error: 'forbidden' });
+  const list = (Array.isArray(texts) ? texts : []).slice(0, 5).map(t => String(t || '').slice(0, 200));
+  res.json({ en: await Promise.all(list.map(koToEn)) });
+});
 app.post('/api/poll/admin/set', async (req, res) => {
   const { accessToken, ko, en, options } = req.body || {};
   if(!(await isPollAdmin(accessToken))) return res.status(403).json({ error: 'forbidden', message: '관리자만 바꿀 수 있어요.' });
@@ -257,8 +276,11 @@ app.post('/api/poll/admin/set', async (req, res) => {
   const opts = (Array.isArray(options) ? options : []).map(o => ({ ko: String((o && o.ko) || '').trim().slice(0, 30), en: String((o && o.en) || '').trim().slice(0, 40) })).filter(o => o.ko).slice(0, 4);
   if(!q) return res.status(400).json({ error: 'bad_question', message: '질문을 적어 주세요.' });
   if(opts.length < 2) return res.status(400).json({ error: 'bad_options', message: '보기를 2개 이상 적어 주세요.' });
+  // 영어 칸이 비어 있으면 자동 번역으로 채움 (실패하면 한국어만 나옴)
+  const [autoQ, ...autoOpts] = await Promise.all([qEn ? qEn : koToEn(q), ...opts.map(o => o.en ? o.en : koToEn(o.ko))]);
+  opts.forEach((o, i) => { o.en = String(autoOpts[i] || '').slice(0, 40); });
   const date = getBasePoll().date;
-  const o = { date, setAt: Date.now(), ko: q, en: qEn, options: opts };
+  const o = { date, setAt: Date.now(), ko: q, en: String(autoQ || '').slice(0, 120), options: opts };
   try{
     await put(POLL_OVERRIDE_BLOB, JSON.stringify(o), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
     overrideMem.d = o; overrideMem.at = Date.now();
