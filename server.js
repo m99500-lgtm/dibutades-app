@@ -38,61 +38,186 @@ const PI_API_BASE = 'https://api.minepi.com/v2';
 // Vercel Blob에 저장할 파일 이름
 const DATA_BLOB_NAME = 'dibutades-data.json';
 
-// ---------- 오늘의 질문 (매일 자정 자동 로테이션) ----------
-// 목록을 자유롭게 추가/수정/순서 변경해도 됩니다. 40개가 다 돌면 처음부터 반복됩니다.
-const QUESTIONS = [
-  { ko: '오늘 하루 중 제일 웃겼던 순간은?', en: 'What made you laugh the most today?' },
-  { ko: '요즘 가장 듣고 싶은 말은?', en: 'What words do you want to hear these days?' },
-  { ko: '오늘 나에게 칭찬 한마디 해준다면?', en: 'Give yourself one compliment for today.' },
-  { ko: '지금 가장 먹고 싶은 음식은?', en: 'What food are you craving right now?' },
-  { ko: '요즘 스트레스 풀리는 나만의 방법은?', en: 'How do you relieve stress these days?' },
-  { ko: '올해가 가기 전에 꼭 해보고 싶은 일은?', en: 'What do you want to do before this year ends?' },
-  { ko: '오늘 아침에 제일 먼저 한 생각은?', en: 'What was the first thing you thought this morning?' },
-  { ko: '최근에 새로 알게 된 재미있는 사실은?', en: 'What interesting fact did you learn recently?' },
-  { ko: '지금 이 순간 가장 그리운 것은?', en: 'What do you miss the most right now?' },
-  { ko: '나를 한 단어로 표현한다면?', en: 'Describe yourself in one word.' },
-  { ko: '오늘 하루를 색깔로 표현한다면?', en: 'If today were a color, what would it be?' },
-  { ko: '최근에 본 것 중 가장 인상 깊었던 장면은?', en: 'What is the most memorable thing you saw recently?' },
-  { ko: '지금 창밖 날씨는 어떤가요?', en: 'What is the weather like outside right now?' },
-  { ko: '요즘 자꾸 흥얼거리게 되는 노래가 있나요?', en: 'Is there a song stuck in your head lately?' },
-  { ko: '오늘 처음 만난 사람에게 하고 싶은 한마디는?', en: 'What would you say to someone you just met today?' },
-  { ko: '지금 가장 갖고 싶은 초능력은?', en: 'What superpower do you want most right now?' },
-  { ko: '요즘 나를 웃게 하는 사람은 누구인가요?', en: 'Who makes you smile these days?' },
-  { ko: '오늘 하루, 몇 점짜리 하루였나요? (10점 만점)', en: 'How would you rate today out of 10?' },
-  { ko: '지금 이 순간 가장 감사한 것은?', en: 'What are you most grateful for right now?' },
-  { ko: '요즘 자주 꾸는 꿈이 있나요?', en: 'Do you have a recurring dream lately?' },
-  { ko: '나에게 위로가 되는 문장 하나를 남겨주세요.', en: 'Leave a sentence that comforts you.' },
-  { ko: '오늘 처음 보는 사람에게 디부타데스를 소개한다면?', en: 'How would you introduce this wall to a stranger?' },
-  { ko: '지금 손에 잡히는 물건 하나로 삼행시를 지어보세요.', en: 'Make a short poem using the nearest object to you.' },
-  { ko: '요즘 미루고 있는 일이 있나요?', en: 'Is there something you keep putting off?' },
-  { ko: '오늘 하루를 한 문장으로 요약한다면?', en: 'Summarize today in one sentence.' },
-  { ko: '지금 이 순간 듣고 있는 소리는?', en: 'What sound do you hear right now?' },
-  { ko: '나에게 가장 소중한 물건 하나는?', en: 'What is your most precious possession?' },
-  { ko: '요즘 배우고 싶은 게 있나요?', en: 'Is there something you want to learn these days?' },
-  { ko: '지금 기분을 이모지 하나로 표현한다면?', en: 'Pick one emoji for your mood right now.' },
-  { ko: '오늘 하루 중 가장 평화로웠던 순간은?', en: 'What was the most peaceful moment of your day?' },
-  { ko: 'Pi 파이오니어가 된 지 얼마나 되셨나요?', en: 'How long have you been a Pi Pioneer?' },
-  { ko: '파이오니어로서 가장 기억에 남는 순간은?', en: "What's your most memorable moment as a Pioneer?" },
-  { ko: 'Pi 생태계에서 가장 기대되는 기능은?', en: 'What Pi ecosystem feature excites you the most?' },
-  { ko: '오늘 Pi 관련해서 가장 궁금한 것은?', en: "What's your biggest question about Pi today?" },
-  { ko: '나만의 디부타데스 이용 팁이 있다면?', en: 'Do you have a tip for using this wall?' },
-  { ko: '지금 이 순간 응원하고 싶은 사람이 있나요?', en: 'Is there someone you want to cheer on right now?' },
-  { ko: '오늘 처음 시도해본 것이 있나요?', en: 'Did you try something new today?' },
-  { ko: '나에게 내일 하루를 선물한다면 뭘 하고 싶나요?', en: 'If you had a free day tomorrow, what would you do?' },
-  { ko: '지금 가장 편안한 장소는 어디인가요?', en: 'Where is the most comfortable place for you right now?' },
-  { ko: '오늘 디부타데스에 남기고 싶은 진짜 이유는?', en: "What's your real reason for writing here today?" }
+// ---------- 오늘의 투표: 요일별 테마 + 특별한 날 (한국 시간 자정에 바뀜) ----------
+// 요일마다 테마가 정해져 있고, 각 테마의 투표 9개가 매주 하나씩 돌아갑니다 (9주, 약 두 달에 한 바퀴).
+// 모양: [질문(한국어), 질문(영어), [[보기(한국어), 보기(영어)], ...]]  · 보기는 2~4개
+// 모든 투표에는 마지막에 "✏️ 다른 생각" 보기가 자동으로 붙고, 그걸 고르면 아래 한마디 칸에 쓰게 됩니다.
+// 특별한 날(SPECIAL_DAYS)에는 요일 테마 대신 그날 투표가 나옵니다. 날짜는 '월-일'입니다.
+const POLL_THEMES = [
+  { day: '일요일', ko: '마음', en: 'Heart', qs: [
+    ['요즘 나에게 더 필요한 건?', 'What do you need more these days?', [['휴식', 'Rest'], ['도전', 'A challenge']]],
+    ['지금 내 마음의 날씨는?', 'Your inner weather right now?', [['☀️ 맑음', 'Sunny'], ['⛅ 구름', 'Cloudy'], ['🌧️ 비', 'Rainy']]],
+    ['힘들 때 나는 주로?', 'When things get hard, I usually…', [['혼자 정리해요', 'Sort it out alone'], ['누군가와 이야기해요', 'Talk to someone'], ['일단 자요', 'Sleep on it']]],
+    ['주말 저녁, 더 끌리는 건?', 'A weekend evening — which appeals more?', [['집에서 쉬기', 'Stay in'], ['밖에서 걷기', 'Go for a walk']]],
+    ['위로가 필요할 때 듣고 싶은 말은?', 'Words you want to hear when you need comfort?', [['"괜찮아"', '"It\'s okay"'], ['"잘하고 있어"', '"You\'re doing great"'], ['"같이 있어 줄게"', '"I\'m here with you"']]],
+    ['이번 주의 나에게 주고 싶은 점수는?', 'Your score for yourself this week?', [['💯 만점', 'Full marks'], ['👍 꽤 괜찮음', 'Pretty good'], ['🌱 다음 주엔 더', 'Better next week']]],
+    ['혼자 있는 시간, 나에게는?', 'Time alone — for me it is…', [['충전 시간', 'Recharging'], ['조금 외로운 시간', 'A bit lonely']]],
+    ['고마운 마음, 나는 주로 어떻게 전하나요?', 'How do you usually say thanks?', [['말로', 'In words'], ['메시지로', 'By message'], ['작은 선물로', 'With a small gift']]],
+    ['잠들기 전 내 머릿속은?', 'Before sleep, my mind is…', [['오늘 일 되감기', 'Replaying today'], ['내일 계획 세우기', 'Planning tomorrow'], ['텅 빈 상태', 'Totally blank']]]
+  ]},
+  { day: '월요일', ko: '일상', en: 'Everyday', qs: [
+    ['아침의 첫 음료는?', 'Your first drink of the morning?', [['☕ 커피', 'Coffee'], ['🍵 차', 'Tea'], ['💧 물', 'Water']]],
+    ['알람이 울리면 나는?', 'When the alarm rings…', [['바로 일어나요', 'Up right away'], ['5분만 더…', 'Five more minutes'], ['알람이 여러 개예요', 'I set several alarms']]],
+    ['월요일을 버티는 힘은?', 'What gets you through Monday?', [['맛있는 점심', 'A good lunch'], ['퇴근 후 계획', 'After-work plans'], ['그냥 버틴다', 'Just pushing through']]],
+    ['휴대폰 배터리, 몇 %부터 불안해요?', 'At what battery level do you start to worry?', [['50%', '50%'], ['20%', '20%'], ['5%도 괜찮아요', 'Fine even at 5%']]],
+    ['출근길·등굣길 이동 수단은?', 'How do you get to work or school?', [['🚶 걸어서', 'Walk'], ['🚌 대중교통', 'Public transit'], ['🚗 차', 'Car'], ['🏠 집에서 해요', 'From home']]],
+    ['나는 어느 쪽?', 'Which one are you?', [['🌅 아침형', 'Morning person'], ['🌙 저녁형', 'Night owl']]],
+    ['메시지 답장, 나는?', 'Replying to messages, I am…', [['바로바로', 'Right away'], ['몰아서', 'In batches'], ['가끔 잊어요', 'Sometimes I forget']]],
+    ['지금 내 책상 상태는?', 'Your desk right now?', [['깔끔', 'Tidy'], ['적당히', 'So-so'], ['나만 아는 질서', 'Organized chaos']]],
+    ['이번 주 목표의 크기는?', "The size of this week's goal?", [['큰 꿈', 'A big dream'], ['작은 한 걸음', 'One small step'], ['무사히 버티기', 'Just get through']]]
+  ]},
+  { day: '화요일', ko: '음식', en: 'Food', qs: [
+    ['라면에 하나만 더 넣는다면?', 'One extra for your ramen?', [['🥚 달걀', 'Egg'], ['🧀 치즈', 'Cheese'], ['🥬 파·김치', 'Scallion or kimchi']]],
+    ['평생 하나만 먹어야 한다면?', 'Only one for the rest of your life?', [['🍚 밥', 'Rice'], ['🍞 빵', 'Bread'], ['🍜 면', 'Noodles']]],
+    ['비 오는 날 생각나는 건?', 'Your rainy-day craving?', [['부침개', 'Korean pancake'], ['따뜻한 국물', 'Hot soup'], ['달콤한 디저트', 'Something sweet']]],
+    ['매운 음식, 나는?', 'Spicy food and me?', [['🔥 아주 맵게', 'Bring the heat'], ['🙂 적당히', 'Medium'], ['🥛 순한 맛', 'Mild, please']]],
+    ['탕수육 소스는?', 'Sweet-and-sour pork sauce?', [['부어 먹기', 'Pour it on'], ['찍어 먹기', 'Dip it']]],
+    ['외국 친구에게 먼저 권하고 싶은 한국 음식은?', 'The Korean dish you would offer a foreign friend first?', [['비빔밥', 'Bibimbap'], ['김치찌개', 'Kimchi stew'], ['떡볶이', 'Tteokbokki'], ['불고기', 'Bulgogi']]],
+    ['오늘 저녁, 더 끌리는 건?', "Tonight's dinner?", [['집밥', 'Home-cooked'], ['외식', 'Eating out'], ['배달', 'Delivery']]],
+    ['디저트를 고른다면?', 'Pick a dessert', [['🍦 아이스크림', 'Ice cream'], ['🍰 케이크', 'Cake'], ['🍓 과일', 'Fruit']]],
+    ['음식 사진, 먹기 전에 찍나요?', 'A photo before eating?', [['꼭 찍어요', 'Always'], ['가끔', 'Sometimes'], ['먹기 바빠요', 'Too busy eating']]]
+  ]},
+  { day: '수요일', ko: '만약에', en: 'What if', qs: [
+    ['투명인간 되기 vs 하늘 날기', 'Become invisible or be able to fly?', [['👻 투명인간', 'Invisible'], ['🕊️ 하늘 날기', 'Flying']]],
+    ['시간 여행을 한다면 어디로?', 'Time travel — where to?', [['⏪ 과거로', 'The past'], ['⏩ 미래로', 'The future']]],
+    ['동물과 대화할 수 있다면 먼저?', 'If you could talk to one animal first?', [['🐶 강아지', 'Dog'], ['🐱 고양이', 'Cat'], ['🐬 돌고래', 'Dolphin'], ['🐦 새', 'Bird']]],
+    ['우주여행 티켓이 생긴다면?', 'You get a ticket to space?', [['🚀 바로 간다', 'Go right away'], ['🌍 지구가 좋아요', 'I will stay on Earth']]],
+    ['하루에 한 시간이 더 생긴다면?', 'One extra hour every day?', [['😴 잠', 'Sleep'], ['📚 배우기', 'Learn'], ['🎮 놀기', 'Play'], ['👨‍👩‍👧 가족', 'Family']]],
+    ['2099년에 열릴 타임캡슐에 넣는다면?', 'For a time capsule opened in 2099?', [['✉️ 편지', 'A letter'], ['📷 사진', 'A photo'], ['📱 지금 쓰는 휴대폰', "Today's phone"]]],
+    ['하나만 가질 수 있다면?', 'Pick one power', [['순간이동', 'Teleport'], ['마음 읽기', 'Read minds'], ['시간 멈추기', 'Stop time']]],
+    ['무인도에 하나만 가져간다면?', 'One item on a desert island?', [['🔪 칼', 'A knife'], ['📖 책', 'A book'], ['🍜 라면 한 박스', 'A box of ramen']]],
+    ['내 인생이 영화라면 장르는?', 'Your life as a movie genre?', [['😂 코미디', 'Comedy'], ['🎭 드라마', 'Drama'], ['🗺️ 모험', 'Adventure'], ['💕 로맨스', 'Romance']]]
+  ]},
+  { day: '목요일', ko: '파이와 크립토', en: 'Pi & Crypto', qs: [
+    ['Pi로 가장 먼저 해 보고 싶은 건?', 'The first thing you would like to do with Pi?', [['물건 사기', 'Buy goods'], ['서비스 이용', 'Use a service'], ['기부하기', 'Donate']]],
+    ['처음 Pi를 알게 된 경로는?', 'How did you first hear about Pi?', [['지인 추천', 'A friend'], ['SNS·유튜브', 'Social media'], ['뉴스·기사', 'News']]],
+    ['매일 채굴 버튼, 나는?', 'The daily mining tap — I…', [['하루도 안 빠져요', 'Never miss a day'], ['가끔 잊어요', 'Sometimes forget'], ['알림 덕분에 해요', 'Thanks to reminders']]],
+    ['Pi 앱에 가장 바라는 것은?', 'What do you want most from the Pi app?', [['더 많은 쓸 곳', 'More places to use Pi'], ['더 쉬운 사용법', 'Easier to use'], ['더 빠른 소식', 'Faster updates']]],
+    ['내 보안 서클은 몇 명인가요?', 'How many people in your Security Circle?', [['1~2명', '1–2'], ['3~4명', '3–4'], ['5명', '5'], ['아직 없어요', 'None yet']]],
+    ['가장 자주 쓰는 Pi 앱 종류는?', 'The kind of Pi app you use most?', [['🎮 게임', 'Games'], ['💬 커뮤니티', 'Community'], ['🛍️ 쇼핑', 'Shopping'], ['거의 안 써요', 'Rarely']]],
+    ['서밋 같은 큰 행사, 나는?', 'Big events like the Summit — I…', [['실시간으로 봐요', 'Watch live'], ['요약만 봐요', 'Read summaries'], ['잘 안 봐요', 'Skip them']]],
+    ['가족에게 Pi를 알려 줬나요?', 'Have you told your family about Pi?', [['이미 함께해요', "They're in"], ['알려 줬지만 아직', 'Told them, not yet'], ['아직 안 했어요', 'Not yet']]],
+    ['Pi 소식은 주로 어디서 보나요?', 'Where do you get Pi news?', [['X', 'X'], ['카페·커뮤니티', 'Forums'], ['유튜브', 'YouTube'], ['디부타데스', 'Dibutades']]]
+  ]},
+  { day: '금요일', ko: '007 사기 판별', en: '007 Scam Watch', qs: [
+    ['모르는 계정이 보낸 링크, 나는?', 'A link from an unknown account — I…', [['절대 안 눌러요', 'Never tap it'], ['확인 후 눌러요', 'Check first'], ['가끔 눌러 봐요', 'Sometimes tap']]],
+    ['"두 배로 돌려준다"는 말을 들으면?', '"Send and get double back" — you…', [['🚫 바로 차단', 'Block'], ['🙈 일단 무시', 'Ignore'], ['🚨 신고', 'Report']]],
+    ['패스프레이즈 보관 방법은? (내용은 절대 쓰지 마세요!)', 'How do you keep your passphrase? (Never post the words!)', [['종이에 적어서', 'On paper'], ['안전한 곳에 따로', 'Somewhere safe offline'], ['휴대폰 메모·사진', 'Phone notes or photo']]],
+    ['"공식 지원팀"이라며 DM이 오면?', 'An "official support" DM arrives — you…', [['무시', 'Ignore'], ['공식 채널에서 확인', 'Check official channels'], ['답장', 'Reply']]],
+    ['가장 조심해야 할 사기는?', 'The scam to watch out for most?', [['패스프레이즈 요구', 'Passphrase requests'], ['선입금 요구', 'Upfront fees'], ['가짜 앱', 'Fake apps'], ['사칭 계정', 'Impersonators']]],
+    ['사기를 당할 뻔한 적이 있나요?', 'Have you ever nearly fallen for a scam?', [['있어요', 'Yes'], ['없어요', 'No'], ['잘 모르겠어요', 'Not sure']]],
+    ['사기 소식은 주로 어디서 알게 되나요?', 'Where do you learn about scams?', [['지인', 'Friends'], ['SNS', 'Social media'], ['007 경보', 'Scam Alert tab']]],
+    ['조건이 너무 좋을 때 나는 먼저?', 'When a deal looks too good, first I…', [['공식 발표 확인', 'Check official news'], ['주변에 물어보기', 'Ask around'], ['그냥 지나가기', 'Walk away']]],
+    ['오늘의 007 퀴즈, 결과는?', "Today's 007 quiz — how did it go?", [['맞혔어요', 'Got it'], ['틀렸어요', 'Missed it'], ['아직 안 풀었어요', 'Not yet']]]
+  ]},
+  { day: '토요일', ko: '추억과 문화', en: 'Memories & Culture', qs: [
+    ['어릴 때 제일 좋아한 놀이는?', 'Your favorite game as a child?', [['숨바꼭질', 'Hide and seek'], ['술래잡기', 'Tag'], ['딱지·구슬', 'Marbles & cards'], ['게임기', 'Video games']]],
+    ['처음 좋아한 음악 장르는?', 'The first music genre you loved?', [['가요·팝', 'Pop'], ['록', 'Rock'], ['트로트·민요', 'Folk & trot'], ['클래식', 'Classical']]],
+    ['나의 여행 스타일은?', 'Your travel style?', [['📋 계획파', 'Planner'], ['🎲 즉흥파', 'Spontaneous']]],
+    ['딱 하루 돌아갈 수 있다면?', 'Go back for one day?', [['어린 시절', 'Childhood'], ['학창 시절', 'School days'], ['지금이 좋아요', 'I like now']]],
+    ['명절에 가장 기다려지는 것은?', 'The best part of a holiday?', [['🍲 음식', 'Food'], ['👨‍👩‍👧 가족 모임', 'Family'], ['🛌 쉬는 날', 'Days off']]],
+    ['어릴 적 꿈과 지금의 나는?', 'Your childhood dream and you now?', [['꿈을 이뤘어요', 'Made it'], ['새 꿈을 찾았어요', 'Found a new dream'], ['아직 가는 중', 'Still on my way']]],
+    ['받으면 더 기쁜 건?', 'Which feels better to receive?', [['✉️ 손편지', 'A handwritten letter'], ['📱 메시지', 'A text message']]],
+    ['내 사진들은 주로 어디에?', 'Where do your photos live?', [['인화한 앨범', 'Printed albums'], ['휴대폰 속', 'On my phone'], ['클라우드', 'In the cloud']]],
+    ['세계에 알리고 싶은 한국 문화는?', 'Korean culture you would share with the world?', [['한글', 'Hangeul'], ['한식', 'Food'], ['K-음악', 'Music'], ['전통 놀이', 'Traditional games']]]
+  ]}
 ];
+const SPECIAL_DAYS = {
+  '01-01': ['새해 첫날! 올해 다짐의 크기는?', "New Year! How big is this year's resolution?", [['큰 목표', 'A big goal'], ['작은 습관', 'A small habit'], ['다짐 없이 자유롭게', 'No resolutions']], '새해 첫날', "New Year's Day"],
+  '02-14': ['마음을 전하는 나만의 방법은?', 'Your way of showing you care?', [['🍫 초콜릿', 'Chocolate'], ['✉️ 편지', 'A letter'], ['🤝 함께하는 시간', 'Time together']], '밸런타인데이', "Valentine's Day"],
+  '03-14': ['파이 데이! 오늘 나는?', 'Happy Pi Day! Today I…', [['🥧 파이 먹기', 'Eat a pie'], ['🔢 3.14 기념하기', 'Celebrate 3.14'], ['⛏️ 평소처럼 채굴', 'Mine as usual']], '파이 데이', 'Pi Day'],
+  '04-22': ['지구의 날, 오늘의 작은 실천은?', "Earth Day — today's small action?", [['텀블러 쓰기', 'Reusable cup'], ['분리수거', 'Recycling'], ['차 대신 걷기', 'Walk instead of driving']], '지구의 날', 'Earth Day'],
+  '05-05': ['어린 시절로 하루 돌아간다면?', 'Back to childhood for one day?', [['실컷 놀기', 'Play all day'], ['가족과 시간', 'Time with family'], ['공부 다시 하기', 'Study again']], '어린이날', "Children's Day"],
+  '05-08': ['부모님께 전하고 싶은 것은?', 'What would you give your parents today?', [['고맙다는 말', 'A thank you'], ['사랑한다는 말', 'An I love you'], ['함께하는 식사', 'A meal together']], '어버이날', "Parents' Day"],
+  '06-28': ['2π 데이! Pi와 함께한 시간은?', 'Happy 2π Day! How long have you been with Pi?', [['2019년부터', 'Since 2019'], ['2020~2022년부터', 'Since 2020–2022'], ['2023년 이후', 'Since 2023 or later']], '2π 데이', 'Pi2 Day'],
+  '10-09': ['한글날! 가장 아름다운 우리말은?', 'Hangeul Day! The most beautiful Korean word?', [['사랑', 'Love'], ['하늘', 'Sky'], ['그리움', 'Longing'], ['우리', 'Us']], '한글날', 'Hangeul Day'],
+  '10-31': ['할로윈, 나는?', 'Halloween — and me?', [['🎃 분장 좋아요', 'Love costumes'], ['🍬 사탕만', 'Just the candy'], ['😐 관심 없어요', 'Not my thing']], '할로윈', 'Halloween'],
+  '12-25': ['크리스마스에 받고 싶은 선물은?', 'Your Christmas wish?', [['🎁 갖고 싶던 물건', 'Something I wanted'], ['✈️ 여행', 'A trip'], ['🛌 푹 쉬기', 'A good rest']], '크리스마스', 'Christmas'],
+  '12-31': ['올해를 한 단어로 고른다면?', 'This year in one word?', [['🌱 성장', 'Growth'], ['🪨 버팀', 'Endurance'], ['😊 행복', 'Happiness'], ['🔄 변화', 'Change']], '한 해의 마지막 날', "New Year's Eve"]
+};
 
-function getTodayQuestion(){
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 0);
-  const dayOfYear = Math.floor((now - start) / 86400000);
-  const q = QUESTIONS[dayOfYear % QUESTIONS.length];
-  return { ...q, date: now.toISOString().slice(0, 10) };
+function getTodayPoll(){
+  const kst = new Date(Date.now() + 9 * 3600 * 1000);          // 한국 시간 기준
+  const date = kst.toISOString().slice(0, 10);
+  const sp = SPECIAL_DAYS[date.slice(5)];
+  let q, theme, themeEn, special = false;
+  if(sp){ q = sp; theme = sp[3]; themeEn = sp[4]; special = true; }
+  else{
+    const t = POLL_THEMES[kst.getUTCDay()];
+    const week = Math.floor(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()) / 86400000 / 7);
+    q = t.qs[week % t.qs.length]; theme = `${t.day} · ${t.ko}`; themeEn = t.en;
+  }
+  const options = q[2].map(o => ({ ko: o[0], en: o[1] })).concat([{ ko: '✏️ 다른 생각', en: 'Something else', other: true }]);
+  return { date, ko: q[0], en: q[1], theme, themeEn, special, options };
 }
 
+// ---------- 투표 집계 (저장 횟수를 아끼려고 5분에 한 번, 또는 30표마다 한꺼번에 저장) ----------
+const POLL_BLOB_NAME = 'dibutades-poll.json';
+const pollMem = { d: null, at: 0, pending: [], lastFlush: 0 };
+function pollEmpty(date, n){ return { date, counts: Array(n).fill(0), voters: {} }; }
+async function pollLoadBlob(date, n){
+  try{
+    const r = await get(POLL_BLOB_NAME, { access: 'private' });
+    const d = JSON.parse(await new Response(r.stream).text());
+    if(d && d.date === date && Array.isArray(d.counts)){ while(d.counts.length < n) d.counts.push(0); d.voters = d.voters || {}; return d; }
+  }catch(e){}
+  return pollEmpty(date, n);
+}
+function pollApply(d){
+  for(const p of pollMem.pending){
+    if(p.date !== d.date || d.voters[p.vid] !== undefined) continue;
+    d.voters[p.vid] = p.choice; d.counts[p.choice] = (d.counts[p.choice] || 0) + 1;
+  }
+  return d;
+}
+async function pollLoad(date, n){
+  if(pollMem.d && pollMem.d.date === date && Date.now() - pollMem.at < 60 * 1000) return pollMem.d;
+  pollMem.pending = pollMem.pending.filter(p => p.date === date);   // 날이 바뀐 표는 버림
+  pollMem.d = pollApply(await pollLoadBlob(date, n));
+  pollMem.at = Date.now();
+  return pollMem.d;
+}
+async function pollFlush(date, n){
+  if(!pollMem.pending.length) return;
+  if(Date.now() - pollMem.lastFlush < 5 * 60 * 1000 && pollMem.pending.length < 30) return;
+  const d = pollApply(await pollLoadBlob(date, n));
+  await put(POLL_BLOB_NAME, JSON.stringify(d), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+  pollMem.pending = []; pollMem.d = d; pollMem.at = Date.now(); pollMem.lastFlush = Date.now();
+}
+function pollView(p, d, vid){
+  const total = d.counts.reduce((a, b) => a + b, 0);
+  return { ...p, counts: d.counts.slice(0, p.options.length), total, myChoice: vid && d.voters[vid] !== undefined ? d.voters[vid] : null };
+}
+
+app.get('/api/poll/today', async (req, res) => {
+  const p = getTodayPoll();
+  try{
+    const d = await pollLoad(p.date, p.options.length);
+    res.set('Cache-Control', 'no-store');
+    res.json(pollView(p, d, String(req.query.vid || '').slice(0, 64)));
+  }catch(e){ res.json({ ...p, counts: Array(p.options.length).fill(0), total: 0, myChoice: null }); }
+});
+app.post('/api/poll/vote', async (req, res) => {
+  const p = getTodayPoll();
+  const { choice, visitorId } = req.body || {};
+  const c = Number(choice), vid = String(visitorId || '').slice(0, 64);
+  if(!Number.isInteger(c) || c < 0 || c >= p.options.length) return res.status(400).json({ error: 'bad_choice' });
+  if(!vid) return res.status(400).json({ error: 'no_visitor' });
+  try{
+    const d = await pollLoad(p.date, p.options.length);
+    if(d.voters[vid] === undefined && Object.keys(d.voters).length < 20000){
+      d.voters[vid] = c; d.counts[c] = (d.counts[c] || 0) + 1;
+      pollMem.pending.push({ date: p.date, vid, choice: c });
+      try{ await pollFlush(p.date, p.options.length); }catch(e){ console.error('poll save', e && e.message); }
+    }
+    res.json(pollView(p, d, vid));
+  }catch(e){ console.error('poll vote', e && e.message); res.status(500).json({ error: 'server' }); }
+});
+
+// 예전 화면과의 호환용 (오늘의 투표 질문만 돌려줌)
 app.get('/api/question/today', (req, res) => {
-  res.json(getTodayQuestion());
+  const p = getTodayPoll();
+  res.json({ ko: p.ko, en: p.en, theme: p.theme, themeEn: p.themeEn, special: p.special, date: p.date });
 });
 
 // ---------- Vercel Blob 기반 저장소 (Private Store) ----------
