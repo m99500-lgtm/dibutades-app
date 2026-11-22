@@ -989,7 +989,10 @@
   .write-row{ display:flex; align-items:center; gap:10px; margin-top:8px; }
   .self-cert{ flex:1; margin:0; min-height:44px; font-size:12px; }
   .self-cert input{ width:18px; height:18px; accent-color:var(--spray-y); }
-  .write-count{ font-size:11px; color:var(--chalk-dim); font-variant-numeric:tabular-nums; }
+  .write-count{ flex:1; font-size:11px; color:var(--chalk-dim); font-variant-numeric:tabular-nums; }
+  #writeMsg::placeholder{ font-size:16px; line-height:1.35; }
+  #submitGraffiti{ display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  #submitGraffiti .en{ font-size:10px; font-weight:500; margin-top:3px; opacity:.85; }
   #submitGraffiti, #submitGraffiti:active{
     width:auto; margin:0; min-height:44px; padding:0 22px; border:none; border-radius:22px;
     font-size:15px; line-height:1; box-shadow:none;
@@ -1225,6 +1228,8 @@
     background:linear-gradient(var(--card), var(--card)) padding-box, linear-gradient(90deg, #ff4d4d, #ff9f1c, #ffd93d, #4dd679, #3ea6ff, #5b6cff, #b967ff) border-box; }
   .meal-input button{ height:46px; padding:0 16px; border:none; border-radius:12px; background:var(--spray-y); color:#241b04; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
   .meal-input button:disabled{ opacity:0.5; }
+  .meal-input button{ display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.1; }
+  .meal-input button .en{ font-size:10px; font-weight:500; opacity:.8; margin-top:2px; }
   .meal-note{ font-size:10.5px; color:var(--chalk-dim); margin-top:6px; }
   .meal-msg{ font-size:12px; margin-top:6px; color:var(--spray-y); min-height:0; }
   .meal-feed li{ display:grid; grid-template-columns:30px minmax(0,1fr) auto; gap:10px; align-items:center; }
@@ -1530,14 +1535,10 @@
             </div>
           </div>
           <label for="writeMsg" class="sr-only">낙서 내용</label>
-          <textarea id="writeMsg" maxlength="200" placeholder="보기에 없는 생각이나 투표한 이유를 한마디 남겨 보세요"></textarea>
+          <textarea id="writeMsg" maxlength="200" placeholder="보기에 없는 생각이나 투표한 이유를 한마디 남겨 보세요&#10;Share a thought, or why you voted"></textarea>
           <div class="write-row">
-            <label class="self-cert">
-              <input type="checkbox" id="selfCertCheck">
-              <span>직접 쓴 글이에요</span>
-            </label>
             <span class="write-count" id="writeCount">0/200</span>
-            <button class="btn btn-primary" id="submitGraffiti">남기기</button>
+            <button class="btn btn-primary" id="submitGraffiti">남기기<span class="en">Post</span></button>
           </div>
           <div class="status" id="writeStatus"></div>
           <p class="hint" id="whoamiText">낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.</p>
@@ -1576,7 +1577,7 @@
         </div>
         <div class="foot-links">
           <button type="button" class="foot-link" id="openWelcome">디부타데스 소개 <span>About</span></button>
-          <button type="button" class="foot-link" id="openPromo">내 Pi 앱 홍보하기 <span>Promote your Pi app</span> →</button>
+          <button type="button" class="foot-link" id="openPromo">당신의 Pi 앱 홍보하기 <span>Promote your Pi app</span> →</button>
         </div>
       </section>
 
@@ -2620,10 +2621,6 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
     return;
   }
   if(!msg){ showStatus('writeStatus','err','내용을 입력해주세요.','Please enter a message.'); return; }
-  if(!document.getElementById('selfCertCheck').checked){
-    showStatus('writeStatus','err','직접 작성했다는 확인 체크박스를 눌러주세요.','Please check the box confirming you wrote this yourself.');
-    return;
-  }
   try{
     const res = await fetch(API_BASE + '/api/graffiti', {
       method:'POST',
@@ -2645,7 +2642,6 @@ document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
     document.getElementById('writeMsg').value = '';
     updateWriteCount();
     loadVisitStats(); // 방금 낙서한 것을 통계에 반영
-    document.getElementById('selfCertCheck').checked = false;
     const streakLine = data.streak
       ? `<div class="streak-badge">🔥 ${data.streak}일 연속 작성 중이에요<span class="en">${data.streak}-day streak!</span></div>`
       : '';
@@ -3228,7 +3224,7 @@ function renderMeal(body){
     `<div class="meal-map"><svg viewBox="0 0 358 180" role="img" aria-label="오늘 사람들이 올린 한 끼가 표시된 세계 지도">${mealLandSvg()}${dots}</svg></div><div class="meal-note" style="margin-top:4px">점 하나 = 그 나라에서 오늘 올라온 한 끼</div>` +
     `<div class="news-sub">오늘 뭐 먹었어?<span class="sub-en">What did you eat today?</span></div>` +
     `<div class="meal-form"><div class="meal-row"><label class="sr-only" for="mealCountry">나라</label><select id="mealCountry">${opts}</select>${chips}</div>` +
-    `<div class="meal-input"><label class="sr-only" for="mealText">오늘 먹은 한 끼</label><input id="mealText" type="text" maxlength="40" placeholder="김치찌개에 계란말이"><button type="button" id="mealSend">올리기</button></div>` +
+    `<div class="meal-input"><label class="sr-only" for="mealText">오늘 먹은 한 끼</label><input id="mealText" type="text" maxlength="40" placeholder="김치찌개에 계란말이"><button type="button" id="mealSend">올리기<span class="en">Post</span></button></div>` +
     `<div class="meal-msg" id="mealMsg"></div><div class="meal-note">나라와 한 끼만 지도에 올라가요. 사진은 받지 않아요. 하루 세 번까지.</div></div>` +
     `<div class="news-sub">세계 사람들의 한 끼<span class="sub-en">Meals from pioneers</span></div>` +
     (feed ? `<ul class="news-list meal-feed">${feed}</ul>` : '<div class="news-empty">오늘 첫 한 끼를 올려 주세요!</div>');
