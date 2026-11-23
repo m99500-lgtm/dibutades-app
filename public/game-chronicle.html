@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Pi Chronicle Board · 디부타데스</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;500;700&display=swap">
+<style>
+  .appback{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);color:inherit;text-decoration:none;font-size:12.5px;font-weight:700;opacity:.9}
+  .appback:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+  /* Layout: badge bar / 7×7 board — a 40-square spiral path around a 3×3 Secret Room bingo in the centre / two dice. Single dark night-chalkboard theme. */
+  :root{
+    --night:#1b1a22; --board:#25232e; --cell:#2f2c3a; --line:#3d3a4a;
+    --chalk:#f1ece2; --dim:#a49db3; --pi:#ffc93c;
+    --hist:#8b7bff; --scam:#ff5f7a; --mine:#4fd1a5; --luck:#53b8ff; --bad:#9aa3b5; --trap:#ff9a3c; --exch:#e879f9; --home:#ff3b3b;
+    --f-title:"Bungee","Inter",system-ui,sans-serif;
+    --f-year:"Fraunces",Georgia,serif;
+    --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color-scheme:dark;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--night);color:var(--chalk);font-family:var(--f-body);-webkit-tap-highlight-color:transparent}
+  .wrap{max-width:480px;margin:0 auto;box-sizing:border-box;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:14px 24px;display:flex;flex-direction:column;gap:12px}
+  header h1{margin:0;font-family:var(--f-title);font-weight:400;font-size:24px;line-height:1.1}
+  header p{margin:5px 0 0;font-size:12.5px;color:var(--dim);line-height:1.5}
+  .bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat{padding:9px 10px;border-radius:14px;background:var(--board);border:1px solid var(--line)}
+  .stat > span{display:block;font-size:10.5px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase}
+  .stat b{white-space:nowrap}
+  .stat b{font-size:19px;font-variant-numeric:tabular-nums;color:var(--pi)}
+  .stat small{font-size:11px;color:var(--dim);margin-left:3px}
+  .board{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(7,auto);gap:3px;padding:6px;border-radius:18px;background:var(--board);border:1px solid var(--line)}
+  .c{position:relative;aspect-ratio:1;border-radius:8px;background:var(--cell);border:1px solid var(--line);padding:2px 3px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:0;cursor:pointer;color:var(--chalk);font-family:inherit}
+  .c .n{position:absolute;top:1px;left:3px;font-size:7.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .c .ic{font-size:15px;line-height:1}
+  .c .t{font-size:6.5px;line-height:1.05;text-align:center;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .c.hist{border-top:3px solid var(--hist)} .c.scam{border-top:3px solid var(--scam)} .c.mine{border-top:3px solid var(--mine)}
+  .c.luck{border-top:3px solid var(--luck)} .c.bad{border-top:3px solid var(--bad);background:#2a2a33} .c.trap{border-top:3px solid var(--trap)}
+  .c.exch{border-top:3px solid var(--exch)} .c.home{border-top:3px solid var(--home);background:#3a2026}
+  .c.start,.c.goal{background:#3a3220;border-color:var(--pi)}
+  .c.here{box-shadow:0 0 0 2px var(--pi) inset}
+  .bwrap{position:relative}
+  .walker{position:absolute;left:0;top:0;width:30px;height:34px;pointer-events:none;z-index:5;transition:transform .28s ease-in-out,opacity .22s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+  .walker svg{display:block;overflow:visible}
+  .walker .fig{transform-origin:15px 34px;transition:transform .15s}
+  .walker.face-l .fig{transform:scaleX(-1)}
+  .walker .legL{transform-origin:12.6px 21px}.walker .legR{transform-origin:17.4px 21px}
+  .walker.walking .legL{animation:legSw .28s ease-in-out infinite alternate}
+  .walker.walking .legR{animation:legSw .28s ease-in-out infinite alternate-reverse}
+  .walker.walking .body{animation:bob .14s ease-in-out infinite alternate}
+  .walker.cheer .body{animation:cheer .5s ease-out 2}
+  @keyframes legSw{from{transform:rotate(22deg)}to{transform:rotate(-22deg)}}
+  @keyframes bob{from{transform:translateY(0)}to{transform:translateY(-1.6px)}}
+  @keyframes cheer{0%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+  @media (prefers-reduced-motion:reduce){.walker{transition:none}.walker.walking .legL,.walker.walking .legR,.walker.walking .body,.walker.cheer .body{animation:none}}
+  .tok{position:absolute;right:1px;bottom:0;font-size:13px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+  /* centre secret room */
+  .room{grid-column:3 / span 3;grid-row:3 / span 3;border-radius:12px;background:#171620;border:1px dashed #5a5470;display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:4px;position:relative}
+  .room.open{border:1px solid var(--pi);box-shadow:0 0 18px rgba(255,201,60,.25)}
+  .bc{border-radius:7px;border:1px solid var(--line);background:#24222d;color:var(--dim);font-family:var(--f-title);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:default;min-height:0;aspect-ratio:1}
+  .room.open .bc{background:#353142;color:var(--chalk);cursor:pointer}
+  .room .bc.ok{background:#1f4a3c;border-color:var(--mine);color:var(--chalk)}
+  .room .bc.no{background:#4a1f29;border-color:var(--scam);color:var(--chalk)}
+  .room .bc.line{box-shadow:0 0 0 2px var(--pi) inset}
+  .room .lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;pointer-events:none;background:rgba(23,22,32,.55);border-radius:12px}
+  .room .lock b{font-size:20px}
+  .room.open .lock{display:none}
+  .legend{display:flex;flex-wrap:wrap;gap:5px 11px;font-size:10.5px;color:var(--dim)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .dock{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center}
+  .die{width:54px;height:54px;border-radius:14px;background:var(--chalk);color:#1b1a22;font-size:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-variant-numeric:tabular-nums}
+  .die.roll{animation:shake .5s}
+  @keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}50%{transform:rotate(12deg)}75%{transform:rotate(-6deg)}}
+  .go{min-height:54px;border:none;border-radius:16px;background:var(--pi);color:#2a1f02;font-family:var(--f-title);font-size:15px;cursor:pointer;padding:0 10px}
+  .go:disabled{opacity:.45;cursor:default}
+  .go:focus-visible,.btn:focus-visible,.bc:focus-visible,.c:focus-visible{outline:2px solid var(--chalk);outline-offset:1px}
+  .log{font-size:12.5px;color:var(--dim);min-height:1.4em;line-height:1.5}
+  .note{font-size:11px;color:var(--dim);line-height:1.5;border-top:1px dashed var(--line);padding-top:10px;margin:0}
+  /* cards */
+  .sheet{position:fixed;inset:0;z-index:10;background:rgba(10,9,14,.74);display:flex;align-items:flex-end;justify-content:center;padding:0 max(12px, env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px))}
+  .sheet[hidden]{display:none!important}
+  .card{width:100%;max-width:460px;max-height:calc(100% - 24px);overflow-y:auto;border-radius:20px;background:#2a2734;border:1px solid var(--line);padding:18px 18px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;animation:up .25s ease-out}
+  @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+  .kind{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .year{font-family:var(--f-year);font-size:24px;color:var(--pi);line-height:1.1}
+  .card h2{margin:0;font-size:18px;line-height:1.35}
+  .card p{margin:0;font-size:14px;line-height:1.6;color:#ddd6ea}
+  .eff{font-size:13px;font-weight:700;color:var(--pi)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{min-height:48px;border-radius:14px;border:1px solid var(--line);background:#353142;color:var(--chalk);font-family:var(--f-body);font-size:15px;font-weight:700;cursor:pointer}
+  .btn.scamb{border-color:rgba(255,95,122,.65)} .btn.safeb{border-color:rgba(79,209,165,.65)}
+  .btn.main{background:var(--pi);color:#2a1f02;border-color:var(--pi)}
+  .big{font-family:var(--f-title);font-size:22px;line-height:1.25}
+  .badge-ic{width:22px;height:22px;vertical-align:-5px;margin-right:4px}
+  .badges-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:6px 0}
+  .badges-row svg{width:84px;height:84px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+  .badges-row svg.dim{opacity:.25;filter:grayscale(1)}
+  .badges-row svg.pop{animation:pop .5s ease-out both}
+  @keyframes pop{0%{transform:scale(.3) rotate(-20deg);opacity:0}70%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:none}}
+  .files-left{font-size:12px;color:var(--pi);font-weight:700}
+  @media (prefers-reduced-motion:reduce){ .die.roll,.card,.badges-row svg.pop{animation:none} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="appback" href="/#games">← 007 게임 · Back to games</a>
+  <header>
+    <h1>📜 PI CHRONICLE BOARD</h1>
+    <p>Spiral through Pi's history with two dice. You have <b>5 rolls</b>. Reach square 39 to unseal the <b>Secret Room</b> in the centre, open <b>5 of its 9 sealed files</b>, and win 007 Badges for every full line. Tap any square to read it.</p>
+  </header>
+  <div class="bar">
+    <div class="stat"><span>Rolls left</span><b id="rolls">5</b><small>/ 5</small></div>
+    <div class="stat"><span>Trust</span><b id="trust">0</b></div>
+    <div class="stat"><span>007 Badges</span><b><span id="badgeIc"></span><span id="badges">0</span></b><small id="today">today 0/5</small></div>
+  </div>
+  <div class="bwrap"><div class="board" id="board" aria-label="Pi Chronicle board"></div><div class="walker" id="walker" aria-hidden="true"><svg viewBox="0 0 30 34" width="30" height="34"><g class="fig"><ellipse cx="15" cy="32.6" rx="8" ry="1.6" fill="rgba(0,0,0,.45)"/><g class="legL"><rect x="11" y="21" width="3.2" height="10" rx="1.4" fill="#22243a"/><rect x="9.8" y="30" width="5" height="2.2" rx="1" fill="#0c0d14"/></g><g class="legR"><rect x="15.8" y="21" width="3.2" height="10" rx="1.4" fill="#22243a"/><rect x="15.2" y="30" width="5" height="2.2" rx="1" fill="#0c0d14"/></g><g class="body"><rect x="6.4" y="13.6" width="3" height="8" rx="1.5" fill="#b8975a"/><rect x="20.6" y="13.6" width="3" height="8" rx="1.5" fill="#b8975a"/><rect x="8.5" y="12.8" width="13" height="11" rx="4" fill="#c9a96a"/><path d="M12.6 12.9 L15 18.2 L17.4 12.9 Z" fill="#f1ece2"/><path d="M14.4 13.6 L15 17 L15.6 13.6 Z" fill="#c0392b"/><circle cx="18.6" cy="18.6" r="1.3" fill="#e8c45f"/><circle cx="15" cy="8.6" r="4.6" fill="#f2c9a0"/><rect x="11.3" y="7.7" width="7.4" height="2.1" rx="1" fill="#111"/><rect x="11" y="1.6" width="8" height="4.6" rx="1.6" fill="#2b2a35"/><rect x="11" y="4.4" width="8" height="1.1" fill="#d9b45a"/><ellipse cx="15" cy="5.9" rx="7.2" ry="1.5" fill="#2b2a35"/></g></g></svg></div></div>
+  <div class="legend">
+    <span><i style="background:var(--hist)"></i>History</span><span><i style="background:var(--exch)"></i>Exchange</span><span><i style="background:var(--scam)"></i>007 Check</span>
+    <span><i style="background:var(--mine)"></i>Mining</span><span><i style="background:var(--luck)"></i>Luck</span><span><i style="background:var(--bad)"></i>Bad luck</span>
+    <span><i style="background:var(--trap)"></i>Trap</span><span><i style="background:var(--home)"></i>Back to Start</span>
+  </div>
+  <div class="dock">
+    <div class="die" id="d1" aria-label="Die 1">🎲</div>
+    <div class="die" id="d2" aria-label="Die 2">🎲</div>
+    <button class="go" id="roll" type="button">ROLL</button>
+  </div>
+  <div class="log" id="log" role="status">Tap ROLL to begin your journey.</div>
+  <p class="note">007 Badges are in-app collectibles only. They have no cash value and cannot be bought, sold or exchanged. Exchange names are shortened on purpose. Exchange squares are history, not advice.</p>
+</div>
+
+<div class="sheet" id="sheet" hidden><div class="card" id="card" role="dialog" aria-modal="true"></div></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const QUIZ = [{"a":"scam","q":"A \"Pi Network Support\" account DMs you: \"Suspicious activity detected. Enter your 24-word passphrase to unlock your wallet.\"","x":"Your passphrase is the key to your wallet. The Pi team never DMs first and never asks for it."},{"a":"scam","q":"\"Summit event! Send 10 Pi now and get 20 Pi back within 24 hours. First 100 only!\"","x":"\"Send and get double back\" is the oldest trick. Time limits are there to stop you from thinking."},{"a":"safe","q":"A Pi app's login shows the Pi screen: \"Share your username with this app?\" No passphrase field.","x":"This is the normal official Pi login. If a login screen asks for your passphrase, it is fake."},{"a":"scam","q":"\"KYC taking too long? Pay just 5 Pi and we will get you approved in one day.\"","x":"No one can speed up your KYC for a fee. KYC only goes through the official process in the Pi app."},{"a":"scam","q":"\"Mainnet migration service! Just give us your passphrase and we will move your remaining Pi right away.\"","x":"Migration only happens through the Mainnet checklist in the Pi app. Hand over your passphrase and your Pi becomes theirs."},{"a":"scam","q":"\"You won a Pi airdrop! Visit this site, connect your wallet and verify with your passphrase.\"","x":"No real airdrop needs your passphrase. \"You won\" is classic bait."},{"a":"safe","q":"Paying in a Pi app opens the Pi wallet showing the app name and amount; it only goes through if you tap approve.","x":"This is a normal Pi payment. Check the app name and amount, and cancel if anything looks off."},{"a":"scam","q":"You get a \"Pi Browser Pro\" apk file by message, promising \"double mining speed\".","x":"Only install Pi apps from the official app stores. Unknown installers can steal your wallet."},{"a":"scam","q":"An account claiming to be Nicolas Kokkalis DMs you about \"a special chance for selected pioneers\".","x":"The founders do not offer private deals by DM. Impersonating them is very common."},{"a":"scam","q":"\"We buy Pi at $314,159 each. Just send a $100 activation fee first.\"","x":"An unrealistic price plus an upfront fee is advance-fee fraud. Pay and they vanish."},{"a":"safe","q":"A friend used your username as the invitation code when joining Pi.","x":"An invitation code is just a username, safe to share. It is nothing like your passphrase."},{"a":"scam","q":"\"Pi investment group! 30% guaranteed every month, principal guaranteed.\"","x":"\"Guaranteed returns\" is itself the warning sign. Real investments guarantee nothing."},{"a":"scam","q":"\"A booster that triples your mining rate! Only 5 Pi a month.\"","x":"You cannot buy a faster mining rate. Only official in-app features like Security Circles affect it."},{"a":"scam","q":"\"Reply within 24 hours or your Pi account will be deleted. Verify through the link below.\"","x":"Threats with a deadline are phishing. Check account notices inside the Pi app itself."},{"a":"safe","q":"You added a few family members and friends you truly trust to your Security Circle in the Pi app.","x":"That is exactly what Security Circles are for: people you really know."},{"a":"scam","q":"You get a link: \"Upload your KYC documents here — both sides of your ID and a selfie.\"","x":"KYC is only done in the official KYC app opened from Pi. Uploading your ID elsewhere risks identity theft."},{"a":"scam","q":"An online friend you have chatted with for weeks suddenly asks you to send some Pi for \"an emergency\".","x":"Building trust then asking for money is a classic romance scam. Sent Pi cannot be recovered."},{"a":"scam","q":"\"Work from home, paid in Pi! Send a 20 Pi deposit to get started.\"","x":"A job that asks you to pay a deposit first is a scam."},{"a":"safe","q":"You opened the Pi app and tapped the mining button once for the day. No payment involved.","x":"That is the normal way to mine Pi. Mining is free."},{"a":"scam","q":"\"Pi pre-sale before the exchange listing! Buy now with other coins and get 10x after listing!\"","x":"\"Pre-sale before listing\" and \"guaranteed 10x\" are hallmarks of fake sales."},{"a":"scam","q":"\"Lost your passphrase? We can recover your wallet. Tell us the words you remember.\"","x":"Fake \"recovery services\" collect your remaining words. Even a few words are dangerous."},{"a":"scam","q":"A \"support agent\" asks you to share your screen and open your Pi wallet so they can \"fix the problem\".","x":"Opening your wallet while sharing your screen exposes everything. Real support never asks this."},{"a":"safe","q":"You downloaded the Pi Node software from the official site, minepi.com.","x":"The official site is the right place. Avoid node files from anywhere else."},{"a":"scam","q":"\"To check your wallet works, send 1 Pi to this address as a test. We will send it right back.\"","x":"\"Test transfers\" never come back, and they often lead to bigger requests."},{"a":"scam","q":"A Telegram group called \"Pi Official Help Desk\"; an admin offers to help you by private message.","x":"Fake admins messaging you first is a common trick. Get help inside the Pi app."},{"a":"scam","q":"\"Retweet and connect your wallet for 100 free Pi!\" The link asks for your passphrase.","x":"\"Free\" plus a passphrase prompt equals theft."},{"a":"safe","q":"You applied for KYC through the menu in the Pi app, using the official KYC app, without paying anything.","x":"That is the official KYC process. Only use the path the Pi app gives you."},{"a":"scam","q":"An app shows a box: \"Enter your passphrase here to claim your bonus.\"","x":"Legit apps never ask for your passphrase. Payments only happen on the Pi wallet approval screen."},{"a":"scam","q":"\"Pi debit card pre-order! Pay 10 Pi to get it first at launch.\"","x":"Selling products that were never officially announced is a scam. Check official Pi channels first."},{"a":"scam","q":"\"You won a hackathon prize! Send a 15 Pi transfer fee first to receive it.\"","x":"Paying a fee before receiving a prize is advance-fee fraud."},{"a":"safe","q":"You wrote your 24-word passphrase on paper and keep it somewhere safe at home. No photos.","x":"Great habit. Photos, notes apps and clouds can leak in a hack."},{"a":"scam","q":"\"Pi event VIP pass! Meet the founders on a video call. 50 Pi.\"","x":"Passes or meetings not in official announcements are scams, and they pop up at every big event. Check official Pi channels."},{"a":"scam","q":"The leader of a \"Pi Network Korea official group\" asks you to deposit 30 Pi to raise your member level.","x":"A group using an official-sounding name and asking for deposits is a red flag. Pi has no paid member levels."},{"a":"scam","q":"An ad pushes \"Pi Mining 2.0 — mines better!\", a look-alike app.","x":"It is a copycat app. Mining only happens in the official Pi app."},{"a":"safe","q":"To receive Pi from a friend, you shared only your wallet address starting with G.","x":"Your public address is meant for receiving. Just never share the passphrase."},{"a":"scam","q":"Someone asks you to tell them the verification code just sent to you by SMS.","x":"Sharing that code lets them take over your account. Never share it."},{"a":"scam","q":"\"Lend us your ID for other people's KYC and earn 5 Pi each time.\"","x":"Letting others use your identity is fraud and illegal, and it puts your own account at risk."},{"a":"scam","q":"\"Pi staking dApp! Just deposit and earn 3% interest every day.\"","x":"3% a day means thousands of percent a year. Unrealistic interest signals a Ponzi scheme."},{"a":"safe","q":"You moved to Mainnet by following the Mainnet checklist in the Pi app step by step.","x":"That is the official way. No agents or outside sites needed."},{"a":"scam","q":"\"We can unlock your locked-up Pi right now. 20% unlock fee.\"","x":"Lockups follow the settings you chose. No one can release them for a fee."},{"a":"scam","q":"\"Double node rewards program! Node operators only, 10 Pi to join.\"","x":"Node rewards come only from the official node software and rules. There is no paid boost."},{"a":"scam","q":"A YouTube live shows a founder's face with a caption: \"Send to this address now and get double back.\"","x":"Deepfake streams are on the rise. Founders never ask you to send them anything."},{"a":"safe","q":"You looked up your transactions on the official Pi block explorer using your wallet address.","x":"The block explorer is a public record. Looking up by address is safe."},{"a":"scam","q":"A \"Pi charity drive\" sends a sad story and one wallet address, with no organization or way to verify.","x":"Unverifiable charity requests often play on emotions. Check the organization before giving."},{"a":"scam","q":"\"Pi just listed on a big exchange! Sell to us for 20% above market — send first.\"","x":"Unverified news plus a premium plus \"send first\" is a scam. Check official announcements."},{"a":"scam","q":"\"A Pi token on BNB chain that converts 1:1 to Mainnet Pi later. Buy now!\"","x":"\"Pi tokens\" on other chains are unrelated fakes. They do not convert to Mainnet Pi."},{"a":"safe","q":"Before paying in the Pi Browser, you checked the address bar to make sure it is the app you know.","x":"Great habit. It filters out look-alike fake apps."},{"a":"scam","q":"\"Scan this QR code for an instant event reward.\" It opens an unknown site asking to connect your wallet.","x":"A QR code can lead anywhere. Do not connect your wallet on unknown sites."},{"a":"scam","q":"\"Selling Security Circle spots. Pay 10 Pi and I will add you to boost your mining.\"","x":"Security Circles are for people you actually know and trust. Buying a spot is a scam."},{"a":"scam","q":"\"Selling a KYC-verified Pi account with 5,000 Pi balance.\"","x":"Account trading breaks Pi rules, and sellers often take the money or reclaim the account."},{"a":"safe","q":"An unexpected payment approval popped up while using an app, so you tapped cancel.","x":"Well done. You can always refuse a payment you did not intend."},{"a":"scam","q":"A reply under your post: \"We can increase your transferable balance. Contact us.\"","x":"Transferable balance only changes through official Pi processes. Such replies are bait."},{"a":"scam","q":"\"Pi will 100x next month. Inside info — VIP room entry 20 Pi.\"","x":"No one knows prices for sure. Selling \"certain\" tips is itself the scam."},{"a":"scam","q":"\"Mandatory Pi app update! Download the new version from this link.\" The address is unfamiliar.","x":"Only update through your official app store. \"Updates\" from links can be malware."},{"a":"safe","q":"You saw an account impersonating a founder and reported it with X's report feature.","x":"Good move. Reports help protect other pioneers."},{"a":"scam","q":"\"Migration deadline is today! Send your Pi to this address now or it will be lost.\"","x":"No real process needs you to send Pi to someone else. Check official dates in the Pi app."},{"a":"scam","q":"A game app urges you: \"Bet 10 Pi now, it could be 30 Pi in 5 minutes!\" and keeps pushing for more.","x":"Promising multiples in minutes and pushing for more is how gambling scams work."},{"a":"scam","q":"\"Leave your wallet address and passphrase and we will send you a summit NFT.\"","x":"Sending only needs your address. Asking for the passphrase means they want your wallet."},{"a":"safe","q":"Hearing about a new feature, you checked the in-app news and the official Pi Network account before believing it.","x":"The surest habit. Be wary of news that is not on official channels."},{"a":"safe","q":"When logging into a Pi app, the Pi screen asks to allow payments too; each actual payment still needs its own approval.","x":"Normal. The permission only lets the app request payments; money moves only when you approve each one."}];
+  const MAX_ROLLS = 5, DAILY_CAP = 5, MAX_OPEN = 5;
+  // 007 Badge: gold medal with a navy core, "007", a π mark and the agent ring
+  let bid = 0;
+  function badgeSvg(cls){
+    const id = 'bg' + (++bid);
+    return `<svg class="${cls || ''}" viewBox="0 0 100 100" role="img" aria-label="007 Badge"><defs>
+      <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".5" stop-color="#ffc93c"/><stop offset="1" stop-color="#c98a12"/></linearGradient>
+      <path id="${id}p" d="M50 50 m-31 0 a31 31 0 1 1 62 0 a31 31 0 1 1 -62 0"/></defs>
+      <path d="M33 70 L24 96 L36 90 L42 99 L48 74Z" fill="#ff5f7a"/><path d="M67 70 L76 96 L64 90 L58 99 L52 74Z" fill="#8b7bff"/>
+      <circle cx="50" cy="46" r="41" fill="url(#${id}g)"/>
+      <circle cx="50" cy="46" r="41" fill="none" stroke="#fff4cf" stroke-opacity=".7" stroke-width="1.5" stroke-dasharray="2 3"/>
+      <circle cx="50" cy="46" r="31" fill="#1d1b2b" stroke="#c98a12" stroke-width="2"/>
+      <text font-family="Inter,system-ui,sans-serif" font-size="6.2" font-weight="700" letter-spacing="1.6" fill="#ffe9a3"><textPath href="#${id}p" startOffset="2%">PI CHRONICLE · AGENT · PI CHRONICLE · AGENT ·</textPath></text>
+      <text x="50" y="48" text-anchor="middle" font-family="Bungee,Inter,sans-serif" font-size="19" fill="#ffc93c">007</text>
+      <text x="50" y="66" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-size="16" font-weight="700" fill="#f1ece2">π</text>
+      <circle cx="50" cy="16" r="2.2" fill="#fff4cf"/></svg>`;
+  }
+  // [type, icon, label, year, title, story]
+  const EX = s => `${s} Open Network day brought PI to trading venues like this one. A listing is history, not a promise of price. Always check official news yourself.`;
+  const SQ = [
+    ['start','🚀','Start','2019.03.14','Launched on Pi Day','On March 14, 2019, Pi Network opened as a mobile mining app. Every story here begins with that first tap.'],
+    ['hist','🎓','Founders','2019','Nicolas & Chengdiao','Two Stanford graduates dreamed of a cryptocurrency anyone could join from a phone.'],
+    ['scam','🛡️','007'],
+    ['mine','⛏️','Mining'],
+    ['hist','⭕','Circle','','Security Circles','Pioneers formed circles of 3 to 5 people they truly trust, building the trust graph of the network.'],
+    ['luck','🍀','Luck'],
+    ['hist','🧪','Testnet','','Testnet','Developers tried apps with Test-Pi, play money with no value, before anything touched the real chain.'],
+    ['mine','⛏️','Mining'],
+    ['hist','💻','Pi Node','','Pi Node','Pioneers began running nodes on their own computers and became the backbone of the blockchain.'],
+    ['scam','🛡️','007'],
+    ['hist','🪪','KYC','','Real humans, verified','Identity checks made sure one person holds one account. Many Pioneers became validators helping others pass KYC.'],
+    ['bad','🌧️','Bad luck'],
+    ['hist','🥧','Pi Day','3.14','Pi Day','Every March 14 (3.14), Pioneers celebrate the day the project was born.'],
+    ['trap','🎣','Trap','','You clicked a phishing link!','A message said "You won an airdrop!" and you tapped it. You did not enter your passphrase, but you stumble back 2 squares.'],
+    ['hist','🔒','Enclosed','2021.12.28','Enclosed Mainnet begins','The real blockchain started running, still closed off from the outside world.'],
+    ['scam','🛡️','007'],
+    ['hist','🌐','Browser','','Pi Browser & Wallet','Apps and Pi payments came together in one place. A payment only happens when you approve it in your own wallet.'],
+    ['hist','📦','Migration','','Mainnet Migration','After KYC, Pioneers moved their mined Pi to Mainnet wallets step by step.'],
+    ['mine','⛏️','Mining'],
+    ['hist','🥧','Pi2 Day','6.28','Pi2 Day','June 28 celebrates 2π (about 6.28), another day Pioneers look forward to each year.'],
+    ['scam','🛡️','007'],
+    ['luck','🍀','Luck'],
+    ['hist','🧑‍💻','Hackathon','','Pi Hackathons','Pi invited developers to hackathons to build real apps for the ecosystem.'],
+    ['hist','🔓','Open Net','2025.02.20','Open Network begins','The firewall came down and Mainnet connected to the outside world, a door Pioneers had waited years for.'],
+    ['exch','🏛️','OK','','Exchange: OK', EX('A big trading venue.')],
+    ['exch','🏛️','BITGE','','Exchange: BITGE', EX('Another venue joined in.')],
+    ['exch','🏛️','MEX','','Exchange: MEX', EX('More Pioneers watched PI trade here.')],
+    ['exch','🏛️','GATEI','','Exchange: GATEI', EX('One more door to the market.')],
+    ['exch','🏛️','LBAN','','Exchange: LBAN', EX('The list of venues kept growing.')],
+    ['scam','🛡️','007'],
+    ['trap','🎣','Trap','','"Send 10, get 20 back"','You almost sent Pi to a "double your Pi" event. You stopped just in time, but it costs you 2 squares.'],
+    ['hist','🧩','App Studio','2025','Pi App Studio','A tool arrived that lets anyone describe an app in words and have AI build a Pi app, no coding needed.'],
+    ['bad','🌧️','Bad luck'],
+    ['mine','⛏️','Mining'],
+    ['home','💀','To Start','','You shared your passphrase!','A "support agent" asked for your 24 words and you gave them. Everything is gone. Back to START.'],
+    ['scam','🛡️','007'],
+    ['exch','🔐','Sealed','','Sealed Exchange','Nobody knows which exchange comes next. Anyone who says they have "insider listing news" is a red flag. You kept calm.'],
+    ['hist','🎤','Summit','2026.11','Ecosystem Summit','Pi held an Ecosystem Summit for developers, announcing deep linking, a notification center and a new app directory.'],
+    ['scam','🛡️','007'],
+    ['goal','🚪','Secret Room','Now','The Secret Room','The next chapter is written by Pioneers together. The sealed door in the centre begins to glow…']
+  ];
+  const LAST = SQ.length - 1; // 39
+  const KIND = { hist:['History','var(--hist)'], exch:['Exchange · history','var(--exch)'], scam:['🛡️ 007 Check','var(--scam)'], mine:['Mining','var(--mine)'], luck:['🍀 Luck','var(--luck)'], bad:['🌧️ Bad luck','var(--bad)'], trap:['Trap','var(--trap)'], home:['Back to Start','var(--home)'], start:['Start','var(--pi)'], goal:['Goal','var(--pi)'] };
+
+  // spiral path on a 7×7 grid: outer ring then inner ring, clockwise from the top-left; centre 3×3 is the Secret Room
+  const PATH = (() => {
+    const p = [], ring = (a, b) => { for(let c = a; c <= b; c++) p.push([a, c]); for(let r = a + 1; r <= b; r++) p.push([r, b]); for(let c = b - 1; c >= a; c--) p.push([b, c]); for(let r = b - 1; r > a; r--) p.push([r, a]); };
+    ring(0, 6); ring(1, 5); return p;
+  })();
+
+  const st = { at:0, trust:0, rolls:MAX_ROLLS, busy:false, used:new Set(), room:null };
+  const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  function readBadges(){ try{ const v = JSON.parse(localStorage.getItem('pcbBadges') || '{}'); return { total: v.total || 0, n: v.day === today() ? (v.n || 0) : 0 }; }catch(e){ return { total: 0, n: 0 }; } }
+  function addBadges(k){ const b = readBadges(), got = Math.min(Math.max(0, DAILY_CAP - b.n), k); try{ localStorage.setItem('pcbBadges', JSON.stringify({ total: b.total + got, day: today(), n: b.n + got })); }catch(e){} paintBadges(); return got; }
+  function paintBadges(){ const b = readBadges(); $('badges').textContent = b.total; $('today').textContent = `today ${b.n}/${DAILY_CAP}`; const ic = $('badgeIc'); if(ic && !ic.firstChild) ic.innerHTML = badgeSvg('badge-ic'); }
+
+  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const roomLines = () => st.room ? LINES.filter(l => l.every(i => st.room.cells[i] === true)) : [];
+  function draw(){
+    const cells = PATH.map(([r, c], i) => {
+      const s = SQ[i];
+      return `<button type="button" class="c ${s[0]}${st.at === i ? ' here' : ''}" style="grid-row:${r + 1};grid-column:${c + 1}" data-sq="${i}" aria-label="Square ${i}, ${s[2]}"><span class="n">${i}</span><span class="ic">${s[1]}</span><span class="t">${s[2]}</span></button>`;
+    }).join('');
+    const lit = new Set(roomLines().flat());
+    const files = Array.from({ length: 9 }, (_, i) => { const v = st.room ? st.room.cells[i] : null; return `<button type="button" class="bc${v === true ? ' ok' : v === false ? ' no' : ''}${lit.has(i) ? ' line' : ''}" data-file="${i}" ${st.room && v === null ? '' : 'tabindex="-1"'} aria-label="Sealed file ${i + 1}">${v === true ? '✓' : v === false ? '✕' : i + 1}</button>`; }).join('');
+    $('board').innerHTML = cells + `<div class="room${st.room ? ' open' : ''}" aria-label="Secret Room">${files}<div class="lock"><b>🔒</b>Secret Room</div></div>`;
+    $('rolls').textContent = st.rolls; $('trust').textContent = st.trust;
+    placeWalker();
+  }
+  // The agent walks square by square; jumps of more than one square (back to START) fade out and in
+  let wAt = null, wX = null;
+  function walkerXY(i){ const c = $('board').querySelector(`[data-sq="${i}"]`), wr = $('board').parentNode.getBoundingClientRect(), r = c.getBoundingClientRect(); return [r.left - wr.left + r.width / 2 - 15, r.top - wr.top + r.height - 35]; }
+  function setW(w, x, y){ if(wX !== null && Math.abs(x - wX) > 1) w.classList.toggle('face-l', x < wX); wX = x; w.style.transform = `translate(${x}px,${y}px)`; }
+  function placeWalker(instant){
+    const w = $('walker'); if(!w) return; const [x, y] = walkerXY(st.at);
+    if(instant || wAt === null){ w.style.transition = 'none'; setW(w, x, y); void w.offsetWidth; w.style.transition = ''; }
+    else if(Math.abs(st.at - wAt) > 1){ const to = st.at; w.style.opacity = 0; setTimeout(() => { if(st.at !== to) return; const [a, b] = walkerXY(to); w.style.transition = 'none'; w.classList.remove('face-l'); wX = null; setW(w, a, b); void w.offsetWidth; w.style.transition = ''; w.style.opacity = 1; }, 240); }
+    else setW(w, x, y);
+    wAt = st.at;
+  }
+  addEventListener('resize', () => placeWalker(true));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function sheet(html){ return new Promise(res => { $('card').innerHTML = html; $('sheet').hidden = false; $('card').querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { $('sheet').hidden = true; res(b.dataset.v); })); const f = $('card').querySelector('[data-v]'); if(f) f.focus(); }); }
+  function pick(){ if(st.used.size >= QUIZ.length) st.used.clear(); let i; do{ i = Math.floor(Math.random() * QUIZ.length); }while(st.used.has(i)); st.used.add(i); return QUIZ[i]; }
+  async function move(n){ const w = $('walker'), d = n > 0 ? 1 : -1; w.classList.add('walking'); for(let k = 0; k < Math.abs(n); k++){ const nx = Math.min(LAST, Math.max(0, st.at + d)); if(nx === st.at) break; st.at = nx; draw(); await sleep(300); if(st.at === LAST) break; } w.classList.remove('walking'); w.classList.remove('cheer'); void w.offsetWidth; if(n > 0) w.classList.add('cheer'); await sleep(120); }
+  const story = (s, k, eff, btn) => `<div class="kind" style="color:${k[1]}">${k[0]}</div>${s[3] ? `<div class="year">${s[3]}</div>` : ''}<h2>${s[1]} ${s[4]}</h2><p>${s[5]}</p>${eff ? `<div class="eff">${eff}</div>` : ''}<button class="btn main" data-v="ok" type="button">${btn}</button>`;
+  function simple(s){
+    const k = KIND[s[0]];
+    if(s[0] === 'scam') return `<div class="kind" style="color:${k[1]}">${k[0]}</div><h2>Scam or safe?</h2><p>Land here and you'll judge a real-world style message. Right: Trust +2 and 1 square forward. Wrong: 2 squares back.</p><button class="btn main" data-v="ok" type="button">Close</button>`;
+    if(s[0] === 'mine') return `<div class="kind" style="color:${k[1]}">⛏️ Mining</div><h2>One tap a day</h2><p>Trust +1. Mining is always free.</p><button class="btn main" data-v="ok" type="button">Close</button>`;
+    if(s[0] === 'luck') return `<div class="kind" style="color:${k[1]}">${k[0]}</div><h2>A Security Circle friend helps</h2><p>Move 2 squares forward.</p><button class="btn main" data-v="ok" type="button">Close</button>`;
+    if(s[0] === 'bad') return `<div class="kind" style="color:${k[1]}">${k[0]}</div><h2>Rainy day</h2><p>Move 3 squares back.</p><button class="btn main" data-v="ok" type="button">Close</button>`;
+    return story(s, k, '', 'Close');
+  }
+  async function land(){
+    const s = SQ[st.at], k = KIND[s[0]];
+    if(s[0] === 'goal' || s[0] === 'start') return;
+    if(s[0] === 'hist' || s[0] === 'exch'){ await sheet(story(s, k, 'You read a page of the chronicle · Trust +1', 'Continue')); st.trust += 1; }
+    else if(s[0] === 'mine'){ await sheet(`<div class="kind" style="color:${k[1]}">⛏️ Mining</div><h2>You tapped the mining button today</h2><p>One tap a day. Steady habits add up, and mining is always free.</p><div class="eff">Trust +1</div><button class="btn main" data-v="ok" type="button">Continue</button>`); st.trust += 1; }
+    else if(s[0] === 'luck'){ await sheet(`<div class="kind" style="color:${k[1]}">${k[0]}</div><h2>A Security Circle friend helped you</h2><p>With people you trust beside you, the road gets shorter.</p><div class="eff">Move 2 squares forward</div><button class="btn main" data-v="ok" type="button">Go!</button>`); await move(2); await land(); }
+    else if(s[0] === 'bad'){ await sheet(`<div class="kind" style="color:${k[1]}">${k[0]}</div><h2>A rainy day</h2><p>Your phone died before you could tap, and the day slipped away. Some days are like that.</p><div class="eff">Move 3 squares back</div><button class="btn main" data-v="ok" type="button">Tomorrow is another day</button>`); await move(-3); }
+    else if(s[0] === 'trap'){ await sheet(story(s, k, 'Move 2 squares back', 'I\'ll be careful')); await move(-2); }
+    else if(s[0] === 'home'){ await sheet(story(s, k, 'Return to START', 'Lesson learned')); st.at = 0; draw(); }
+    else if(s[0] === 'scam'){
+      const q = pick();
+      const a = await sheet(`<div class="kind" style="color:${k[1]}">${k[0]}</div><h2>Scam or safe?</h2><p>${q.q}</p><div class="two"><button class="btn scamb" data-v="scam" type="button">🚨 Scam</button><button class="btn safeb" data-v="safe" type="button">✅ Safe</button></div>`);
+      const ok = a === q.a;
+      await sheet(`<div class="kind" style="color:${ok ? 'var(--mine)' : 'var(--scam)'}">${ok ? 'Correct! 🍀' : 'Not quite'}</div><h2>Answer: ${q.a === 'scam' ? '🚨 Scam' : '✅ Safe'}</h2><p>${q.x}</p><div class="eff">${ok ? 'Trust +2 · 1 square forward' : '2 squares back'}</div><button class="btn main" data-v="ok" type="button">Continue</button>`);
+      if(ok){ st.trust += 2; await move(1); } else await move(-2);
+    }
+    draw();
+  }
+
+  // ---------- Secret Room (centre bingo) ----------
+  async function openRoom(){
+    await sheet(`<div class="kind" style="color:var(--pi)">🚪 Secret Room</div><div class="big">The centre unseals</div><p>Nine sealed files glow in the middle of the board, but you may open only <b>${MAX_OPEN}</b>. Choose them wisely, judge each message, and light up lines.</p><div class="badges-row">${badgeSvg('pop')}</div><p style="text-align:center"><b>Every full line of ✓ earns one 007 Badge</b></p><button class="btn main" data-v="ok" type="button">Enter the room</button>`);
+    st.room = { cells: Array(9).fill(null), qs: Array.from({ length: 9 }, () => pick()), opened: 0 };
+    $('log').innerHTML = `Secret Room open. Tap a sealed file in the centre. <span class="files-left">Files left: ${MAX_OPEN}</span>`;
+    draw();
+  }
+  async function openFile(i){
+    const room = st.room; if(!room || room.cells[i] !== null || st.busy || room.opened >= MAX_OPEN) return;
+    st.busy = true; const q = room.qs[i]; room.opened++;
+    const a = await sheet(`<div class="kind" style="color:var(--scam)">Sealed file ${i + 1}</div><h2>Scam or safe?</h2><p>${q.q}</p><div class="two"><button class="btn scamb" data-v="scam" type="button">🚨 Scam</button><button class="btn safeb" data-v="safe" type="button">✅ Safe</button></div>`);
+    room.cells[i] = a === q.a;
+    if(!room.cells[i]) await sheet(`<div class="kind" style="color:var(--scam)">Not quite</div><h2>Answer: ${q.a === 'scam' ? '🚨 Scam' : '✅ Safe'}</h2><p>${q.x}</p><button class="btn main" data-v="ok" type="button">Back to the room</button>`);
+    draw(); const left = MAX_OPEN - room.opened;
+    $('log').innerHTML = `Lines lit: ${roomLines().length}. <span class="files-left">Files left: ${left}</span>`;
+    st.busy = false;
+    if(left <= 0) await closeRoom();
+  }
+  async function closeRoom(){
+    const n = roomLines().length, got = n ? addBadges(n) : 0;
+    await sleep(500);
+    const row = got ? Array.from({ length: got }, () => badgeSvg('pop')).join('') : badgeSvg('dim');
+    await sheet(`<div class="kind" style="color:var(--pi)">🏅 Secret Room cleared</div><div class="badges-row">${row}</div><div class="big" style="text-align:center">${n} line${n === 1 ? '' : 's'} · +${got} 007 Badge${got === 1 ? '' : 's'}</div><p>${n > got ? `You reached today's limit of ${DAILY_CAP} badges. Come back tomorrow.` : n ? 'Well done, agent. Your badges are saved on this device.' : 'No full line this time. The files will be different next time.'}</p><p>Trust earned on the board: <b style="color:var(--pi)">${st.trust}</b></p><button class="btn main" data-v="again" type="button">Play again</button>`);
+    reset();
+  }
+  async function outOfRolls(){
+    await sheet(`<div class="kind" style="color:var(--trap)">Out of rolls</div><div class="big">You reached square ${st.at}</div><p>The Secret Room is ${LAST - st.at} square${LAST - st.at === 1 ? '' : 's'} away. Its seal holds this time.</p><p>Trust earned: <b style="color:var(--pi)">${st.trust}</b></p><button class="btn main" data-v="again" type="button">Try again</button>`);
+    reset();
+  }
+  function reset(){ st.at = 0; st.trust = 0; st.rolls = MAX_ROLLS; st.busy = false; st.room = null; $('roll').disabled = false; $('d1').textContent = $('d2').textContent = '🎲'; $('log').textContent = 'Tap ROLL to begin your journey.'; draw(); }
+
+  $('board').addEventListener('click', e => {
+    const f = e.target.closest('.bc'); if(f){ openFile(Number(f.dataset.file)); return; }
+    const c = e.target.closest('.c'); if(c && !st.busy && !st.room) sheet(simple(SQ[Number(c.dataset.sq)]));
+  });
+  $('roll').addEventListener('click', async () => {
+    if(st.busy || st.rolls <= 0 || st.room) return; st.busy = true; $('roll').disabled = true;
+    const a = 1 + Math.floor(Math.random() * 6), b = 1 + Math.floor(Math.random() * 6);
+    [$('d1'), $('d2')].forEach(d => { d.classList.remove('roll'); void d.offsetWidth; d.classList.add('roll'); d.textContent = '🎲'; });
+    await sleep(480); $('d1').textContent = a; $('d2').textContent = b;
+    st.rolls--; draw();
+    $('log').textContent = `You rolled ${a} + ${b} = ${a + b}.`;
+    await move(a + b);
+    if(st.at !== LAST) await land();
+    if(st.at === LAST){ st.busy = false; await openRoom(); return; }
+    if(st.rolls <= 0){ await outOfRolls(); return; }
+    $('log').textContent += ` ${st.rolls} roll${st.rolls === 1 ? '' : 's'} left.`;
+    st.busy = false; $('roll').disabled = false;
+  });
+  paintBadges(); draw();
+})();
+</script>
+
+</body>
+</html>

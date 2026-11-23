@@ -1357,6 +1357,21 @@
   body.light-theme .write-link{ background:rgba(184,134,11,0.08); }
 
   /* 007 사기 경보 화면 */
+  .game-list{ display:flex; flex-direction:column; gap:12px; }
+  .game-card{ display:grid; grid-template-columns:44px 1fr; grid-template-areas:"ic body" "go go"; gap:10px 12px; padding:14px; border-radius:16px; background:var(--card); border:1px solid var(--card-line); color:var(--chalk); text-decoration:none; }
+  .game-card:focus-visible{ outline:2px solid var(--spray-y); outline-offset:2px; }
+  .game-ic{ grid-area:ic; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px; background:rgba(255,201,60,0.12); border:1px solid rgba(255,201,60,0.35); }
+  .game-body{ grid-area:body; display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .game-name{ font-size:16px; font-weight:700; line-height:1.3; }
+  .game-en{ display:block; font-size:10.5px; font-weight:400; color:var(--chalk-dim); }
+  .game-desc{ font-size:13px; line-height:1.6; color:var(--chalk); }
+  .game-desc.en{ font-size:11.5px; color:var(--chalk-dim); }
+  .game-desc b{ color:var(--spray-y); }
+  .game-tags{ display:flex; flex-wrap:wrap; gap:5px; margin-top:2px; }
+  .game-tags i{ font-style:normal; font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--card-line); color:var(--chalk-dim); }
+  .game-go{ grid-area:go; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:46px; border-radius:12px; background:var(--spray-y); color:#2a1f02; font-weight:700; font-size:15px; line-height:1.15; }
+  .game-go .game-en{ color:#2a1f02; opacity:.8; font-size:10px; }
+  .game-note{ margin:14px 0 0; font-size:11.5px; line-height:1.6; color:var(--chalk-dim); }
   .scam-head{ margin-bottom:14px; }
   .scam-title{ font-family:'Black Han Sans', sans-serif; font-size:26px; color:#ff6b6b; }
   .scam-title span{ font-family:'Noto Sans KR', sans-serif; font-size:12px; font-weight:400; color:var(--chalk-dim); margin-left:8px; }
@@ -1404,7 +1419,7 @@
       <li><span class="ic" aria-hidden="true">✏️</span><span><b>쓰기</b> — 오늘의 투표에 참여하고 한 줄 남기기<span class="wc-en">Write — vote in today's poll and leave a line</span></span></li>
       <li><span class="ic" aria-hidden="true">🧱</span><span><b>낙서벽</b> — 모두의 한 줄에 마음 하나<span class="wc-en">Wall — react to everyone's lines</span></span></li>
       <li><span class="ic" aria-hidden="true">🖼️</span><span><b>갤러리</b> — 함께 그리는 '파이오니어들의 은하'<span class="wc-en">Gallery — the Galaxy of Pioneers we draw together</span></span></li>
-      <li><span class="ic" aria-hidden="true">🎮</span><span><b>007 게임</b> — 새 게임 준비 중<span class="wc-en">007 Game — coming soon</span></span></li>
+      <li><span class="ic" aria-hidden="true">🎮</span><span><b>007 게임</b> — 짧은 보드게임 3종<span class="wc-en">007 Game — three short board games</span></span></li>
       <li><span class="ic" aria-hidden="true">📰</span><span><b>오늘의 소식</b> — 파이·암호화폐·역사 속 오늘·오늘 뭐 먹지?<span class="wc-en">Today — Pi, crypto, on this day, and world meals</span></span></li>
     </ul>
     <div class="wc-safe">
@@ -1589,8 +1604,41 @@
     <div id="pageScam" class="fullpage">
       <div class="scam-head">
         <div class="scam-title">007 게임<span>007 Game</span></div>
-        <p class="scam-lead">새로운 게임을 준비하고 있어요. 곧 만나요 🍀<br><span style="opacity:.8">A new game is on its way. See you soon!</span></p>
+        <p class="scam-lead">짧게 즐기는 보드게임 세 가지예요. 하나를 골라 입장해 보세요 🍀<br><span style="opacity:.8">Three short board games. Pick one and step in.</span></p>
       </div>
+      <div class="game-list">
+        <a class="game-card" href="/game-chronicle.html">
+          <span class="game-ic" aria-hidden="true">📜</span>
+          <span class="game-body">
+            <span class="game-name">파이 연대기 보드<span class="game-en">Pi Chronicle Board</span></span>
+            <span class="game-desc">주사위 2개, 5번의 기회로 파이의 역사를 따라 소용돌이 길을 걸어요. 39번 칸에 닿으면 가운데 <b>비밀의 방</b>이 열리고, 사기·안전 판별 빙고로 배지를 얻어요.</span>
+            <span class="game-desc en">Walk Pi's history with two dice and 5 rolls. Reach square 39 to unseal the Secret Room and win badges with a scam-or-safe bingo.</span>
+            <span class="game-tags"><i>🎲 운 + 판단</i><i>⏱ 2~3분</i><i>난이도 ★☆☆</i></span>
+          </span>
+          <span class="game-go">입장<span class="game-en">Enter</span></span>
+        </a>
+        <a class="game-card" href="/game-loop.html">
+          <span class="game-ic" aria-hidden="true">📅</span>
+          <span class="game-body">
+            <span class="game-name">랜덤 데이 루프<span class="game-en">Random Day Loop</span></span>
+            <span class="game-desc">요즘 SNS의 연말 회고 트렌드처럼, 원형판의 열두 달을 돌며 하루씩 사진을 찍어요. 주사위 <b>하나 또는 둘을 골라</b> 움직이고, 타이밍을 맞춰 스탬프 3개마다 배지 1개.</span>
+            <span class="game-desc en">A circle of twelve months. Pick one die or both, land on a month and snap the photo on time. Every 3 stamps earn a badge.</span>
+            <span class="game-tags"><i>⭕ 원형판</i><i>👆 타이밍</i><i>난이도 ★★☆</i></span>
+          </span>
+          <span class="game-go">입장<span class="game-en">Enter</span></span>
+        </a>
+        <a class="game-card" href="/game-314.html">
+          <span class="game-ic" aria-hidden="true">⏳</span>
+          <span class="game-body">
+            <span class="game-name">314 챌린지<span class="game-en">314 Challenge</span></span>
+            <span class="game-desc">모래시계 판을 8자로 한 바퀴 돌아, 멈춘 칸의 숫자 합을 <b>정확히 314</b>로 맞춰 집에 돌아와요. 1~314 원형 룰렛, 가운데 숫자 선택, ± 찬스카드로 계산하는 하이 레벨 게임.</span>
+            <span class="game-desc en">Walk the hourglass in a figure-8 and come home with a sum of exactly 314, using the wheel, the middle picks and ± chance cards.</span>
+            <span class="game-tags"><i>🧮 계산</i><i>🥧 314</i><i>난이도 ★★★</i></span>
+          </span>
+          <span class="game-go">입장<span class="game-en">Enter</span></span>
+        </a>
+      </div>
+      <p class="game-note">🏅 배지는 앱 안에서만 쓰는 기념품이에요. 돈 가치가 없고 사고팔 수 없어요. 지금은 각자의 기기에 저장되고, 게임마다 하루 5개까지 받을 수 있어요.<br><span style="opacity:.8">Badges are in-app keepsakes with no cash value. They are saved on your device, up to 5 per game a day.</span></p>
     </div>
 
     <!-- 둘러보기: 낙서만 조용히 보여주는 별도 페이지 (헤더는 그대로 유지) -->
@@ -3324,6 +3372,11 @@ document.getElementById('openPromo').addEventListener('click', () => showPromoPa
 // ---------- 007 게임 탭 (예전 경보 기능은 화면에서 뺐음, 호출하는 곳이 남아 있어 빈 함수로 둠) ----------
 function loadScam(){}
 function checkScamAdmin(){}
+// 게임에서 "← 007 게임"으로 돌아오면(/#games) 007 게임 탭을 바로 열어요
+if(location.hash === '#games'){
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  setTimeout(() => { try{ showScamPage(); }catch(e){} }, 0);
+}
 
 // ---------- 파이오니어들의 은하: 버튼을 누를 때마다 은하에 별 획이 저절로 ----------
 // 로그인한 파이오니어만, 15초에 한 번까지 (서버에서도 같은 제한 + 하루 40번)

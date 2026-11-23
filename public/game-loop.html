@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Random Day Loop · 디부타데스</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;500;700&display=swap">
+<style>
+  .appback{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);color:inherit;text-decoration:none;font-size:12.5px;font-weight:700;opacity:.9}
+  .appback:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+  /* Layout: stat bar / circular 25-square year ring with a 12-month recap album in the middle / two dice + pick-a-move buttons. Warm night film-roll theme. */
+  :root{
+    --night:#1e1820; --board:#2a2129; --cell:#3a2e38; --line:#4a3c48;
+    --chalk:#f6eee6; --dim:#b6a5ae; --gold:#ffc93c; --coral:#ff7a6b; --teal:#4fd1c5; --violet:#a78bfa; --sky:#5fb8ff; --rose:#ff5f7a;
+    --f-title:"Bungee","Inter",system-ui,sans-serif; --f-year:"Fraunces",Georgia,serif; --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color-scheme:dark;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--night);color:var(--chalk);font-family:var(--f-body);-webkit-tap-highlight-color:transparent}
+  .wrap{max-width:480px;margin:0 auto;box-sizing:border-box;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:14px 24px;display:flex;flex-direction:column;gap:12px}
+  header h1{margin:0;font-family:var(--f-title);font-weight:400;font-size:24px;line-height:1.1}
+  header p{margin:5px 0 0;font-size:12.5px;color:var(--dim);line-height:1.5}
+  .bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat{padding:9px 10px;border-radius:14px;background:var(--board);border:1px solid var(--line)}
+  .stat > span{display:block;font-size:10.5px;color:var(--dim);letter-spacing:.04em;text-transform:uppercase}
+  .stat b{white-space:nowrap;font-size:19px;font-variant-numeric:tabular-nums;color:var(--gold)}
+  .stat small{font-size:11px;color:var(--dim);margin-left:3px}
+  .bwrap{position:relative}
+  .ring{position:relative;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 50% 50%, #241c23 0 54%, var(--board) 54.2% 100%);border:1px solid var(--line)}
+  .ring::before{content:"";position:absolute;inset:5.5%;border-radius:50%;border:2px dashed #5a4856}
+  .c{position:absolute;width:10.4%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--cell);border:2px solid var(--line);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--chalk);font-family:inherit;padding:0}
+  .c .ic{font-size:14px;line-height:1}
+  .c .m{font-family:var(--f-title);font-size:9px;line-height:1}
+  .c.month{background:#463543;border-color:var(--coral)}
+  .c.month.done{background:#2d4a44;border-color:var(--teal)}
+  .c.go{border-color:var(--sky)} .c.think{border-color:var(--violet)} .c.scam{border-color:var(--rose)} .c.light{border-color:var(--gold)}
+  .c.start{background:#3a3220;border-color:var(--gold)}
+  .c.here{box-shadow:0 0 0 3px var(--gold)}
+  .c.aim{box-shadow:0 0 0 3px var(--chalk);animation:aim 1s ease-in-out infinite alternate}
+  @keyframes aim{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.12)}}
+  .album{position:absolute;left:50%;top:50%;width:56%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px}
+  .album h2{margin:0;font-family:var(--f-title);font-weight:400;font-size:13px;letter-spacing:.06em;color:var(--gold)}
+  .album .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:100%}
+  .st{aspect-ratio:1;border-radius:8px;border:1px dashed #6a5866;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#7d6c78;font-size:8.5px;font-weight:700;letter-spacing:.05em;gap:1px}
+  .st i{font-style:normal;font-size:16px;filter:grayscale(1);opacity:.35}
+  .st.got{border:1px solid var(--teal);background:#24403b;color:var(--chalk);animation:stamp .45s ease-out}
+  .st.got i{filter:none;opacity:1}
+  @keyframes stamp{0%{transform:scale(1.6) rotate(-12deg);opacity:0}70%{transform:scale(.94)}100%{transform:none}}
+  .album small{font-size:10px;color:var(--dim)}
+  .walker{position:absolute;left:0;top:0;width:30px;height:34px;pointer-events:none;z-index:5;transition:transform .28s ease-in-out,opacity .22s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+  .walker svg{display:block;overflow:visible}
+  .walker .fig{transform-origin:15px 34px;transition:transform .15s}
+  .walker.face-l .fig{transform:scaleX(-1)}
+  .walker .legL{transform-origin:12.6px 21px}.walker .legR{transform-origin:17.4px 21px}
+  .walker.walking .legL{animation:legSw .28s ease-in-out infinite alternate}
+  .walker.walking .legR{animation:legSw .28s ease-in-out infinite alternate-reverse}
+  .walker.walking .body{animation:bob .14s ease-in-out infinite alternate}
+  .walker.cheer .body{animation:cheer .5s ease-out 2}
+  @keyframes legSw{from{transform:rotate(22deg)}to{transform:rotate(-22deg)}}
+  @keyframes bob{from{transform:translateY(0)}to{transform:translateY(-1.6px)}}
+  @keyframes cheer{0%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+  .legend{display:flex;flex-wrap:wrap;gap:5px 11px;font-size:10.5px;color:var(--dim)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+  .dock{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center}
+  .die{width:54px;height:54px;border-radius:14px;background:var(--chalk);color:#1e1820;font-size:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-variant-numeric:tabular-nums}
+  .die.roll{animation:shake .5s}
+  @keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}50%{transform:rotate(12deg)}75%{transform:rotate(-6deg)}}
+  .go-btn{min-height:54px;border:none;border-radius:16px;background:var(--gold);color:#2a1f02;font-family:var(--f-title);font-size:15px;cursor:pointer;padding:0 10px}
+  .go-btn:disabled{opacity:.45;cursor:default}
+  .choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .choices[hidden]{display:none}
+  .pick{min-height:56px;border-radius:14px;border:1px solid var(--line);background:#3a2e38;color:var(--chalk);font-family:var(--f-body);font-size:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px}
+  .pick b{font-family:var(--f-title);font-weight:400;font-size:17px;color:var(--gold)}
+  .pick.hit{border-color:var(--coral);background:#4a3340}
+  .go-btn:focus-visible,.btn:focus-visible,.c:focus-visible,.pick:focus-visible{outline:2px solid var(--chalk);outline-offset:2px}
+  .log{font-size:12.5px;color:var(--dim);min-height:1.4em;line-height:1.5}
+  .note{font-size:11px;color:var(--dim);line-height:1.5;border-top:1px dashed var(--line);padding-top:10px;margin:0}
+  .sheet{position:fixed;inset:0;z-index:10;background:rgba(14,10,14,.74);display:flex;align-items:flex-end;justify-content:center;padding:0 max(12px, env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px))}
+  .sheet[hidden]{display:none!important}
+  .card{width:100%;max-width:460px;max-height:calc(100% - 24px);overflow-y:auto;border-radius:20px;background:#2f2530;border:1px solid var(--line);padding:18px 18px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;animation:up .25s ease-out}
+  @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+  .kind{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .card h2{margin:0;font-size:18px;line-height:1.35}
+  .card p{margin:0;font-size:14px;line-height:1.6;color:#e6dadf}
+  .eff{font-size:13px;font-weight:700;color:var(--gold)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{min-height:48px;border-radius:14px;border:1px solid var(--line);background:#3a2e38;color:var(--chalk);font-family:var(--f-body);font-size:15px;font-weight:700;cursor:pointer}
+  .btn.scamb{border-color:rgba(255,95,122,.65)} .btn.safeb{border-color:rgba(79,209,197,.65)}
+  .btn.main{background:var(--gold);color:#2a1f02;border-color:var(--gold)}
+  .big{font-family:var(--f-title);font-size:22px;line-height:1.25}
+  .meter{position:relative;height:46px;border-radius:12px;background:#1e1820;border:1px solid var(--line);overflow:hidden}
+  .meter .zone{position:absolute;top:0;bottom:0;background:rgba(79,209,197,.28);border-left:2px solid var(--teal);border-right:2px solid var(--teal)}
+  .meter .needle{position:absolute;top:4px;bottom:4px;width:4px;margin-left:-2px;border-radius:2px;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+  .frame{font-family:var(--f-year);font-size:26px;color:var(--gold);line-height:1.1}
+  .badge-ic{width:22px;height:22px;vertical-align:-5px;margin-right:4px}
+  .badges-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:6px 0}
+  .badges-row svg{width:84px;height:84px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+  .badges-row svg.dim{opacity:.25;filter:grayscale(1)}
+  .badges-row svg.pop{animation:pop .5s ease-out both}
+  @keyframes pop{0%{transform:scale(.3) rotate(-20deg);opacity:0}70%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:none}}
+  @media (prefers-reduced-motion:reduce){.walker{transition:none}.walker.walking .legL,.walker.walking .legR,.walker.walking .body,.walker.cheer .body,.die.roll,.card,.badges-row svg.pop,.st.got,.c.aim{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="appback" href="/#games">← 007 게임 · Back to games</a>
+  <header>
+    <h1>📅 RANDOM DAY LOOP</h1>
+    <p>The year-end trend: one random day from every month. Walk the year in a circle with <b>8 rolls</b>. Each roll gives two dice: move by <b>one die or both</b>. Land on a month and snap its photo in time to add a stamp to your <b>2026 recap</b>. Every 3 stamps = 1 007 Badge.</p>
+  </header>
+  <div class="bar">
+    <div class="stat"><span>Rolls left</span><b id="rolls">8</b><small>/ 8</small></div>
+    <div class="stat"><span>Stamps</span><b id="stamps">0</b><small>/ 12</small></div>
+    <div class="stat"><span>007 Badges</span><b><span id="badgeIc"></span><span id="badges">0</span></b><small id="today">today 0/5</small></div>
+  </div>
+  <div class="bwrap"><div class="ring" id="board" aria-label="Random Day Loop board"></div><div class="walker" id="walker" aria-hidden="true"><svg viewBox="0 0 30 34" width="30" height="34"><g class="fig"><ellipse cx="15" cy="32.6" rx="8" ry="1.6" fill="rgba(0,0,0,.45)"/><g class="legL"><rect x="11" y="21" width="3.2" height="10" rx="1.4" fill="#22243a"/><rect x="9.8" y="30" width="5" height="2.2" rx="1" fill="#0c0d14"/></g><g class="legR"><rect x="15.8" y="21" width="3.2" height="10" rx="1.4" fill="#22243a"/><rect x="15.2" y="30" width="5" height="2.2" rx="1" fill="#0c0d14"/></g><g class="body"><rect x="6.4" y="13.6" width="3" height="8" rx="1.5" fill="#b8975a"/><rect x="20.6" y="13.6" width="3" height="8" rx="1.5" fill="#b8975a"/><rect x="8.5" y="12.8" width="13" height="11" rx="4" fill="#c9a96a"/><path d="M12.6 12.9 L15 18.2 L17.4 12.9 Z" fill="#f1ece2"/><path d="M14.4 13.6 L15 17 L15.6 13.6 Z" fill="#c0392b"/><circle cx="18.6" cy="18.6" r="1.3" fill="#e8c45f"/><circle cx="15" cy="8.6" r="4.6" fill="#f2c9a0"/><rect x="11.3" y="7.7" width="7.4" height="2.1" rx="1" fill="#111"/><rect x="11" y="1.6" width="8" height="4.6" rx="1.6" fill="#2b2a35"/><rect x="11" y="4.4" width="8" height="1.1" fill="#d9b45a"/><ellipse cx="15" cy="5.9" rx="7.2" ry="1.5" fill="#2b2a35"/></g></g></svg></div></div>
+  <div class="legend">
+    <span><i style="background:var(--coral)"></i>Month (snap a stamp)</span><span><i style="background:var(--sky)"></i>Go Go Go</span><span><i style="background:var(--violet)"></i>Overthinking</span>
+    <span><i style="background:var(--rose)"></i>Viral or scam?</span><span><i style="background:var(--gold)"></i>Ring light</span>
+  </div>
+  <div class="dock">
+    <div class="die" id="d1" aria-label="Die A">🎲</div>
+    <div class="die" id="d2" aria-label="Die B">🎲</div>
+    <button class="go-btn" id="roll" type="button">ROLL</button>
+  </div>
+  <div class="choices" id="choices" hidden></div>
+  <div class="log" id="log" role="status">Tap ROLL to start your year.</div>
+  <p class="note">007 Badges are in-app collectibles only. They have no cash value and cannot be bought, sold or exchanged.</p>
+</div>
+
+<div class="sheet" id="sheet" hidden><div class="card" id="card" role="dialog" aria-modal="true"></div></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const QUIZ = [{"a":"scam","q":"A \"Pi Network Support\" account DMs you: \"Suspicious activity detected. Enter your 24-word passphrase to unlock your wallet.\"","x":"Your passphrase is the key to your wallet. The Pi team never DMs first and never asks for it."},{"a":"scam","q":"\"Summit event! Send 10 Pi now and get 20 Pi back within 24 hours. First 100 only!\"","x":"\"Send and get double back\" is the oldest trick. Time limits are there to stop you from thinking."},{"a":"safe","q":"A Pi app's login shows the Pi screen: \"Share your username with this app?\" No passphrase field.","x":"This is the normal official Pi login. If a login screen asks for your passphrase, it is fake."},{"a":"scam","q":"\"KYC taking too long? Pay just 5 Pi and we will get you approved in one day.\"","x":"No one can speed up your KYC for a fee. KYC only goes through the official process in the Pi app."},{"a":"scam","q":"\"Mainnet migration service! Just give us your passphrase and we will move your remaining Pi right away.\"","x":"Migration only happens through the Mainnet checklist in the Pi app. Hand over your passphrase and your Pi becomes theirs."},{"a":"scam","q":"\"You won a Pi airdrop! Visit this site, connect your wallet and verify with your passphrase.\"","x":"No real airdrop needs your passphrase. \"You won\" is classic bait."},{"a":"safe","q":"Paying in a Pi app opens the Pi wallet showing the app name and amount; it only goes through if you tap approve.","x":"This is a normal Pi payment. Check the app name and amount, and cancel if anything looks off."},{"a":"scam","q":"You get a \"Pi Browser Pro\" apk file by message, promising \"double mining speed\".","x":"Only install Pi apps from the official app stores. Unknown installers can steal your wallet."},{"a":"scam","q":"An account claiming to be Nicolas Kokkalis DMs you about \"a special chance for selected pioneers\".","x":"The founders do not offer private deals by DM. Impersonating them is very common."},{"a":"scam","q":"\"We buy Pi at $314,159 each. Just send a $100 activation fee first.\"","x":"An unrealistic price plus an upfront fee is advance-fee fraud. Pay and they vanish."},{"a":"safe","q":"A friend used your username as the invitation code when joining Pi.","x":"An invitation code is just a username, safe to share. It is nothing like your passphrase."},{"a":"scam","q":"\"Pi investment group! 30% guaranteed every month, principal guaranteed.\"","x":"\"Guaranteed returns\" is itself the warning sign. Real investments guarantee nothing."},{"a":"scam","q":"\"A booster that triples your mining rate! Only 5 Pi a month.\"","x":"You cannot buy a faster mining rate. Only official in-app features like Security Circles affect it."},{"a":"scam","q":"\"Reply within 24 hours or your Pi account will be deleted. Verify through the link below.\"","x":"Threats with a deadline are phishing. Check account notices inside the Pi app itself."},{"a":"safe","q":"You added a few family members and friends you truly trust to your Security Circle in the Pi app.","x":"That is exactly what Security Circles are for: people you really know."},{"a":"scam","q":"You get a link: \"Upload your KYC documents here — both sides of your ID and a selfie.\"","x":"KYC is only done in the official KYC app opened from Pi. Uploading your ID elsewhere risks identity theft."},{"a":"scam","q":"An online friend you have chatted with for weeks suddenly asks you to send some Pi for \"an emergency\".","x":"Building trust then asking for money is a classic romance scam. Sent Pi cannot be recovered."},{"a":"scam","q":"\"Work from home, paid in Pi! Send a 20 Pi deposit to get started.\"","x":"A job that asks you to pay a deposit first is a scam."},{"a":"safe","q":"You opened the Pi app and tapped the mining button once for the day. No payment involved.","x":"That is the normal way to mine Pi. Mining is free."},{"a":"scam","q":"\"Pi pre-sale before the exchange listing! Buy now with other coins and get 10x after listing!\"","x":"\"Pre-sale before listing\" and \"guaranteed 10x\" are hallmarks of fake sales."},{"a":"scam","q":"\"Lost your passphrase? We can recover your wallet. Tell us the words you remember.\"","x":"Fake \"recovery services\" collect your remaining words. Even a few words are dangerous."},{"a":"scam","q":"A \"support agent\" asks you to share your screen and open your Pi wallet so they can \"fix the problem\".","x":"Opening your wallet while sharing your screen exposes everything. Real support never asks this."},{"a":"safe","q":"You downloaded the Pi Node software from the official site, minepi.com.","x":"The official site is the right place. Avoid node files from anywhere else."},{"a":"scam","q":"\"To check your wallet works, send 1 Pi to this address as a test. We will send it right back.\"","x":"\"Test transfers\" never come back, and they often lead to bigger requests."},{"a":"scam","q":"A Telegram group called \"Pi Official Help Desk\"; an admin offers to help you by private message.","x":"Fake admins messaging you first is a common trick. Get help inside the Pi app."},{"a":"scam","q":"\"Retweet and connect your wallet for 100 free Pi!\" The link asks for your passphrase.","x":"\"Free\" plus a passphrase prompt equals theft."},{"a":"safe","q":"You applied for KYC through the menu in the Pi app, using the official KYC app, without paying anything.","x":"That is the official KYC process. Only use the path the Pi app gives you."},{"a":"scam","q":"An app shows a box: \"Enter your passphrase here to claim your bonus.\"","x":"Legit apps never ask for your passphrase. Payments only happen on the Pi wallet approval screen."},{"a":"scam","q":"\"Pi debit card pre-order! Pay 10 Pi to get it first at launch.\"","x":"Selling products that were never officially announced is a scam. Check official Pi channels first."},{"a":"scam","q":"\"You won a hackathon prize! Send a 15 Pi transfer fee first to receive it.\"","x":"Paying a fee before receiving a prize is advance-fee fraud."},{"a":"safe","q":"You wrote your 24-word passphrase on paper and keep it somewhere safe at home. No photos.","x":"Great habit. Photos, notes apps and clouds can leak in a hack."},{"a":"scam","q":"\"Pi event VIP pass! Meet the founders on a video call. 50 Pi.\"","x":"Passes or meetings not in official announcements are scams, and they pop up at every big event. Check official Pi channels."},{"a":"scam","q":"The leader of a \"Pi Network Korea official group\" asks you to deposit 30 Pi to raise your member level.","x":"A group using an official-sounding name and asking for deposits is a red flag. Pi has no paid member levels."},{"a":"scam","q":"An ad pushes \"Pi Mining 2.0 — mines better!\", a look-alike app.","x":"It is a copycat app. Mining only happens in the official Pi app."},{"a":"safe","q":"To receive Pi from a friend, you shared only your wallet address starting with G.","x":"Your public address is meant for receiving. Just never share the passphrase."},{"a":"scam","q":"Someone asks you to tell them the verification code just sent to you by SMS.","x":"Sharing that code lets them take over your account. Never share it."},{"a":"scam","q":"\"Lend us your ID for other people's KYC and earn 5 Pi each time.\"","x":"Letting others use your identity is fraud and illegal, and it puts your own account at risk."},{"a":"scam","q":"\"Pi staking dApp! Just deposit and earn 3% interest every day.\"","x":"3% a day means thousands of percent a year. Unrealistic interest signals a Ponzi scheme."},{"a":"safe","q":"You moved to Mainnet by following the Mainnet checklist in the Pi app step by step.","x":"That is the official way. No agents or outside sites needed."},{"a":"scam","q":"\"We can unlock your locked-up Pi right now. 20% unlock fee.\"","x":"Lockups follow the settings you chose. No one can release them for a fee."},{"a":"scam","q":"\"Double node rewards program! Node operators only, 10 Pi to join.\"","x":"Node rewards come only from the official node software and rules. There is no paid boost."},{"a":"scam","q":"A YouTube live shows a founder's face with a caption: \"Send to this address now and get double back.\"","x":"Deepfake streams are on the rise. Founders never ask you to send them anything."},{"a":"safe","q":"You looked up your transactions on the official Pi block explorer using your wallet address.","x":"The block explorer is a public record. Looking up by address is safe."},{"a":"scam","q":"A \"Pi charity drive\" sends a sad story and one wallet address, with no organization or way to verify.","x":"Unverifiable charity requests often play on emotions. Check the organization before giving."},{"a":"scam","q":"\"Pi just listed on a big exchange! Sell to us for 20% above market — send first.\"","x":"Unverified news plus a premium plus \"send first\" is a scam. Check official announcements."},{"a":"scam","q":"\"A Pi token on BNB chain that converts 1:1 to Mainnet Pi later. Buy now!\"","x":"\"Pi tokens\" on other chains are unrelated fakes. They do not convert to Mainnet Pi."},{"a":"safe","q":"Before paying in the Pi Browser, you checked the address bar to make sure it is the app you know.","x":"Great habit. It filters out look-alike fake apps."},{"a":"scam","q":"\"Scan this QR code for an instant event reward.\" It opens an unknown site asking to connect your wallet.","x":"A QR code can lead anywhere. Do not connect your wallet on unknown sites."},{"a":"scam","q":"\"Selling Security Circle spots. Pay 10 Pi and I will add you to boost your mining.\"","x":"Security Circles are for people you actually know and trust. Buying a spot is a scam."},{"a":"scam","q":"\"Selling a KYC-verified Pi account with 5,000 Pi balance.\"","x":"Account trading breaks Pi rules, and sellers often take the money or reclaim the account."},{"a":"safe","q":"An unexpected payment approval popped up while using an app, so you tapped cancel.","x":"Well done. You can always refuse a payment you did not intend."},{"a":"scam","q":"A reply under your post: \"We can increase your transferable balance. Contact us.\"","x":"Transferable balance only changes through official Pi processes. Such replies are bait."},{"a":"scam","q":"\"Pi will 100x next month. Inside info — VIP room entry 20 Pi.\"","x":"No one knows prices for sure. Selling \"certain\" tips is itself the scam."},{"a":"scam","q":"\"Mandatory Pi app update! Download the new version from this link.\" The address is unfamiliar.","x":"Only update through your official app store. \"Updates\" from links can be malware."},{"a":"safe","q":"You saw an account impersonating a founder and reported it with X's report feature.","x":"Good move. Reports help protect other pioneers."},{"a":"scam","q":"\"Migration deadline is today! Send your Pi to this address now or it will be lost.\"","x":"No real process needs you to send Pi to someone else. Check official dates in the Pi app."},{"a":"scam","q":"A game app urges you: \"Bet 10 Pi now, it could be 30 Pi in 5 minutes!\" and keeps pushing for more.","x":"Promising multiples in minutes and pushing for more is how gambling scams work."},{"a":"scam","q":"\"Leave your wallet address and passphrase and we will send you a summit NFT.\"","x":"Sending only needs your address. Asking for the passphrase means they want your wallet."},{"a":"safe","q":"Hearing about a new feature, you checked the in-app news and the official Pi Network account before believing it.","x":"The surest habit. Be wary of news that is not on official channels."},{"a":"safe","q":"When logging into a Pi app, the Pi screen asks to allow payments too; each actual payment still needs its own approval.","x":"Normal. The permission only lets the app request payments; money moves only when you approve each one."}];
+  const MAX_ROLLS = 8, DAILY_CAP = 5, N = 25, KEY = 'rdlBadges';
+  let bid = 0;
+  function badgeSvg(cls){
+    const id = 'rb' + (++bid);
+    return `<svg class="${cls || ''}" viewBox="0 0 100 100" role="img" aria-label="007 Badge, Random Day Loop"><defs>
+      <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".5" stop-color="#ffc93c"/><stop offset="1" stop-color="#c98a12"/></linearGradient>
+      <path id="${id}p" d="M50 50 m-31 0 a31 31 0 1 1 62 0 a31 31 0 1 1 -62 0"/></defs>
+      <path d="M33 70 L24 96 L36 90 L42 99 L48 74Z" fill="#ff7a6b"/><path d="M67 70 L76 96 L64 90 L58 99 L52 74Z" fill="#4fd1c5"/>
+      <circle cx="50" cy="46" r="41" fill="url(#${id}g)"/>
+      <circle cx="50" cy="46" r="41" fill="none" stroke="#fff4cf" stroke-opacity=".7" stroke-width="1.5" stroke-dasharray="2 3"/>
+      <circle cx="50" cy="46" r="31" fill="#2a1d29" stroke="#c98a12" stroke-width="2"/>
+      <text font-family="Inter,system-ui,sans-serif" font-size="6.2" font-weight="700" letter-spacing="1.5" fill="#ffe9a3"><textPath href="#${id}p" startOffset="2%">RANDOM DAY LOOP · 2026 RECAP · RANDOM DAY ·</textPath></text>
+      <text x="50" y="45" text-anchor="middle" font-family="Bungee,Inter,sans-serif" font-size="17" fill="#ffc93c">007</text>
+      <text x="50" y="63" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-size="13" font-weight="700" fill="#f6eee6">2026</text>
+      <circle cx="50" cy="16" r="2.2" fill="#fff4cf"/></svg>`;
+  }
+  const MONTHS = [
+    ['JAN','❄️','A random day in January: breath turning to fog at the bus stop.'],
+    ['FEB','💌','A random day in February: a short message that made you smile.'],
+    ['MAR','🌸','A random day in March: blossoms on the way home.'],
+    ['APR','☔','A random day in April: sharing an umbrella with a stranger.'],
+    ['MAY','🌿','A random day in May: lunch outside, sun on your face.'],
+    ['JUN','🍉','A random day in June: the first cold watermelon of the year.'],
+    ['JUL','🏖️','A random day in July: sand in your shoes, nobody minding.'],
+    ['AUG','🎆','A random day in August: fireworks seen from a rooftop.'],
+    ['SEP','🍂','A random day in September: the first cool evening wind.'],
+    ['OCT','🎃','A random day in October: a pumpkin latte on a long walk.'],
+    ['NOV','🍁','A random day in November: maple leaves stuck to the pavement.'],
+    ['DEC','🎄','A random day in December: lights going up all over town.']
+  ];
+  // Square 0 is New Year. Odd squares are months (1 = JAN ... 23 = DEC), even squares are events.
+  const EV = { 2:'go', 4:'scam', 6:'think', 8:'light', 10:'scam', 12:'go', 14:'think', 16:'scam', 18:'light', 20:'go', 22:'scam', 24:'think' };
+  const SQ = Array.from({ length: N }, (_, i) => i === 0 ? { t:'start', ic:'🎆', l:'New Year' } : i % 2 ? { t:'month', m:(i - 1) / 2 } : { t:EV[i] });
+  const EVI = { go:['⚡','Go Go Go'], scam:['🛡️','Viral or scam?'], think:['💭','Overthinking'], light:['💡','Ring light'] };
+
+  const st = { at:0, rolls:MAX_ROLLS, busy:false, stamps:new Set(), used:new Set(), wide:false, jump:false };
+  const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  function readBadges(){ try{ const v = JSON.parse(localStorage.getItem(KEY) || '{}'); return { total: v.total || 0, n: v.day === today() ? (v.n || 0) : 0 }; }catch(e){ return { total: 0, n: 0 }; } }
+  function addBadges(k){ const b = readBadges(), got = Math.min(Math.max(0, DAILY_CAP - b.n), k); try{ localStorage.setItem(KEY, JSON.stringify({ total: b.total + got, day: today(), n: b.n + got })); }catch(e){} paintBadges(); return got; }
+  function paintBadges(){ const b = readBadges(); $('badges').textContent = b.total; $('today').textContent = `today ${b.n}/${DAILY_CAP}`; const ic = $('badgeIc'); if(ic && !ic.firstChild) ic.innerHTML = badgeSvg('badge-ic'); }
+
+  const label = i => { const s = SQ[i]; return s.t === 'month' ? MONTHS[s.m][0] : s.t === 'start' ? 'New Year' : EVI[s.t][1]; };
+  function draw(aims){
+    const R = 43.6;
+    const cells = SQ.map((s, i) => {
+      const a = (-90 + i * 360 / N) * Math.PI / 180, x = 50 + R * Math.cos(a), y = 50 + R * Math.sin(a);
+      const cls = s.t + (s.t === 'month' && st.stamps.has(s.m) ? ' done' : '') + (st.at === i ? ' here' : '') + (aims && aims.includes(i) ? ' aim' : '');
+      const inner = s.t === 'month' ? `<span class="ic">${MONTHS[s.m][1]}</span><span class="m">${MONTHS[s.m][0]}</span>` : `<span class="ic">${s.t === 'start' ? s.ic : EVI[s.t][0]}</span>`;
+      return `<button type="button" class="c ${cls}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%" data-sq="${i}" aria-label="Square ${i}, ${label(i)}">${inner}</button>`;
+    }).join('');
+    const album = MONTHS.map((m, k) => `<div class="st${st.stamps.has(k) ? ' got' : ''}"><i>${m[1]}</i>${m[0]}</div>`).join('');
+    $('board').innerHTML = cells + `<div class="album"><h2>2026 RECAP</h2><div class="grid">${album}</div><small>${st.stamps.size} of 12 random days</small></div>`;
+    $('rolls').textContent = st.rolls; $('stamps').textContent = st.stamps.size;
+    placeWalker();
+  }
+  // Walker: steps around the ring; a jump (new game) fades out and in
+  let wX = null, placed = false;
+  function walkerXY(i){ const c = $('board').querySelector(`[data-sq="${i}"]`), wr = $('board').parentNode.getBoundingClientRect(), r = c.getBoundingClientRect(); return [r.left - wr.left + r.width / 2 - 15, r.top - wr.top + r.height / 2 - 26]; }
+  function setW(w, x, y){ if(wX !== null && Math.abs(x - wX) > 1) w.classList.toggle('face-l', x < wX); wX = x; w.style.transform = `translate(${x}px,${y}px)`; }
+  function placeWalker(instant){
+    const w = $('walker'); if(!w) return; const [x, y] = walkerXY(st.at);
+    if(instant || !placed){ w.style.transition = 'none'; setW(w, x, y); void w.offsetWidth; w.style.transition = ''; placed = true; }
+    else if(st.jump){ st.jump = false; w.style.opacity = 0; setTimeout(() => { const [a, b] = walkerXY(st.at); w.style.transition = 'none'; w.classList.remove('face-l'); wX = null; setW(w, a, b); void w.offsetWidth; w.style.transition = ''; w.style.opacity = 1; }, 240); }
+    else setW(w, x, y);
+  }
+  addEventListener('resize', () => placeWalker(true));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function sheet(html, onOpen){ return new Promise(res => { $('card').innerHTML = html; $('sheet').hidden = false; $('card').querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { $('sheet').hidden = true; res(b.dataset.v); })); if(onOpen) onOpen(); const f = $('card').querySelector('[data-v]'); if(f) f.focus(); }); }
+  function pick(){ if(st.used.size >= QUIZ.length) st.used.clear(); let i; do{ i = Math.floor(Math.random() * QUIZ.length); }while(st.used.has(i)); st.used.add(i); return QUIZ[i]; }
+  async function move(n){
+    const w = $('walker'), d = n > 0 ? 1 : -1; let lap = false; w.classList.add('walking');
+    for(let k = 0; k < Math.abs(n); k++){ st.at = (st.at + d + N) % N; if(d > 0 && st.at === 0) lap = true; draw(); await sleep(300); }
+    w.classList.remove('walking', 'cheer'); void w.offsetWidth; if(n > 0) w.classList.add('cheer'); await sleep(120);
+    return lap;
+  }
+  // Snap mini-game: stop the moving needle inside the green zone
+  function snap(mi){
+    const m = MONTHS[mi], width = st.wide ? 34 : 20, left = 8 + Math.random() * (84 - width);
+    st.wide = false;
+    return new Promise(res => {
+      let raf, t0 = performance.now(), pos = 0, done = false;
+      sheet(`<div class="kind" style="color:var(--coral)">📸 Random day in ${m[0]}</div><div class="frame">${m[1]} ${m[0]}</div><p>Tap <b>SNAP</b> when the light is inside the green zone.${width > 20 ? ' Your ring light made the zone wider.' : ''}</p><div class="meter" aria-hidden="true"><div class="zone" style="left:${left}%;width:${width}%"></div><div class="needle" id="needle"></div></div><button class="btn main" data-v="snap" type="button">📸 SNAP</button>`, () => {
+        const nd = $('needle');
+        const tick = now => { const p = ((now - t0) / 1100) % 2; pos = (p < 1 ? p : 2 - p) * 100; nd.style.left = pos + '%'; if(!done) raf = requestAnimationFrame(tick); };
+        raf = requestAnimationFrame(tick);
+      }).then(() => { done = true; cancelAnimationFrame(raf); res(pos >= left && pos <= left + width); });
+    });
+  }
+  async function land(){
+    const s = SQ[st.at];
+    if(s.t === 'start') return;
+    if(s.t === 'month'){
+      const m = MONTHS[s.m];
+      if(st.stamps.has(s.m)){ await sheet(`<div class="kind" style="color:var(--teal)">${m[1]} ${m[0]}</div><h2>Already in your recap</h2><p>${m[2]}</p><button class="btn main" data-v="ok" type="button">Keep walking</button>`); return; }
+      const ok = await snap(s.m);
+      if(ok){ st.stamps.add(s.m); draw(); await sheet(`<div class="kind" style="color:var(--teal)">Stamp added 🍀</div><div class="frame">${m[1]} ${m[0]}</div><p>${m[2]}</p><div class="eff">Recap: ${st.stamps.size} of 12</div><button class="btn main" data-v="ok" type="button">Nice</button>`); }
+      else await sheet(`<div class="kind" style="color:var(--coral)">Blurry shot</div><h2>${m[1]} ${m[0]} slipped by</h2><p>It happens. Some days only stay in your memory. Land here again to try once more.</p><button class="btn main" data-v="ok" type="button">Okay</button>`);
+    }
+    else if(s.t === 'go'){ await sheet(`<div class="kind" style="color:var(--sky)">⚡ Go Go Go</div><h2>A big moment, no time to think</h2><p>The trend sound plays and you run with it.</p><div class="eff">Move 2 squares forward</div><button class="btn main" data-v="ok" type="button">Go!</button>`); if(await move(2)) await lapBonus(); await land(); }
+    else if(s.t === 'think'){ await sheet(`<div class="kind" style="color:var(--violet)">💭 Overthinking</div><h2>"Paid me no mind…?"</h2><p>You read one short reply ten different ways and lost an hour. Breathe. It was probably nothing.</p><div class="eff">Move 1 square back</div><button class="btn main" data-v="ok" type="button">Let it go</button>`); await move(-1); await land(); }
+    else if(s.t === 'light'){ st.wide = true; await sheet(`<div class="kind" style="color:var(--gold)">💡 Ring light</div><h2>Good lighting, easier shot</h2><p>Your next month snap gets a wider green zone.</p><button class="btn main" data-v="ok" type="button">Thanks</button>`); }
+    else if(s.t === 'scam'){
+      const q = pick();
+      const a = await sheet(`<div class="kind" style="color:var(--rose)">🛡️ Viral or scam?</div><h2>A post is going around…</h2><p>${q.q}</p><div class="two"><button class="btn scamb" data-v="scam" type="button">🚨 Scam</button><button class="btn safeb" data-v="safe" type="button">✅ Safe</button></div>`);
+      const ok = a === q.a; if(ok) st.rolls++;
+      await sheet(`<div class="kind" style="color:${ok ? 'var(--teal)' : 'var(--rose)'}">${ok ? 'Correct! 🍀' : 'Not quite'}</div><h2>Answer: ${q.a === 'scam' ? '🚨 Scam' : '✅ Safe'}</h2><p>${q.x}</p>${ok ? '<div class="eff">+1 roll</div>' : ''}<button class="btn main" data-v="ok" type="button">Continue</button>`);
+    }
+    draw();
+  }
+  async function lapBonus(){ st.rolls++; draw(); await sheet(`<div class="kind" style="color:var(--gold)">🎆 New Year</div><h2>You walked a whole year</h2><p>A new lap, a new year.</p><div class="eff">+1 roll</div><button class="btn main" data-v="ok" type="button">Keep going</button>`); }
+  function info(i){
+    const s = SQ[i];
+    if(s.t === 'month'){ const m = MONTHS[s.m]; return `<div class="kind" style="color:var(--coral)">${m[1]} ${m[0]}</div><h2>${st.stamps.has(s.m) ? 'In your recap' : 'Snap a random day'}</h2><p>${m[2]}</p><button class="btn main" data-v="ok" type="button">Close</button>`; }
+    const t = { start:['🎆 New Year','Pass this square to start a new lap: +1 roll.'], go:['⚡ Go Go Go','Move 2 squares forward.'], think:['💭 Overthinking','Move 1 square back.'], light:['💡 Ring light','Your next snap zone gets wider.'], scam:['🛡️ Viral or scam?','Judge a post. Right answer: +1 roll.'] }[s.t];
+    return `<div class="kind" style="color:var(--gold)">${t[0]}</div><p>${t[1]}</p><button class="btn main" data-v="ok" type="button">Close</button>`;
+  }
+  async function finish(){
+    const n = st.stamps.size, earned = Math.floor(n / 3), got = earned ? addBadges(earned) : 0;
+    await sleep(400);
+    const row = got ? Array.from({ length: got }, () => badgeSvg('pop')).join('') : badgeSvg('dim');
+    await sheet(`<div class="kind" style="color:var(--gold)">🏁 Your 2026 recap</div><div class="badges-row">${row}</div><div class="big" style="text-align:center">${n} stamp${n === 1 ? '' : 's'} · +${got} 007 Badge${got === 1 ? '' : 's'}</div><p>${earned > got ? `You reached today's limit of ${DAILY_CAP} badges. Come back tomorrow.` : got ? 'A year of small, random days. Your badges are saved on this device.' : 'Three stamps make a badge. Try aiming for the months next time.'}</p><button class="btn main" data-v="again" type="button">Play again</button>`);
+    reset();
+  }
+  function reset(){ st.at = 0; st.rolls = MAX_ROLLS; st.busy = false; st.stamps = new Set(); st.wide = false; st.jump = true; $('roll').disabled = false; $('choices').hidden = true; $('d1').textContent = $('d2').textContent = '🎲'; $('log').textContent = 'Tap ROLL to start your year.'; draw(); }
+
+  $('board').addEventListener('click', e => { const c = e.target.closest('.c'); if(c && !st.busy) sheet(info(Number(c.dataset.sq))); });
+  $('roll').addEventListener('click', async () => {
+    if(st.busy || st.rolls <= 0) return; st.busy = true; $('roll').disabled = true;
+    const a = 1 + Math.floor(Math.random() * 6), b = 1 + Math.floor(Math.random() * 6);
+    [$('d1'), $('d2')].forEach(d => { d.classList.remove('roll'); void d.offsetWidth; d.classList.add('roll'); d.textContent = '🎲'; });
+    await sleep(480); $('d1').textContent = a; $('d2').textContent = b;
+    const opts = [['Die A', a], ['Die B', b], ['Both', a + b]].filter((o, k) => !(k === 1 && a === b));
+    const dest = n => (st.at + n) % N;
+    const isNew = i => SQ[i].t === 'month' && !st.stamps.has(SQ[i].m);
+    $('choices').innerHTML = opts.map(([t, n]) => `<button type="button" class="pick${isNew(dest(n)) ? ' hit' : ''}" data-n="${n}"><span>${t}</span><b>${n}</b><span>→ ${label(dest(n))}</span></button>`).join('');
+    $('choices').hidden = false; draw(opts.map(o => dest(o[1])));
+    $('log').textContent = 'Pick how far to walk. Highlighted picks land on a month you still need.';
+    const n = await new Promise(res => $('choices').querySelectorAll('.pick').forEach(p => p.addEventListener('click', () => res(Number(p.dataset.n)), { once:true })));
+    $('choices').hidden = true; st.rolls--; draw();
+    $('log').textContent = `Walking ${n} square${n === 1 ? '' : 's'}…`;
+    if(await move(n)) await lapBonus();
+    await land();
+    st.busy = false;
+    if(st.rolls <= 0){ $('log').textContent = 'The year is done.'; await finish(); return; }
+    $('roll').disabled = false; $('log').textContent = `${st.rolls} roll${st.rolls === 1 ? '' : 's'} left. Tap ROLL.`;
+  });
+  paintBadges(); draw();
+})();
+</script>
+
+</body>
+</html>

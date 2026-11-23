@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>314 Challenge · 디부타데스</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;500;700&display=swap">
+<style>
+  .appback{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.18);color:inherit;text-decoration:none;font-size:12.5px;font-weight:700;opacity:.9}
+  .appback:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+  /* Layout: header / 7×7 hourglass board — outline path (top row, both diagonals, bottom row) walked as a figure-8, 8 chance cards inside the two bulbs, SUM panel on the left of the glass and TO 314 on the right / circular 1–314 wheel + SPIN. Night desert theme. */
+  :root{
+    --night:#16151c; --board:#211f2a; --cell:#2d2a38; --line:#3e3a4c;
+    --chalk:#f3eee6; --dim:#a8a1b6; --sand:#e8b86a; --gold:#ffc93c; --plus:#4fd1a5; --minus:#ff6b7f; --cen:#5fe3ff;
+    --f-title:"Bungee","Inter",system-ui,sans-serif; --f-year:"Fraunces",Georgia,serif; --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color-scheme:dark;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--night);color:var(--chalk);font-family:var(--f-body);-webkit-tap-highlight-color:transparent}
+  .wrap{max-width:480px;margin:0 auto;box-sizing:border-box;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:14px 24px;display:flex;flex-direction:column;gap:12px}
+  header h1{margin:0;font-family:var(--f-title);font-weight:400;font-size:24px;line-height:1.1}
+  header h1 span{color:var(--gold)}
+  header p{margin:5px 0 0;font-size:12.5px;color:var(--dim);line-height:1.5}
+  .top{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim)}
+  .top b{color:var(--gold);font-variant-numeric:tabular-nums}
+  .badge-ic{width:22px;height:22px;vertical-align:-6px;margin-right:4px}
+  .bwrap{position:relative}
+  .hg{position:relative;padding:8px;border-radius:18px;background:var(--board);border:1px solid var(--line)}
+  .glass{position:absolute;inset:8px;clip-path:polygon(0 0,100% 0,100% 4%,56% 47%,56% 53%,100% 96%,100% 100%,0 100%,0 96%,44% 53%,44% 47%,0 4%);background:rgba(232,184,106,.07)}
+  .sand{position:absolute;left:0;right:0;background:linear-gradient(180deg,#f0c77d,#c9934a);opacity:.4;transition:height .4s ease}
+  .sand.t{bottom:53%} .sand.b{bottom:0}
+  .board{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(7,auto);gap:4px}
+  .c{position:relative;aspect-ratio:1;border-radius:9px;background:rgba(45,42,56,.94);border:1px solid var(--line);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;color:var(--chalk);font-family:inherit;padding:0}
+  .c .v{font-family:var(--f-title);font-size:14px;line-height:1}
+  .c .s{font-size:6.5px;letter-spacing:.06em;color:var(--dim);text-transform:uppercase;margin-top:2px}
+  .c.got{background:#3a3220;border-color:var(--gold)}
+  .c.got .v{color:var(--gold)}
+  .c.home{background:#3a3220;border-color:var(--gold)}
+  .c.mid{background:#1c3640;border-color:var(--cen)}
+  .c.mid .v{font-size:16px}
+  .c.here{box-shadow:0 0 0 2px var(--gold) inset}
+  .k{aspect-ratio:1;border-radius:9px;border:1px dashed #6a6280;background:rgba(33,31,42,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-title);font-size:13px;color:var(--dim);cursor:default;padding:0;min-width:0}
+  .k .s{font-family:var(--f-body);font-size:6.5px;letter-spacing:.06em;margin-top:2px}
+  .k.on{cursor:pointer;border-style:solid;background:#302c40}
+  .k.on{color:var(--gold);border-color:var(--gold)} .k.used.p{color:var(--plus)} .k.used.m{color:var(--minus)}
+  .btn.plus{border-color:var(--plus);color:var(--plus)} .btn.minus{border-color:var(--minus);color:var(--minus)}
+  .k.on{animation:glow 1.4s ease-in-out infinite alternate}
+  @keyframes glow{from{box-shadow:0 0 0 rgba(255,201,60,0)}to{box-shadow:0 0 10px rgba(255,201,60,.35)}}
+  .k.used{opacity:.25;text-decoration:line-through}
+  .side{grid-row:3 / span 3;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;border-radius:12px;background:rgba(22,21,28,.6);padding:4px}
+  .side span{font-size:9.5px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+  .side b{font-family:var(--f-title);font-weight:400;font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
+  .side small{font-size:9.5px;color:var(--dim)}
+  .side.l{grid-column:1 / span 2} .side.r{grid-column:6 / span 2}
+  .side.l b{color:var(--chalk)} .side.r b{color:var(--gold)}
+  .side.r.ok b{color:var(--plus)} .side.r.over b{color:var(--minus)}
+  .walker{position:absolute;left:0;top:0;width:30px;height:34px;pointer-events:none;z-index:5;transition:transform .26s ease-in-out,opacity .22s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+  .walker svg{display:block;overflow:visible}
+  .walker .fig{transform-origin:15px 34px;transition:transform .15s}
+  .walker.face-l .fig{transform:scaleX(-1)}
+  .walker .legL{transform-origin:12.6px 21px}.walker .legR{transform-origin:17.4px 21px}
+  .walker.walking .legL{animation:legSw .26s ease-in-out infinite alternate}
+  .walker.walking .legR{animation:legSw .26s ease-in-out infinite alternate-reverse}
+  .walker.walking .body{animation:bob .13s ease-in-out infinite alternate}
+  .walker.cheer .body{animation:cheer .5s ease-out 2}
+  @keyframes legSw{from{transform:rotate(22deg)}to{transform:rotate(-22deg)}}
+  @keyframes bob{from{transform:translateY(0)}to{transform:translateY(-1.6px)}}
+  @keyframes cheer{0%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+  .dock{display:grid;grid-template-columns:124px 1fr;gap:12px;align-items:center}
+  .wheel{position:relative;width:124px;height:124px}
+  .wheel svg{width:100%;height:100%;display:block}
+  .wheel .disc{transform-origin:50% 50%;transition:transform 1.6s cubic-bezier(.15,.8,.2,1)}
+  .wheel .ptr{position:absolute;left:50%;top:-4px;margin-left:-7px;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:12px solid var(--gold);filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+  .wheel .hub{position:absolute;inset:27%;border-radius:50%;background:var(--night);border:2px solid var(--gold);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .wheel .hub b{font-family:var(--f-title);font-weight:400;font-size:18px;line-height:1;color:var(--chalk)}
+  .wheel .hub small{font-size:9px;color:var(--gold);margin-top:2px}
+  .act{display:flex;flex-direction:column;gap:8px}
+  .go-btn{min-height:54px;border:none;border-radius:16px;background:var(--gold);color:#2a1f02;font-family:var(--f-title);font-size:15px;cursor:pointer;padding:0 10px}
+  .go-btn:disabled{opacity:.45;cursor:default}
+  .go-btn.fin{background:var(--plus)}
+  .go-btn:focus-visible,.btn:focus-visible,.k:focus-visible,.c:focus-visible{outline:2px solid var(--chalk);outline-offset:1px}
+  .log{font-size:12.5px;color:var(--dim);line-height:1.5;min-height:3em}
+  .note{font-size:11px;color:var(--dim);line-height:1.5;border-top:1px dashed var(--line);padding-top:10px;margin:0}
+  .sheet{position:fixed;inset:0;z-index:10;background:rgba(10,9,14,.74);display:flex;align-items:flex-end;justify-content:center;padding:0 max(12px, env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px))}
+  .sheet[hidden]{display:none!important}
+  .card{width:100%;max-width:460px;max-height:calc(100% - 24px);overflow-y:auto;border-radius:20px;background:#28253a;border:1px solid var(--line);padding:18px 18px 16px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;animation:up .25s ease-out}
+  @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+  .kind{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+  .card h2{margin:0;font-size:18px;line-height:1.35}
+  .card p{margin:0;font-size:14px;line-height:1.6;color:#ddd6ea}
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{min-height:48px;border-radius:14px;border:1px solid var(--line);background:#353146;color:var(--chalk);font-family:var(--f-body);font-size:15px;font-weight:700;cursor:pointer}
+  .btn.num{font-family:var(--f-title);font-weight:400;font-size:22px;min-height:64px;border-color:var(--cen);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .btn.num small{font-family:var(--f-body);font-size:11px;color:var(--dim)}
+  .btn.main{background:var(--gold);color:#2a1f02;border-color:var(--gold)}
+  .big{font-family:var(--f-title);font-size:22px;line-height:1.25}
+  .badges-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:6px 0}
+  .badges-row svg{width:90px;height:90px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+  .badges-row svg.dim{opacity:.25;filter:grayscale(1)}
+  .badges-row svg.pop{animation:pop .5s ease-out both}
+  @keyframes pop{0%{transform:scale(.3) rotate(-20deg);opacity:0}70%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:none}}
+  @media (prefers-reduced-motion:reduce){.walker,.wheel .disc,.sand{transition:none}.walker.walking .legL,.walker.walking .legR,.walker.walking .body,.walker.cheer .body,.card,.badges-row svg.pop,.k.on{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <a class="appback" href="/#games">← 007 게임 · Back to games</a>
+  <header>
+    <h1>⏳ <span>314</span> CHALLENGE</h1>
+    <p>Walk the hourglass in a figure-8 and come back home with a sum of <b>exactly 314</b>. Spin the 1–314 wheel and walk its <b>last digit</b> (0 = 10). Squares you stop on are added. Each time you pass the glowing middle, pick 1 of 3 numbers. Chance cards in the sand can be <b>added or subtracted</b>, once each: the top 4 before your first middle pick, the bottom 4 after it, even at home.</p>
+  </header>
+  <div class="top"><span>Every board is checked: careful play hits 314 in 70%+ of runs.</span><span><span id="badgeIc"></span><b id="badges">0</b> <span id="today">today 0/5</span></span></div>
+  <div class="bwrap"><div class="hg"><div class="glass" aria-hidden="true"><div class="sand t" id="sandT"></div><div class="sand b" id="sandB"></div></div><div class="board" id="board" aria-label="314 Challenge hourglass board"></div></div><div class="walker" id="walker" aria-hidden="true"><svg viewBox="0 0 30 34" width="30" height="34"><g class="fig"><ellipse cx="15" cy="32.6" rx="8" ry="1.6" fill="rgba(0,0,0,.45)"/><g class="legL"><rect x="11" y="21" width="3.2" height="10" rx="1.4" fill="#22243a"/><rect x="9.8" y="30" width="5" height="2.2" rx="1" fill="#0c0d14"/></g><g class="legR"><rect x="15.8" y="21" width="3.2" height="10" rx="1.4" fill="#22243a"/><rect x="15.2" y="30" width="5" height="2.2" rx="1" fill="#0c0d14"/></g><g class="body"><rect x="6.4" y="13.6" width="3" height="8" rx="1.5" fill="#b8975a"/><rect x="20.6" y="13.6" width="3" height="8" rx="1.5" fill="#b8975a"/><rect x="8.5" y="12.8" width="13" height="11" rx="4" fill="#c9a96a"/><path d="M12.6 12.9 L15 18.2 L17.4 12.9 Z" fill="#f1ece2"/><path d="M14.4 13.6 L15 17 L15.6 13.6 Z" fill="#c0392b"/><circle cx="18.6" cy="18.6" r="1.3" fill="#e8c45f"/><circle cx="15" cy="8.6" r="4.6" fill="#f2c9a0"/><rect x="11.3" y="7.7" width="7.4" height="2.1" rx="1" fill="#111"/><rect x="11" y="1.6" width="8" height="4.6" rx="1.6" fill="#2b2a35"/><rect x="11" y="4.4" width="8" height="1.1" fill="#d9b45a"/><ellipse cx="15" cy="5.9" rx="7.2" ry="1.5" fill="#2b2a35"/></g></g></svg></div></div>
+  <div class="dock">
+    <div class="wheel" aria-hidden="true"><svg viewBox="0 0 100 100"><g class="disc" id="disc"><circle cx="50" cy="50" r="49" fill="#2a2638" stroke="#4a4560" stroke-width="1"/><path d="M49.51 1.00 A49 49 0 0 1 59.26 1.88 L55.67 20.54 A30 30 0 0 0 49.70 20.00Z" fill="#3d3654"/><path d="M59.26 1.88 A49 49 0 0 1 68.64 4.68 L61.41 22.25 A30 30 0 0 0 55.67 20.54Z" fill="#332e46"/><path d="M68.64 4.68 A49 49 0 0 1 77.27 9.29 L66.70 25.08 A30 30 0 0 0 61.41 22.25Z" fill="#3d3654"/><path d="M77.27 9.29 A49 49 0 0 1 84.82 15.53 L71.32 28.89 A30 30 0 0 0 66.70 25.08Z" fill="#332e46"/><path d="M84.82 15.53 A49 49 0 0 1 90.98 23.13 L75.09 33.55 A30 30 0 0 0 71.32 28.89Z" fill="#3d3654"/><path d="M90.98 23.13 A49 49 0 0 1 95.50 31.82 L77.86 38.87 A30 30 0 0 0 75.09 33.55Z" fill="#332e46"/><path d="M95.50 31.82 A49 49 0 0 1 98.21 41.22 L79.51 44.63 A30 30 0 0 0 77.86 38.87Z" fill="#3d3654"/><path d="M98.21 41.22 A49 49 0 0 1 98.99 50.98 L79.99 50.60 A30 30 0 0 0 79.51 44.63Z" fill="#332e46"/><path d="M98.99 50.98 A49 49 0 0 1 97.82 60.70 L79.28 56.55 A30 30 0 0 0 79.99 50.60Z" fill="#3d3654"/><path d="M97.82 60.70 A49 49 0 0 1 94.74 69.99 L77.39 62.24 A30 30 0 0 0 79.28 56.55Z" fill="#332e46"/><path d="M94.74 69.99 A49 49 0 0 1 89.87 78.48 L74.41 67.44 A30 30 0 0 0 77.39 62.24Z" fill="#3d3654"/><path d="M89.87 78.48 A49 49 0 0 1 83.41 85.84 L70.46 71.94 A30 30 0 0 0 74.41 67.44Z" fill="#332e46"/><path d="M83.41 85.84 A49 49 0 0 1 75.62 91.77 L65.69 75.57 A30 30 0 0 0 70.46 71.94Z" fill="#3d3654"/><path d="M75.62 91.77 A49 49 0 0 1 66.81 96.03 L60.29 78.18 A30 30 0 0 0 65.69 75.57Z" fill="#332e46"/><path d="M66.81 96.03 A49 49 0 0 1 57.33 98.45 L54.49 79.66 A30 30 0 0 0 60.29 78.18Z" fill="#3d3654"/><path d="M57.33 98.45 A49 49 0 0 1 47.55 98.94 L48.50 79.96 A30 30 0 0 0 54.49 79.66Z" fill="#332e46"/><path d="M47.55 98.94 A49 49 0 0 1 37.87 97.48 L42.57 79.07 A30 30 0 0 0 48.50 79.96Z" fill="#3d3654"/><path d="M37.87 97.48 A49 49 0 0 1 28.68 94.12 L36.94 77.01 A30 30 0 0 0 42.57 79.07Z" fill="#332e46"/><path d="M28.68 94.12 A49 49 0 0 1 20.33 89.00 L31.84 73.88 A30 30 0 0 0 36.94 77.01Z" fill="#3d3654"/><path d="M20.33 89.00 A49 49 0 0 1 13.17 82.32 L27.45 69.79 A30 30 0 0 0 31.84 73.88Z" fill="#332e46"/><path d="M13.17 82.32 A49 49 0 0 1 7.48 74.36 L23.97 64.91 A30 30 0 0 0 27.45 69.79Z" fill="#3d3654"/><path d="M7.48 74.36 A49 49 0 0 1 3.49 65.42 L21.52 59.44 A30 30 0 0 0 23.97 64.91Z" fill="#332e46"/><path d="M3.49 65.42 A49 49 0 0 1 1.35 55.87 L20.22 53.59 A30 30 0 0 0 21.52 59.44Z" fill="#3d3654"/><path d="M1.35 55.87 A49 49 0 0 1 1.16 46.08 L20.10 47.60 A30 30 0 0 0 20.22 53.59Z" fill="#332e46"/><path d="M1.16 46.08 A49 49 0 0 1 2.91 36.45 L21.17 41.71 A30 30 0 0 0 20.10 47.60Z" fill="#3d3654"/><path d="M2.91 36.45 A49 49 0 0 1 6.54 27.36 L23.39 36.14 A30 30 0 0 0 21.17 41.71Z" fill="#332e46"/><path d="M6.54 27.36 A49 49 0 0 1 11.91 19.18 L26.68 31.13 A30 30 0 0 0 23.39 36.14Z" fill="#3d3654"/><path d="M11.91 19.18 A49 49 0 0 1 18.80 12.22 L30.90 26.87 A30 30 0 0 0 26.68 31.13Z" fill="#332e46"/><path d="M18.80 12.22 A49 49 0 0 1 26.93 6.77 L35.87 23.53 A30 30 0 0 0 30.90 26.87Z" fill="#3d3654"/><path d="M26.93 6.77 A49 49 0 0 1 35.98 3.05 L41.42 21.25 A30 30 0 0 0 35.87 23.53Z" fill="#332e46"/><path d="M35.98 3.05 A49 49 0 0 1 45.59 1.20 L47.30 20.12 A30 30 0 0 0 41.42 21.25Z" fill="#3d3654"/><path d="M45.59 1.20 A49 49 0 0 1 49.51 1.00 L49.70 20.00 A30 30 0 0 0 47.30 20.12Z" fill="#332e46"/><line x1="50.00" y1="8.00" x2="50.00" y2="1.50" stroke="#8f86a8" stroke-width="0.35"/><line x1="50.91" y1="4.51" x2="50.97" y2="1.51" stroke="#8f86a8" stroke-width="0.35"/><line x1="51.82" y1="4.54" x2="51.94" y2="1.54" stroke="#8f86a8" stroke-width="0.35"/><line x1="52.73" y1="4.58" x2="52.91" y2="1.59" stroke="#8f86a8" stroke-width="0.35"/><line x1="53.64" y1="4.65" x2="53.88" y2="1.66" stroke="#8f86a8" stroke-width="0.35"/><line x1="54.54" y1="4.73" x2="54.84" y2="1.74" stroke="#8f86a8" stroke-width="0.35"/><line x1="55.45" y1="4.83" x2="55.81" y2="1.85" stroke="#8f86a8" stroke-width="0.35"/><line x1="56.35" y1="4.95" x2="56.77" y2="1.98" stroke="#8f86a8" stroke-width="0.35"/><line x1="57.25" y1="5.08" x2="57.73" y2="2.12" stroke="#8f86a8" stroke-width="0.35"/><line x1="57.52" y1="8.68" x2="58.69" y2="2.28" stroke="#8f86a8" stroke-width="0.35"/><line x1="59.04" y1="5.41" x2="59.64" y2="2.47" stroke="#8f86a8" stroke-width="0.35"/><line x1="59.93" y1="5.60" x2="60.59" y2="2.67" stroke="#8f86a8" stroke-width="0.35"/><line x1="60.82" y1="5.81" x2="61.53" y2="2.89" stroke="#8f86a8" stroke-width="0.35"/><line x1="61.70" y1="6.03" x2="62.47" y2="3.13" stroke="#8f86a8" stroke-width="0.35"/><line x1="62.58" y1="6.27" x2="63.41" y2="3.39" stroke="#8f86a8" stroke-width="0.35"/><line x1="63.45" y1="6.53" x2="64.34" y2="3.67" stroke="#8f86a8" stroke-width="0.35"/><line x1="64.32" y1="6.81" x2="65.26" y2="3.96" stroke="#8f86a8" stroke-width="0.35"/><line x1="65.18" y1="7.11" x2="66.18" y2="4.28" stroke="#8f86a8" stroke-width="0.35"/><line x1="66.04" y1="7.42" x2="67.09" y2="4.61" stroke="#8f86a8" stroke-width="0.35"/><line x1="65.59" y1="11.00" x2="68.00" y2="4.96" stroke="#8f86a8" stroke-width="0.35"/><line x1="67.73" y1="8.10" x2="68.90" y2="5.33" stroke="#8f86a8" stroke-width="0.35"/><line x1="68.56" y1="8.46" x2="69.79" y2="5.72" stroke="#8f86a8" stroke-width="0.35"/><line x1="69.39" y1="8.84" x2="70.67" y2="6.12" stroke="#8f86a8" stroke-width="0.35"/><line x1="70.21" y1="9.23" x2="71.54" y2="6.55" stroke="#8f86a8" stroke-width="0.35"/><line x1="71.02" y1="9.65" x2="72.41" y2="6.99" stroke="#8f86a8" stroke-width="0.35"/><line x1="71.82" y1="10.08" x2="73.26" y2="7.44" stroke="#8f86a8" stroke-width="0.35"/><line x1="72.62" y1="10.52" x2="74.11" y2="7.92" stroke="#8f86a8" stroke-width="0.35"/><line x1="73.40" y1="10.98" x2="74.95" y2="8.41" stroke="#8f86a8" stroke-width="0.35"/><line x1="74.18" y1="11.46" x2="75.77" y2="8.92" stroke="#8f86a8" stroke-width="0.35"/><line x1="73.03" y1="14.88" x2="76.59" y2="9.44" stroke="#8f86a8" stroke-width="0.35"/><line x1="75.70" y1="12.46" x2="77.40" y2="9.98" stroke="#8f86a8" stroke-width="0.35"/><line x1="76.45" y1="12.98" x2="78.19" y2="10.54" stroke="#8f86a8" stroke-width="0.35"/><line x1="77.18" y1="13.51" x2="78.98" y2="11.11" stroke="#8f86a8" stroke-width="0.35"/><line x1="77.91" y1="14.06" x2="79.75" y2="11.70" stroke="#8f86a8" stroke-width="0.35"/><line x1="78.62" y1="14.63" x2="80.51" y2="12.30" stroke="#8f86a8" stroke-width="0.35"/><line x1="79.32" y1="15.21" x2="81.26" y2="12.92" stroke="#8f86a8" stroke-width="0.35"/><line x1="80.01" y1="15.80" x2="81.99" y2="13.55" stroke="#8f86a8" stroke-width="0.35"/><line x1="80.69" y1="16.41" x2="82.72" y2="14.20" stroke="#8f86a8" stroke-width="0.35"/><line x1="81.36" y1="17.03" x2="83.43" y2="14.86" stroke="#8f86a8" stroke-width="0.35"/><line x1="79.55" y1="20.15" x2="84.12" y2="15.53" stroke="#8f86a8" stroke-width="0.35"/><line x1="82.65" y1="18.31" x2="84.81" y2="16.22" stroke="#8f86a8" stroke-width="0.35"/><line x1="83.28" y1="18.97" x2="85.47" y2="16.93" stroke="#8f86a8" stroke-width="0.35"/><line x1="83.89" y1="19.64" x2="86.13" y2="17.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="84.49" y1="20.33" x2="86.77" y2="18.37" stroke="#8f86a8" stroke-width="0.35"/><line x1="85.08" y1="21.03" x2="87.39" y2="19.11" stroke="#8f86a8" stroke-width="0.35"/><line x1="85.65" y1="21.73" x2="88.01" y2="19.87" stroke="#8f86a8" stroke-width="0.35"/><line x1="86.21" y1="22.45" x2="88.60" y2="20.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="86.76" y1="23.18" x2="89.18" y2="21.41" stroke="#8f86a8" stroke-width="0.35"/><line x1="87.29" y1="23.92" x2="89.74" y2="22.20" stroke="#8f86a8" stroke-width="0.35"/><line x1="84.89" y1="26.62" x2="90.29" y2="23.00" stroke="#8f86a8" stroke-width="0.35"/><line x1="88.30" y1="25.44" x2="90.82" y2="23.82" stroke="#8f86a8" stroke-width="0.35"/><line x1="88.78" y1="26.21" x2="91.34" y2="24.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="89.25" y1="26.99" x2="91.84" y2="25.47" stroke="#8f86a8" stroke-width="0.35"/><line x1="89.70" y1="27.78" x2="92.32" y2="26.31" stroke="#8f86a8" stroke-width="0.35"/><line x1="90.14" y1="28.58" x2="92.79" y2="27.16" stroke="#8f86a8" stroke-width="0.35"/><line x1="90.56" y1="29.38" x2="93.24" y2="28.02" stroke="#8f86a8" stroke-width="0.35"/><line x1="90.97" y1="30.20" x2="93.67" y2="28.89" stroke="#8f86a8" stroke-width="0.35"/><line x1="91.35" y1="31.02" x2="94.08" y2="29.77" stroke="#8f86a8" stroke-width="0.35"/><line x1="91.73" y1="31.85" x2="94.48" y2="30.66" stroke="#8f86a8" stroke-width="0.35"/><line x1="88.84" y1="34.02" x2="94.85" y2="31.55" stroke="#8f86a8" stroke-width="0.35"/><line x1="92.42" y1="33.54" x2="95.21" y2="32.45" stroke="#8f86a8" stroke-width="0.35"/><line x1="92.74" y1="34.39" x2="95.56" y2="33.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="93.04" y1="35.25" x2="95.88" y2="34.28" stroke="#8f86a8" stroke-width="0.35"/><line x1="93.33" y1="36.11" x2="96.19" y2="35.20" stroke="#8f86a8" stroke-width="0.35"/><line x1="93.60" y1="36.98" x2="96.47" y2="36.12" stroke="#8f86a8" stroke-width="0.35"/><line x1="93.85" y1="37.86" x2="96.74" y2="37.06" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.08" y1="38.74" x2="96.99" y2="37.99" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.30" y1="39.62" x2="97.22" y2="38.94" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.50" y1="40.51" x2="97.43" y2="39.88" stroke="#8f86a8" stroke-width="0.35"/><line x1="91.24" y1="42.06" x2="97.63" y2="40.84" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.84" y1="42.30" x2="97.80" y2="41.79" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.99" y1="43.20" x2="97.95" y2="42.75" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.12" y1="44.10" x2="98.09" y2="43.71" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.22" y1="45.00" x2="98.21" y2="44.67" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.32" y1="45.91" x2="98.30" y2="45.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.39" y1="46.82" x2="98.38" y2="46.61" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.44" y1="47.72" x2="98.44" y2="47.57" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.48" y1="48.63" x2="98.48" y2="48.54" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.50" y1="49.54" x2="98.50" y2="49.51" stroke="#8f86a8" stroke-width="0.35"/><line x1="92.00" y1="50.42" x2="98.50" y2="50.49" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.48" y1="51.37" x2="98.48" y2="51.46" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.44" y1="52.28" x2="98.44" y2="52.43" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.39" y1="53.18" x2="98.38" y2="53.39" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.32" y1="54.09" x2="98.30" y2="54.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.22" y1="55.00" x2="98.21" y2="55.33" stroke="#8f86a8" stroke-width="0.35"/><line x1="95.12" y1="55.90" x2="98.09" y2="56.29" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.99" y1="56.80" x2="97.95" y2="57.25" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.84" y1="57.70" x2="97.80" y2="58.21" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.68" y1="58.60" x2="97.63" y2="59.16" stroke="#8f86a8" stroke-width="0.35"/><line x1="91.08" y1="58.76" x2="97.43" y2="60.12" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.30" y1="60.38" x2="97.22" y2="61.06" stroke="#8f86a8" stroke-width="0.35"/><line x1="94.08" y1="61.26" x2="96.99" y2="62.01" stroke="#8f86a8" stroke-width="0.35"/><line x1="93.85" y1="62.14" x2="96.74" y2="62.94" stroke="#8f86a8" stroke-width="0.35"/><line x1="93.60" y1="63.02" x2="96.47" y2="63.88" stroke="#8f86a8" stroke-width="0.35"/><line x1="93.33" y1="63.89" x2="96.19" y2="64.80" stroke="#8f86a8" stroke-width="0.35"/><line x1="93.04" y1="64.75" x2="95.88" y2="65.72" stroke="#8f86a8" stroke-width="0.35"/><line x1="92.74" y1="65.61" x2="95.56" y2="66.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="92.42" y1="66.46" x2="95.21" y2="67.55" stroke="#8f86a8" stroke-width="0.35"/><line x1="92.08" y1="67.31" x2="94.85" y2="68.45" stroke="#8f86a8" stroke-width="0.35"/><line x1="88.52" y1="66.75" x2="94.48" y2="69.34" stroke="#8f86a8" stroke-width="0.35"/><line x1="91.35" y1="68.98" x2="94.08" y2="70.23" stroke="#8f86a8" stroke-width="0.35"/><line x1="90.97" y1="69.80" x2="93.67" y2="71.11" stroke="#8f86a8" stroke-width="0.35"/><line x1="90.56" y1="70.62" x2="93.24" y2="71.98" stroke="#8f86a8" stroke-width="0.35"/><line x1="90.14" y1="71.42" x2="92.79" y2="72.84" stroke="#8f86a8" stroke-width="0.35"/><line x1="89.70" y1="72.22" x2="92.32" y2="73.69" stroke="#8f86a8" stroke-width="0.35"/><line x1="89.25" y1="73.01" x2="91.84" y2="74.53" stroke="#8f86a8" stroke-width="0.35"/><line x1="88.78" y1="73.79" x2="91.34" y2="75.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="88.30" y1="74.56" x2="90.82" y2="76.18" stroke="#8f86a8" stroke-width="0.35"/><line x1="87.80" y1="75.33" x2="90.29" y2="77.00" stroke="#8f86a8" stroke-width="0.35"/><line x1="84.42" y1="74.07" x2="89.74" y2="77.80" stroke="#8f86a8" stroke-width="0.35"/><line x1="86.76" y1="76.82" x2="89.18" y2="78.59" stroke="#8f86a8" stroke-width="0.35"/><line x1="86.21" y1="77.55" x2="88.60" y2="79.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="85.65" y1="78.27" x2="88.01" y2="80.13" stroke="#8f86a8" stroke-width="0.35"/><line x1="85.08" y1="78.97" x2="87.39" y2="80.89" stroke="#8f86a8" stroke-width="0.35"/><line x1="84.49" y1="79.67" x2="86.77" y2="81.63" stroke="#8f86a8" stroke-width="0.35"/><line x1="83.89" y1="80.36" x2="86.13" y2="82.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="83.28" y1="81.03" x2="85.47" y2="83.07" stroke="#8f86a8" stroke-width="0.35"/><line x1="82.65" y1="81.69" x2="84.81" y2="83.78" stroke="#8f86a8" stroke-width="0.35"/><line x1="82.01" y1="82.33" x2="84.12" y2="84.47" stroke="#8f86a8" stroke-width="0.35"/><line x1="78.95" y1="80.43" x2="83.43" y2="85.14" stroke="#8f86a8" stroke-width="0.35"/><line x1="80.69" y1="83.59" x2="82.72" y2="85.80" stroke="#8f86a8" stroke-width="0.35"/><line x1="80.01" y1="84.20" x2="81.99" y2="86.45" stroke="#8f86a8" stroke-width="0.35"/><line x1="79.32" y1="84.79" x2="81.26" y2="87.08" stroke="#8f86a8" stroke-width="0.35"/><line x1="78.62" y1="85.37" x2="80.51" y2="87.70" stroke="#8f86a8" stroke-width="0.35"/><line x1="77.91" y1="85.94" x2="79.75" y2="88.30" stroke="#8f86a8" stroke-width="0.35"/><line x1="77.18" y1="86.49" x2="78.98" y2="88.89" stroke="#8f86a8" stroke-width="0.35"/><line x1="76.45" y1="87.02" x2="78.19" y2="89.46" stroke="#8f86a8" stroke-width="0.35"/><line x1="75.70" y1="87.54" x2="77.40" y2="90.02" stroke="#8f86a8" stroke-width="0.35"/><line x1="74.95" y1="88.05" x2="76.59" y2="90.56" stroke="#8f86a8" stroke-width="0.35"/><line x1="72.32" y1="85.58" x2="75.77" y2="91.08" stroke="#8f86a8" stroke-width="0.35"/><line x1="73.40" y1="89.02" x2="74.95" y2="91.59" stroke="#8f86a8" stroke-width="0.35"/><line x1="72.62" y1="89.48" x2="74.11" y2="92.08" stroke="#8f86a8" stroke-width="0.35"/><line x1="71.82" y1="89.92" x2="73.26" y2="92.56" stroke="#8f86a8" stroke-width="0.35"/><line x1="71.02" y1="90.35" x2="72.41" y2="93.01" stroke="#8f86a8" stroke-width="0.35"/><line x1="70.21" y1="90.77" x2="71.54" y2="93.45" stroke="#8f86a8" stroke-width="0.35"/><line x1="69.39" y1="91.16" x2="70.67" y2="93.88" stroke="#8f86a8" stroke-width="0.35"/><line x1="68.56" y1="91.54" x2="69.79" y2="94.28" stroke="#8f86a8" stroke-width="0.35"/><line x1="67.73" y1="91.90" x2="68.90" y2="94.67" stroke="#8f86a8" stroke-width="0.35"/><line x1="66.89" y1="92.25" x2="68.00" y2="95.04" stroke="#8f86a8" stroke-width="0.35"/><line x1="64.80" y1="89.30" x2="67.09" y2="95.39" stroke="#8f86a8" stroke-width="0.35"/><line x1="65.18" y1="92.89" x2="66.18" y2="95.72" stroke="#8f86a8" stroke-width="0.35"/><line x1="64.32" y1="93.19" x2="65.26" y2="96.04" stroke="#8f86a8" stroke-width="0.35"/><line x1="63.45" y1="93.47" x2="64.34" y2="96.33" stroke="#8f86a8" stroke-width="0.35"/><line x1="62.58" y1="93.73" x2="63.41" y2="96.61" stroke="#8f86a8" stroke-width="0.35"/><line x1="61.70" y1="93.97" x2="62.47" y2="96.87" stroke="#8f86a8" stroke-width="0.35"/><line x1="60.82" y1="94.19" x2="61.53" y2="97.11" stroke="#8f86a8" stroke-width="0.35"/><line x1="59.93" y1="94.40" x2="60.59" y2="97.33" stroke="#8f86a8" stroke-width="0.35"/><line x1="59.04" y1="94.59" x2="59.64" y2="97.53" stroke="#8f86a8" stroke-width="0.35"/><line x1="58.15" y1="94.76" x2="58.69" y2="97.72" stroke="#8f86a8" stroke-width="0.35"/><line x1="56.69" y1="91.46" x2="57.73" y2="97.88" stroke="#8f86a8" stroke-width="0.35"/><line x1="56.35" y1="95.05" x2="56.77" y2="98.02" stroke="#8f86a8" stroke-width="0.35"/><line x1="55.45" y1="95.17" x2="55.81" y2="98.15" stroke="#8f86a8" stroke-width="0.35"/><line x1="54.54" y1="95.27" x2="54.84" y2="98.26" stroke="#8f86a8" stroke-width="0.35"/><line x1="53.64" y1="95.35" x2="53.88" y2="98.34" stroke="#8f86a8" stroke-width="0.35"/><line x1="52.73" y1="95.42" x2="52.91" y2="98.41" stroke="#8f86a8" stroke-width="0.35"/><line x1="51.82" y1="95.46" x2="51.94" y2="98.46" stroke="#8f86a8" stroke-width="0.35"/><line x1="50.91" y1="95.49" x2="50.97" y2="98.49" stroke="#8f86a8" stroke-width="0.35"/><line x1="50.00" y1="95.50" x2="50.00" y2="98.50" stroke="#8f86a8" stroke-width="0.35"/><line x1="49.09" y1="95.49" x2="49.03" y2="98.49" stroke="#8f86a8" stroke-width="0.35"/><line x1="48.32" y1="91.97" x2="48.06" y2="98.46" stroke="#8f86a8" stroke-width="0.35"/><line x1="47.27" y1="95.42" x2="47.09" y2="98.41" stroke="#8f86a8" stroke-width="0.35"/><line x1="46.36" y1="95.35" x2="46.12" y2="98.34" stroke="#8f86a8" stroke-width="0.35"/><line x1="45.46" y1="95.27" x2="45.16" y2="98.26" stroke="#8f86a8" stroke-width="0.35"/><line x1="44.55" y1="95.17" x2="44.19" y2="98.15" stroke="#8f86a8" stroke-width="0.35"/><line x1="43.65" y1="95.05" x2="43.23" y2="98.02" stroke="#8f86a8" stroke-width="0.35"/><line x1="42.75" y1="94.92" x2="42.27" y2="97.88" stroke="#8f86a8" stroke-width="0.35"/><line x1="41.85" y1="94.76" x2="41.31" y2="97.72" stroke="#8f86a8" stroke-width="0.35"/><line x1="40.96" y1="94.59" x2="40.36" y2="97.53" stroke="#8f86a8" stroke-width="0.35"/><line x1="40.07" y1="94.40" x2="39.41" y2="97.33" stroke="#8f86a8" stroke-width="0.35"/><line x1="40.01" y1="90.79" x2="38.47" y2="97.11" stroke="#8f86a8" stroke-width="0.35"/><line x1="38.30" y1="93.97" x2="37.53" y2="96.87" stroke="#8f86a8" stroke-width="0.35"/><line x1="37.42" y1="93.73" x2="36.59" y2="96.61" stroke="#8f86a8" stroke-width="0.35"/><line x1="36.55" y1="93.47" x2="35.66" y2="96.33" stroke="#8f86a8" stroke-width="0.35"/><line x1="35.68" y1="93.19" x2="34.74" y2="96.04" stroke="#8f86a8" stroke-width="0.35"/><line x1="34.82" y1="92.89" x2="33.82" y2="95.72" stroke="#8f86a8" stroke-width="0.35"/><line x1="33.96" y1="92.58" x2="32.91" y2="95.39" stroke="#8f86a8" stroke-width="0.35"/><line x1="33.11" y1="92.25" x2="32.00" y2="95.04" stroke="#8f86a8" stroke-width="0.35"/><line x1="32.27" y1="91.90" x2="31.10" y2="94.67" stroke="#8f86a8" stroke-width="0.35"/><line x1="31.44" y1="91.54" x2="30.21" y2="94.28" stroke="#8f86a8" stroke-width="0.35"/><line x1="32.10" y1="88.00" x2="29.33" y2="93.88" stroke="#8f86a8" stroke-width="0.35"/><line x1="29.79" y1="90.77" x2="28.46" y2="93.45" stroke="#8f86a8" stroke-width="0.35"/><line x1="28.98" y1="90.35" x2="27.59" y2="93.01" stroke="#8f86a8" stroke-width="0.35"/><line x1="28.18" y1="89.92" x2="26.74" y2="92.56" stroke="#8f86a8" stroke-width="0.35"/><line x1="27.38" y1="89.48" x2="25.89" y2="92.08" stroke="#8f86a8" stroke-width="0.35"/><line x1="26.60" y1="89.02" x2="25.05" y2="91.59" stroke="#8f86a8" stroke-width="0.35"/><line x1="25.82" y1="88.54" x2="24.23" y2="91.08" stroke="#8f86a8" stroke-width="0.35"/><line x1="25.05" y1="88.05" x2="23.41" y2="90.56" stroke="#8f86a8" stroke-width="0.35"/><line x1="24.30" y1="87.54" x2="22.60" y2="90.02" stroke="#8f86a8" stroke-width="0.35"/><line x1="23.55" y1="87.02" x2="21.81" y2="89.46" stroke="#8f86a8" stroke-width="0.35"/><line x1="24.91" y1="83.68" x2="21.02" y2="88.89" stroke="#8f86a8" stroke-width="0.35"/><line x1="22.09" y1="85.94" x2="20.25" y2="88.30" stroke="#8f86a8" stroke-width="0.35"/><line x1="21.38" y1="85.37" x2="19.49" y2="87.70" stroke="#8f86a8" stroke-width="0.35"/><line x1="20.68" y1="84.79" x2="18.74" y2="87.08" stroke="#8f86a8" stroke-width="0.35"/><line x1="19.99" y1="84.20" x2="18.01" y2="86.45" stroke="#8f86a8" stroke-width="0.35"/><line x1="19.31" y1="83.59" x2="17.28" y2="85.80" stroke="#8f86a8" stroke-width="0.35"/><line x1="18.64" y1="82.97" x2="16.57" y2="85.14" stroke="#8f86a8" stroke-width="0.35"/><line x1="17.99" y1="82.33" x2="15.88" y2="84.47" stroke="#8f86a8" stroke-width="0.35"/><line x1="17.35" y1="81.69" x2="15.19" y2="83.78" stroke="#8f86a8" stroke-width="0.35"/><line x1="16.72" y1="81.03" x2="14.53" y2="83.07" stroke="#8f86a8" stroke-width="0.35"/><line x1="18.71" y1="78.02" x2="13.87" y2="82.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="15.51" y1="79.67" x2="13.23" y2="81.63" stroke="#8f86a8" stroke-width="0.35"/><line x1="14.92" y1="78.97" x2="12.61" y2="80.89" stroke="#8f86a8" stroke-width="0.35"/><line x1="14.35" y1="78.27" x2="11.99" y2="80.13" stroke="#8f86a8" stroke-width="0.35"/><line x1="13.79" y1="77.55" x2="11.40" y2="79.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="13.24" y1="76.82" x2="10.82" y2="78.59" stroke="#8f86a8" stroke-width="0.35"/><line x1="12.71" y1="76.08" x2="10.26" y2="77.80" stroke="#8f86a8" stroke-width="0.35"/><line x1="12.20" y1="75.33" x2="9.71" y2="77.00" stroke="#8f86a8" stroke-width="0.35"/><line x1="11.70" y1="74.56" x2="9.18" y2="76.18" stroke="#8f86a8" stroke-width="0.35"/><line x1="11.22" y1="73.79" x2="8.66" y2="75.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="13.77" y1="71.24" x2="8.16" y2="74.53" stroke="#8f86a8" stroke-width="0.35"/><line x1="10.30" y1="72.22" x2="7.68" y2="73.69" stroke="#8f86a8" stroke-width="0.35"/><line x1="9.86" y1="71.42" x2="7.21" y2="72.84" stroke="#8f86a8" stroke-width="0.35"/><line x1="9.44" y1="70.62" x2="6.76" y2="71.98" stroke="#8f86a8" stroke-width="0.35"/><line x1="9.03" y1="69.80" x2="6.33" y2="71.11" stroke="#8f86a8" stroke-width="0.35"/><line x1="8.65" y1="68.98" x2="5.92" y2="70.23" stroke="#8f86a8" stroke-width="0.35"/><line x1="8.27" y1="68.15" x2="5.52" y2="69.34" stroke="#8f86a8" stroke-width="0.35"/><line x1="7.92" y1="67.31" x2="5.15" y2="68.45" stroke="#8f86a8" stroke-width="0.35"/><line x1="7.58" y1="66.46" x2="4.79" y2="67.55" stroke="#8f86a8" stroke-width="0.35"/><line x1="7.26" y1="65.61" x2="4.44" y2="66.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="10.27" y1="63.62" x2="4.12" y2="65.72" stroke="#8f86a8" stroke-width="0.35"/><line x1="6.67" y1="63.89" x2="3.81" y2="64.80" stroke="#8f86a8" stroke-width="0.35"/><line x1="6.40" y1="63.02" x2="3.53" y2="63.88" stroke="#8f86a8" stroke-width="0.35"/><line x1="6.15" y1="62.14" x2="3.26" y2="62.94" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.92" y1="61.26" x2="3.01" y2="62.01" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.70" y1="60.38" x2="2.78" y2="61.06" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.50" y1="59.49" x2="2.57" y2="60.12" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.32" y1="58.60" x2="2.37" y2="59.16" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.16" y1="57.70" x2="2.20" y2="58.21" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.01" y1="56.80" x2="2.05" y2="57.25" stroke="#8f86a8" stroke-width="0.35"/><line x1="8.35" y1="55.45" x2="1.91" y2="56.29" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.78" y1="55.00" x2="1.79" y2="55.33" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.68" y1="54.09" x2="1.70" y2="54.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.61" y1="53.18" x2="1.62" y2="53.39" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.56" y1="52.28" x2="1.56" y2="52.43" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.52" y1="51.37" x2="1.52" y2="51.46" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.50" y1="50.46" x2="1.50" y2="50.49" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.50" y1="49.54" x2="1.50" y2="49.51" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.52" y1="48.63" x2="1.52" y2="48.54" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.56" y1="47.72" x2="1.56" y2="47.57" stroke="#8f86a8" stroke-width="0.35"/><line x1="8.10" y1="47.06" x2="1.62" y2="46.61" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.68" y1="45.91" x2="1.70" y2="45.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.78" y1="45.00" x2="1.79" y2="44.67" stroke="#8f86a8" stroke-width="0.35"/><line x1="4.88" y1="44.10" x2="1.91" y2="43.71" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.01" y1="43.20" x2="2.05" y2="42.75" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.16" y1="42.30" x2="2.20" y2="41.79" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.32" y1="41.40" x2="2.37" y2="40.84" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.50" y1="40.51" x2="2.57" y2="39.88" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.70" y1="39.62" x2="2.78" y2="38.94" stroke="#8f86a8" stroke-width="0.35"/><line x1="5.92" y1="38.74" x2="3.01" y2="37.99" stroke="#8f86a8" stroke-width="0.35"/><line x1="9.52" y1="38.79" x2="3.26" y2="37.06" stroke="#8f86a8" stroke-width="0.35"/><line x1="6.40" y1="36.98" x2="3.53" y2="36.12" stroke="#8f86a8" stroke-width="0.35"/><line x1="6.67" y1="36.11" x2="3.81" y2="35.20" stroke="#8f86a8" stroke-width="0.35"/><line x1="6.96" y1="35.25" x2="4.12" y2="34.28" stroke="#8f86a8" stroke-width="0.35"/><line x1="7.26" y1="34.39" x2="4.44" y2="33.36" stroke="#8f86a8" stroke-width="0.35"/><line x1="7.58" y1="33.54" x2="4.79" y2="32.45" stroke="#8f86a8" stroke-width="0.35"/><line x1="7.92" y1="32.69" x2="5.15" y2="31.55" stroke="#8f86a8" stroke-width="0.35"/><line x1="8.27" y1="31.85" x2="5.52" y2="30.66" stroke="#8f86a8" stroke-width="0.35"/><line x1="8.65" y1="31.02" x2="5.92" y2="29.77" stroke="#8f86a8" stroke-width="0.35"/><line x1="9.03" y1="30.20" x2="6.33" y2="28.89" stroke="#8f86a8" stroke-width="0.35"/><line x1="12.56" y1="30.97" x2="6.76" y2="28.02" stroke="#8f86a8" stroke-width="0.35"/><line x1="9.86" y1="28.58" x2="7.21" y2="27.16" stroke="#8f86a8" stroke-width="0.35"/><line x1="10.30" y1="27.78" x2="7.68" y2="26.31" stroke="#8f86a8" stroke-width="0.35"/><line x1="10.75" y1="26.99" x2="8.16" y2="25.47" stroke="#8f86a8" stroke-width="0.35"/><line x1="11.22" y1="26.21" x2="8.66" y2="24.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="11.70" y1="25.44" x2="9.18" y2="23.82" stroke="#8f86a8" stroke-width="0.35"/><line x1="12.20" y1="24.67" x2="9.71" y2="23.00" stroke="#8f86a8" stroke-width="0.35"/><line x1="12.71" y1="23.92" x2="10.26" y2="22.20" stroke="#8f86a8" stroke-width="0.35"/><line x1="13.24" y1="23.18" x2="10.82" y2="21.41" stroke="#8f86a8" stroke-width="0.35"/><line x1="13.79" y1="22.45" x2="11.40" y2="20.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="17.09" y1="23.91" x2="11.99" y2="19.87" stroke="#8f86a8" stroke-width="0.35"/><line x1="14.92" y1="21.03" x2="12.61" y2="19.11" stroke="#8f86a8" stroke-width="0.35"/><line x1="15.51" y1="20.33" x2="13.23" y2="18.37" stroke="#8f86a8" stroke-width="0.35"/><line x1="16.11" y1="19.64" x2="13.87" y2="17.64" stroke="#8f86a8" stroke-width="0.35"/><line x1="16.72" y1="18.97" x2="14.53" y2="16.93" stroke="#8f86a8" stroke-width="0.35"/><line x1="17.35" y1="18.31" x2="15.19" y2="16.22" stroke="#8f86a8" stroke-width="0.35"/><line x1="17.99" y1="17.67" x2="15.88" y2="15.53" stroke="#8f86a8" stroke-width="0.35"/><line x1="18.64" y1="17.03" x2="16.57" y2="14.86" stroke="#8f86a8" stroke-width="0.35"/><line x1="19.31" y1="16.41" x2="17.28" y2="14.20" stroke="#8f86a8" stroke-width="0.35"/><line x1="19.99" y1="15.80" x2="18.01" y2="13.55" stroke="#8f86a8" stroke-width="0.35"/><line x1="22.93" y1="17.89" x2="18.74" y2="12.92" stroke="#8f86a8" stroke-width="0.35"/><line x1="21.38" y1="14.63" x2="19.49" y2="12.30" stroke="#8f86a8" stroke-width="0.35"/><line x1="22.09" y1="14.06" x2="20.25" y2="11.70" stroke="#8f86a8" stroke-width="0.35"/><line x1="22.82" y1="13.51" x2="21.02" y2="11.11" stroke="#8f86a8" stroke-width="0.35"/><line x1="23.55" y1="12.98" x2="21.81" y2="10.54" stroke="#8f86a8" stroke-width="0.35"/><line x1="24.30" y1="12.46" x2="22.60" y2="9.98" stroke="#8f86a8" stroke-width="0.35"/><line x1="25.05" y1="11.95" x2="23.41" y2="9.44" stroke="#8f86a8" stroke-width="0.35"/><line x1="25.82" y1="11.46" x2="24.23" y2="8.92" stroke="#8f86a8" stroke-width="0.35"/><line x1="26.60" y1="10.98" x2="25.05" y2="8.41" stroke="#8f86a8" stroke-width="0.35"/><line x1="27.38" y1="10.52" x2="25.89" y2="7.92" stroke="#8f86a8" stroke-width="0.35"/><line x1="29.85" y1="13.15" x2="26.74" y2="7.44" stroke="#8f86a8" stroke-width="0.35"/><line x1="28.98" y1="9.65" x2="27.59" y2="6.99" stroke="#8f86a8" stroke-width="0.35"/><line x1="29.79" y1="9.23" x2="28.46" y2="6.55" stroke="#8f86a8" stroke-width="0.35"/><line x1="30.61" y1="8.84" x2="29.33" y2="6.12" stroke="#8f86a8" stroke-width="0.35"/><line x1="31.44" y1="8.46" x2="30.21" y2="5.72" stroke="#8f86a8" stroke-width="0.35"/><line x1="32.27" y1="8.10" x2="31.10" y2="5.33" stroke="#8f86a8" stroke-width="0.35"/><line x1="33.11" y1="7.75" x2="32.00" y2="4.96" stroke="#8f86a8" stroke-width="0.35"/><line x1="33.96" y1="7.42" x2="32.91" y2="4.61" stroke="#8f86a8" stroke-width="0.35"/><line x1="34.82" y1="7.11" x2="33.82" y2="4.28" stroke="#8f86a8" stroke-width="0.35"/><line x1="35.68" y1="6.81" x2="34.74" y2="3.96" stroke="#8f86a8" stroke-width="0.35"/><line x1="37.58" y1="9.88" x2="35.66" y2="3.67" stroke="#8f86a8" stroke-width="0.35"/><line x1="37.42" y1="6.27" x2="36.59" y2="3.39" stroke="#8f86a8" stroke-width="0.35"/><line x1="38.30" y1="6.03" x2="37.53" y2="3.13" stroke="#8f86a8" stroke-width="0.35"/><line x1="39.18" y1="5.81" x2="38.47" y2="2.89" stroke="#8f86a8" stroke-width="0.35"/><line x1="40.07" y1="5.60" x2="39.41" y2="2.67" stroke="#8f86a8" stroke-width="0.35"/><line x1="40.96" y1="5.41" x2="40.36" y2="2.47" stroke="#8f86a8" stroke-width="0.35"/><line x1="41.85" y1="5.24" x2="41.31" y2="2.28" stroke="#8f86a8" stroke-width="0.35"/><line x1="42.75" y1="5.08" x2="42.27" y2="2.12" stroke="#8f86a8" stroke-width="0.35"/><line x1="43.65" y1="4.95" x2="43.23" y2="1.98" stroke="#8f86a8" stroke-width="0.35"/><line x1="44.55" y1="4.83" x2="44.19" y2="1.85" stroke="#8f86a8" stroke-width="0.35"/><line x1="45.80" y1="8.21" x2="45.16" y2="1.74" stroke="#8f86a8" stroke-width="0.35"/><line x1="46.36" y1="4.65" x2="46.12" y2="1.66" stroke="#8f86a8" stroke-width="0.35"/><line x1="47.27" y1="4.58" x2="47.09" y2="1.59" stroke="#8f86a8" stroke-width="0.35"/><line x1="48.18" y1="4.54" x2="48.06" y2="1.54" stroke="#8f86a8" stroke-width="0.35"/><line x1="49.09" y1="4.51" x2="49.03" y2="1.51" stroke="#ffc93c" stroke-width="1.4"/><text x="50" y="16.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" font-weight="700" fill="#f3eee6" transform="rotate(0.00 50 50)">1</text><text x="50" y="16.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" font-weight="700" fill="#f3eee6" transform="rotate(56.18 50 50)">50</text><text x="50" y="16.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" font-weight="700" fill="#f3eee6" transform="rotate(113.50 50 50)">100</text><text x="50" y="16.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" font-weight="700" fill="#f3eee6" transform="rotate(170.83 50 50)">150</text><text x="50" y="16.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" font-weight="700" fill="#f3eee6" transform="rotate(228.15 50 50)">200</text><text x="50" y="16.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" font-weight="700" fill="#f3eee6" transform="rotate(285.48 50 50)">250</text><text x="50" y="16.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" font-weight="700" fill="#f3eee6" transform="rotate(342.80 50 50)">300</text><text x="50" y="16.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="5" font-weight="700" fill="#ffc93c" transform="rotate(358.85 50 50)">π</text></g></svg><div class="ptr"></div><div class="hub"><b id="spinNum">π</b><small id="spinStep">spin</small></div></div>
+    <div class="act">
+      <button class="go-btn" id="spin" type="button">SPIN</button>
+      <div class="log" id="log" role="status">Spin the wheel to start. Tap a lit chance card any time it glows.</div>
+    </div>
+  </div>
+  <p class="note">007 Badges are in-app collectibles only. They have no cash value and cannot be bought, sold or exchanged.</p>
+</div>
+
+<div class="sheet" id="sheet" hidden><div class="card" id="card" role="dialog" aria-modal="true"></div></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const TARGET = 314, DAILY_CAP = 5, KEY = 'c314Badges';
+  // Figure-8 path on a 7×7 grid: top row → down one diagonal → bottom row → up the other diagonal → home
+  const PATH = [];
+  for(let c = 0; c < 7; c++) PATH.push([0, c]);
+  for(let k = 1; k < 7; k++) PATH.push([k, 6 - k]);
+  for(let c = 1; c < 7; c++) PATH.push([6, c]);
+  for(let k = 5; k >= 0; k--) PATH.push([k, k]);
+  const LAST = PATH.length - 1, CEN = [9, 21];
+  const TOPK = [[1,2],[1,3],[1,4],[2,3]], BOTK = [[4,3],[5,2],[5,3],[5,4]];
+  const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const stepOf = n => n % 10 || 10;
+
+  let bid = 0;
+  function badgeSvg(cls){
+    const id = 'cb' + (++bid);
+    return `<svg class="${cls || ''}" viewBox="0 0 100 100" role="img" aria-label="007 Badge, 314 Challenge"><defs>
+      <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".5" stop-color="#ffc93c"/><stop offset="1" stop-color="#c98a12"/></linearGradient>
+      <path id="${id}p" d="M50 50 m-31 0 a31 31 0 1 1 62 0 a31 31 0 1 1 -62 0"/></defs>
+      <path d="M33 70 L24 96 L36 90 L42 99 L48 74Z" fill="#4fd1a5"/><path d="M67 70 L76 96 L64 90 L58 99 L52 74Z" fill="#5fe3ff"/>
+      <circle cx="50" cy="46" r="41" fill="url(#${id}g)"/>
+      <circle cx="50" cy="46" r="41" fill="none" stroke="#fff4cf" stroke-opacity=".7" stroke-width="1.5" stroke-dasharray="2 3"/>
+      <circle cx="50" cy="46" r="31" fill="#1a1926" stroke="#c98a12" stroke-width="2"/>
+      <text font-family="Inter,system-ui,sans-serif" font-size="6.2" font-weight="700" letter-spacing="1.5" fill="#ffe9a3"><textPath href="#${id}p" startOffset="2%">314 CHALLENGE · EXACTLY π · 314 CHALLENGE ·</textPath></text>
+      <text x="50" y="45" text-anchor="middle" font-family="Bungee,Inter,sans-serif" font-size="17" fill="#ffc93c">007</text>
+      <text x="50" y="63" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-size="13" font-weight="700" fill="#f3eee6">314</text>
+      <circle cx="50" cy="16" r="2.2" fill="#fff4cf"/></svg>`;
+  }
+  const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  function readBadges(){ try{ const v = JSON.parse(localStorage.getItem(KEY) || '{}'); return { total: v.total || 0, n: v.day === today() ? (v.n || 0) : 0 }; }catch(e){ return { total: 0, n: 0 }; } }
+  function addBadges(k){ const b = readBadges(), got = Math.min(Math.max(0, DAILY_CAP - b.n), k); try{ localStorage.setItem(KEY, JSON.stringify({ total: b.total + got, day: today(), n: b.n + got })); }catch(e){} paintBadges(); return got; }
+  function paintBadges(){ const b = readBadges(); $('badges').textContent = b.total; $('today').textContent = `today ${b.n}/${DAILY_CAP}`; const ic = $('badgeIc'); if(ic && !ic.firstChild) ic.innerHTML = badgeSvg('badge-ic'); }
+
+  // ---------- board generation: keep only boards where 314 is reachable in at least 70% of random runs ----------
+  // every chance card can be used as + or −, once
+  function signed(a){ let s = new Set([0]); for(const v of a){ const n = new Set(s); for(const x of s){ n.add(x + v); n.add(x - v); } s = n; } return s; }
+  const BANDS = [[1,4],[3,10],[8,24],[20,50]];
+  function rawBoard(){
+    const num = {}; for(let i = 1; i < LAST; i++) if(!CEN.includes(i)) num[i] = i > CEN[1] ? ri(3, 12) : ri(25, 45);
+    const cards = () => BANDS.map(([a, b]) => ri(a, b)).sort(() => Math.random() - .5);
+    return { num, cen: CEN.map(() => [ri(30, 90), ri(30, 90), ri(30, 90)]), top: cards(), bot: cards() };
+  }
+  // simulated careful player: steers toward 314 at the first middle (with top cards), weighs the second middle pick, fixes the rest with bottom cards at home
+  function solvable(b, runs){
+    const TS = [...signed(b.top)], B = signed(b.bot);
+    const expRem = a => { let e = 0; for(let i = a + 1; i < LAST; i++) if(!CEN.includes(i)) e += b.num[i]; return e / 5.5; };
+    const finishP = (at, sum) => { let k = 0; for(let r = 0; r < 30; r++){ let a = at, s = sum; while(a < LAST){ a = Math.min(LAST, a + stepOf(ri(1, TARGET))); if(a < LAST && !CEN.includes(a)) s += b.num[a]; } if(B.has(TARGET - s)) k++; } return k / 30; };
+    let ok = 0;
+    for(let r = 0; r < runs; r++){
+      let at = 0, sum = 0;
+      while(at < LAST){
+        const s = stepOf(ri(1, TARGET));
+        for(let k = 0; k < s && at < LAST; k++){
+          at++; const ci = CEN.indexOf(at); if(ci < 0) continue;
+          let best = 0;
+          if(ci === 0){ let bd = 1e9; for(const o of b.cen[0]) for(const t of TS){ const d = Math.abs(TARGET - (sum + o + t + expRem(at))); if(d < bd){ bd = d; best = o + t; } } }
+          else { let bp = -1; for(const o of b.cen[1]){ const a2 = Math.min(LAST, at + s - k - 1), s2 = sum + o + (a2 < LAST ? b.num[a2] : 0), pr = a2 >= LAST ? (B.has(TARGET - s2) ? 1 : 0) : finishP(a2, s2); if(pr > bp){ bp = pr; best = o; } } }
+          sum += best;
+        }
+        if(at < LAST && !CEN.includes(at)) sum += b.num[at];
+      }
+      if(B.has(TARGET - sum)) ok++;
+    }
+    return ok / runs;
+  }
+  function newBoard(){ let best = null, bf = -1; for(let k = 0; k < 30; k++){ const b = rawBoard(), f = solvable(b, 100); if(f > bf){ best = b; bf = f; } if(f >= 0.7) break; } best.rate = bf; return best; }
+
+  const st = { b:null, at:0, sum:0, landed:new Set(), picks:[null, null], used:{ top:[0,0,0,0], bot:[0,0,0,0] }, busy:false, home:false, jump:false };
+  const phaseTop = () => st.picks[0] === null && !st.home;
+  const phaseBot = () => st.picks[0] !== null;
+
+  function draw(){
+    const b = st.b, idx = new Map();
+    PATH.forEach(([r, c], i) => { const k = r + ',' + c; if(!idx.has(k)) idx.set(k, []); idx.get(k).push(i); });
+    let html = '';
+    idx.forEach((list, k) => {
+      const [r, c] = k.split(',').map(Number), i = list[0];
+      const here = list.includes(st.at) ? ' here' : '';
+      if(i === 0) html += `<div class="c home${here}" style="grid-row:${r + 1};grid-column:${c + 1}" data-sq="0"><span class="v">🏠</span><span class="s">Home</span></div>`;
+      else if(CEN.includes(i)){ const p = st.picks.filter(v => v !== null); html += `<div class="c mid${here}" style="grid-row:${r + 1};grid-column:${c + 1}" data-sq="${i}"><span class="v">⏳</span><span class="s">${p.length ? p.join('·') : 'pick 1 of 3'}</span></div>`; }
+      else html += `<div class="c${st.landed.has(i) ? ' got' : ''}${here}" style="grid-row:${r + 1};grid-column:${c + 1}" data-sq="${i}"><span class="v">${b.num[i]}</span></div>`;
+    });
+    const kc = (side, pos, j) => { const v = b[side][j], u = st.used[side][j], on = !u && !st.busy && (side === 'top' ? phaseTop() : phaseBot()); return `<button type="button" class="k${u ? ' used ' + (u > 0 ? 'p' : 'm') : ''}${on ? ' on' : ''}" style="grid-row:${pos[0] + 1};grid-column:${pos[1] + 1}" data-side="${side}" data-j="${j}" ${on ? '' : 'tabindex="-1"'} aria-label="Chance card ${v}, add or subtract">${u ? (u > 0 ? '+' : '−') + v : '±' + v}<span class="s">chance</span></button>`; };
+    html += TOPK.map((p, j) => kc('top', p, j)).join('') + BOTK.map((p, j) => kc('bot', p, j)).join('');
+    const left = TARGET - st.sum;
+    html += `<div class="side l"><span>Sum</span><b id="sumV">${st.sum}</b><small>so far</small></div>`;
+    html += `<div class="side r${left === 0 ? ' ok' : left < 0 ? ' over' : ''}"><span>To 314</span><b>${left < 0 ? '−' + Math.abs(left) : left}</b><small>${left === 0 ? 'exactly π!' : left < 0 ? 'over' : 'left'}</small></div>`;
+    $('board').innerHTML = html;
+    const f = st.at / LAST;
+    $('sandT').style.height = ((1 - f) * 44) + '%'; $('sandB').style.height = (f * 42) + '%';
+    placeWalker();
+  }
+  let wX = null, placed = false;
+  function walkerXY(i){ const [r, c] = PATH[i], el = $('board').querySelector(`.c[style*="grid-row:${r + 1};grid-column:${c + 1}"]`), wr = $('board').closest('.bwrap').getBoundingClientRect(), rc = el.getBoundingClientRect(); return [rc.left - wr.left + rc.width / 2 - 15, rc.top - wr.top + rc.height - 35]; }
+  function setW(w, x, y){ if(wX !== null && Math.abs(x - wX) > 1) w.classList.toggle('face-l', x < wX); wX = x; w.style.transform = `translate(${x}px,${y}px)`; }
+  function placeWalker(instant){
+    const w = $('walker'); if(!w) return; const [x, y] = walkerXY(st.at);
+    if(instant || !placed){ w.style.transition = 'none'; setW(w, x, y); void w.offsetWidth; w.style.transition = ''; placed = true; }
+    else if(st.jump){ st.jump = false; w.style.opacity = 0; setTimeout(() => { const [a, b] = walkerXY(st.at); w.style.transition = 'none'; w.classList.remove('face-l'); wX = null; setW(w, a, b); void w.offsetWidth; w.style.transition = ''; w.style.opacity = 1; }, 240); }
+    else setW(w, x, y);
+  }
+  addEventListener('resize', () => placeWalker(true));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function sheet(html){ return new Promise(res => { $('card').innerHTML = html; $('sheet').hidden = false; $('card').querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { $('sheet').hidden = true; res(b.dataset.v); })); const f = $('card').querySelector('[data-v]'); if(f) f.focus(); }); }
+
+  async function pickMiddle(n){
+    const opts = st.b.cen[n];
+    const v = await sheet(`<div class="kind" style="color:var(--cen)">⏳ The neck of the glass · ${n ? 'second' : 'first'} pass</div><h2>Pick one number</h2><p>Sum now <b>${st.sum}</b>, <b>${TARGET - st.sum}</b> to go. ${n ? `Your unused bottom cards can still move the sum by up to ±${st.b.bot.reduce((t, v, j) => t + (st.used.bot[j] ? 0 : v), 0)}.` : 'After this pick the top chance cards close and the bottom ones open.'}</p><div class="three">${opts.map(o => `<button class="btn num" data-v="${o}" type="button">${o}<small>→ ${st.sum + o}</small></button>`).join('')}</div>`);
+    st.picks[n] = Number(v); st.sum += Number(v); draw();
+  }
+  async function walk(n){
+    const w = $('walker'); w.classList.add('walking');
+    for(let k = 0; k < n && st.at < LAST; k++){
+      st.at++; draw(); await sleep(260);
+      const ci = CEN.indexOf(st.at);
+      if(ci >= 0){ w.classList.remove('walking'); await pickMiddle(ci); w.classList.add('walking'); }
+    }
+    w.classList.remove('walking', 'cheer'); void w.offsetWidth; w.classList.add('cheer'); await sleep(120);
+    if(st.at < LAST && !CEN.includes(st.at)){ st.landed.add(st.at); st.sum += st.b.num[st.at]; draw(); return st.b.num[st.at]; }
+    return null;
+  }
+  function wheelSpin(n){
+    const disc = $('disc'), a = 360 / TARGET;
+    const cur = Number(disc.dataset.rot || 0), base = Math.ceil(cur / 360) * 360 + 1080;
+    const rot = base - (n - 1) * a;
+    disc.dataset.rot = rot; disc.style.transform = `rotate(${rot}deg)`;
+  }
+  $('spin').addEventListener('click', async () => {
+    if(st.busy) return;
+    if(st.home){ await finish(); return; }
+    st.busy = true; $('spin').disabled = true; draw();
+    const n = ri(1, TARGET), s = stepOf(n);
+    $('spinNum').textContent = '…'; $('spinStep').textContent = 'spinning';
+    wheelSpin(n); await sleep(matchMedia('(prefers-reduced-motion: reduce)').matches ? 100 : 1650);
+    $('spinNum').textContent = n; $('spinStep').textContent = `→ ${s}`;
+    $('log').textContent = `Wheel ${n}: last digit ${n % 10} → walk ${s}.`;
+    const got = await walk(s);
+    st.busy = false;
+    if(st.at >= LAST){
+      st.home = true; $('spin').textContent = 'FINISH'; $('spin').classList.add('fin');
+      $('log').innerHTML = st.sum === TARGET ? 'Home with <b>exactly 314</b>! Tap FINISH.' : `Home with ${st.sum}. Use the lit bottom chance cards if they help, then tap FINISH.`;
+    } else $('log').innerHTML = got !== null ? `Stopped on <b>${got}</b> → sum ${st.sum}. ${TARGET - st.sum >= 0 ? TARGET - st.sum + ' to go.' : Math.abs(TARGET - st.sum) + ' over.'}` : `Sum ${st.sum}. Spin again.`;
+    $('spin').disabled = false; draw();
+  });
+  $('board').addEventListener('click', async e => {
+    const k = e.target.closest('.k.on'); if(!k || st.busy) return;
+    const side = k.dataset.side, j = Number(k.dataset.j), v = st.b[side][j];
+    const a = await sheet(`<div class="kind">🃏 Chance card ±${v}</div><h2>Add or subtract ${v}?</h2><p>Sum now <b>${st.sum}</b>, ${TARGET - st.sum >= 0 ? (TARGET - st.sum) + ' to 314' : Math.abs(TARGET - st.sum) + ' over 314'}. Each card works once.</p><div class="three"><button class="btn num plus" data-v="1" type="button">+${v}<small>→ ${st.sum + v}</small></button><button class="btn num minus" data-v="-1" type="button">−${v}<small>→ ${st.sum - v}</small></button><button class="btn" data-v="0" type="button">Not now</button></div>`);
+    const sg = Number(a);
+    if(sg){ st.used[side][j] = sg; st.sum += sg * v; $('log').innerHTML = `Chance card ${sg > 0 ? '+' : '−'}${v} → sum ${st.sum}.`; if(st.home && st.sum === TARGET) $('log').innerHTML += ' <b>Exactly 314!</b> Tap FINISH.'; }
+    draw();
+  });
+  async function finish(){
+    const win = st.sum === TARGET, got = win ? addBadges(1) : 0;
+    const row = got ? badgeSvg('pop') : badgeSvg('dim');
+    const d = st.sum - TARGET;
+    await sheet(`<div class="kind">${win ? '🥧 Exactly π' : '⏳ Home'}</div><div class="badges-row">${row}</div><div class="big" style="text-align:center">${win ? (got ? '314! +1 007 Badge' : '314!') : `${st.sum} · ${Math.abs(d)} ${d > 0 ? 'over' : 'short'}`}</div><p>${win ? (got ? 'You walked the glass and came home with exactly 314. Your badge is saved on this device.' : `Perfect, but you reached today's limit of ${DAILY_CAP} badges. Come back tomorrow.`) : 'So close. Next board will have new numbers. Watch the chance cards and the middle picks.'}</p><button class="btn main" data-v="again" type="button">New board</button>`);
+    reset();
+  }
+  function reset(){
+    st.b = newBoard(); st.at = 0; st.sum = 0; st.landed = new Set(); st.picks = [null, null]; st.used = { top:[0,0,0,0], bot:[0,0,0,0] }; st.busy = false; st.home = false; st.jump = placed;
+    $('spin').textContent = 'SPIN'; $('spin').classList.remove('fin'); $('spin').disabled = false; $('spinNum').textContent = 'π'; $('spinStep').textContent = 'spin';
+    $('log').textContent = 'Spin the wheel to start. Tap a lit chance card any time it glows.';
+    draw();
+  }
+  window.__c314 = st;
+  paintBadges(); reset();
+})();
+</script>
+
+</body>
+</html>
