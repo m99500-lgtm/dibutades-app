@@ -1372,6 +1372,8 @@
   .game-tags i{ font-style:normal; font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--card-line); color:var(--chalk-dim); }
   .game-go{ grid-area:go; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:46px; border-radius:12px; background:var(--spray-y); color:#2a1f02; font-weight:700; font-size:15px; line-height:1.15; }
   .game-go .game-en{ color:#2a1f02; opacity:.8; font-size:10px; }
+  .game-stat{ font-size:11.5px; color:var(--spray-y); }
+  .game-stat[hidden]{ display:none; }
   .game-note{ margin:14px 0 0; font-size:11.5px; line-height:1.6; color:var(--chalk-dim); }
   .scam-head{ margin-bottom:14px; }
   .scam-title{ font-family:'Black Han Sans', sans-serif; font-size:26px; color:#ff6b6b; }
@@ -1616,6 +1618,7 @@
             <span class="game-desc">주사위 2개, 5번의 기회로 파이의 역사를 따라 소용돌이 길을 걸어요. 39번 칸에 닿으면 가운데 <b>비밀의 방</b>이 열리고, 사기·안전 판별 빙고로 배지를 얻어요.</span>
             <span class="game-desc en">Walk Pi's history with two dice and 5 rolls. Reach square 39 to unseal the Secret Room and win badges with a scam-or-safe bingo.</span>
             <span class="game-tags"><i>🎲 운 + 판단</i><i>⏱ 2~3분</i><i>난이도 ★☆☆</i></span>
+            <span class="game-stat" data-game="chronicle" hidden></span>
           </span>
           <span class="game-go">입장<span class="game-en">Enter</span></span>
         </a>
@@ -1626,6 +1629,7 @@
             <span class="game-desc">요즘 SNS의 연말 회고 트렌드처럼, 원형판의 열두 달을 돌며 하루씩 사진을 찍어요. 주사위 <b>하나 또는 둘을 골라</b> 움직이고, 타이밍을 맞춰 스탬프 3개마다 배지 1개.</span>
             <span class="game-desc en">A circle of twelve months. Pick one die or both, land on a month and snap the photo on time. Every 3 stamps earn a badge.</span>
             <span class="game-tags"><i>⭕ 원형판</i><i>👆 타이밍</i><i>난이도 ★★☆</i></span>
+            <span class="game-stat" data-game="loop" hidden></span>
           </span>
           <span class="game-go">입장<span class="game-en">Enter</span></span>
         </a>
@@ -1636,6 +1640,7 @@
             <span class="game-desc">모래시계 판을 8자로 한 바퀴 돌아, 멈춘 칸의 숫자 합을 <b>정확히 314</b>로 맞춰 집에 돌아와요. 1~314 원형 룰렛, 가운데 숫자 선택, ± 찬스카드로 계산하는 하이 레벨 게임.</span>
             <span class="game-desc en">Walk the hourglass in a figure-8 and come home with a sum of exactly 314, using the wheel, the middle picks and ± chance cards.</span>
             <span class="game-tags"><i>🧮 계산</i><i>🥧 314</i><i>난이도 ★★★</i></span>
+            <span class="game-stat" data-game="c314" hidden></span>
           </span>
           <span class="game-go">입장<span class="game-en">Enter</span></span>
         </a>
@@ -3375,6 +3380,18 @@ document.getElementById('openPromo').addEventListener('click', () => showPromoPa
 function loadScam(){}
 function checkScamAdmin(){}
 // 게임에서 "← 007 게임"으로 돌아오면(/#games) 007 게임 탭을 바로 열어요
+// 007 게임 카드에 오늘/누적 판 수 표시 (익명 합계)
+function loadGameStats(){
+  fetch('/api/game/stats', { cache: 'no-store' }).then(r => r.json()).then(d => {
+    document.querySelectorAll('.game-stat').forEach(el => {
+      const g = el.dataset.game, t = (d.today || {})[g] || { plays: 0, wins: 0 }, all = (d.total || {})[g] || { plays: 0, wins: 0 };
+      if(!all.plays){ el.hidden = true; return; }
+      el.textContent = `🎮 오늘 ${t.plays}판 · 누적 ${all.plays}판 · 성공 ${all.wins} / today ${t.plays} · total ${all.plays} · wins ${all.wins}`;
+      el.hidden = false;
+    });
+  }).catch(() => {});
+}
+loadGameStats();
 if(location.hash === '#games'){
   try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
   setTimeout(() => { try{ showScamPage(); }catch(e){} }, 0);
