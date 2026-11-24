@@ -253,6 +253,63 @@ app.post('/api/poll/vote', async (req, res) => {
 });
 
 
+// ---------- 007 게임 익명 카운터 (누가 했는지는 남기지 않고, 게임별 판 수·성공 수만 셈) ----------
+// 저장 횟수를 아끼려고 5분에 한 번, 또는 30판마다 한꺼번에 저장
+const GAME_BLOB_NAME = 'dibutades-games.json';
+const GAME_IDS = ['chronicle', 'loop', 'c314'];
+const gameMem = { d: null, at: 0, pending: [], lastFlush: 0, ipHits: {} };
+function gameEmpty(){ const t = {}; GAME_IDS.forEach(g => t[g] = { p: 0, w: 0 }); return { days: {}, total: t }; }
+async function gameLoadBlob(){
+  try{
+    const r = await get(GAME_BLOB_NAME, { access: 'private' });
+    const d = JSON.parse(await new Response(r.stream).text());
+    if(d && d.days && d.total){ GAME_IDS.forEach(g => { d.total[g] = d.total[g] || { p: 0, w: 0 }; }); return d; }
+  }catch(e){}
+  return gameEmpty();
+}
+function gameAdd(d, x){
+  const day = d.days[x.date] = d.days[x.date] || {};
+  const t = day[x.g] = day[x.g] || { p: 0, w: 0 };
+  t.p++; d.total[x.g].p++;
+  if(x.w){ t.w++; d.total[x.g].w++; }
+}
+function gameView(){
+  const d = JSON.parse(JSON.stringify(gameMem.d || gameEmpty()));
+  gameMem.pending.forEach(x => gameAdd(d, x));
+  const date = kstDateString(Date.now()), today = {};
+  GAME_IDS.forEach(g => { const t = (d.days[date] || {})[g] || { p: 0, w: 0 }; today[g] = { plays: t.p, wins: t.w }; });
+  const total = {}; GAME_IDS.forEach(g => total[g] = { plays: d.total[g].p, wins: d.total[g].w });
+  return { date, today, total };
+}
+async function gameFlush(force){
+  if(!gameMem.pending.length) return;
+  if(!force && Date.now() - gameMem.lastFlush < 5 * 60 * 1000 && gameMem.pending.length < 30) return;
+  const d = await gameLoadBlob();
+  gameMem.pending.forEach(x => gameAdd(d, x));
+  const keep = Object.keys(d.days).sort().slice(-60); const days = {}; keep.forEach(k => days[k] = d.days[k]); d.days = days;   // 최근 60일만 보관
+  await put(GAME_BLOB_NAME, JSON.stringify(d), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+  gameMem.pending = []; gameMem.d = d; gameMem.at = Date.now(); gameMem.lastFlush = Date.now();
+}
+app.get('/api/game/stats', async (req, res) => {
+  try{
+    if(!gameMem.d || Date.now() - gameMem.at > 60 * 1000){ gameMem.d = await gameLoadBlob(); gameMem.at = Date.now(); }
+    res.set('Cache-Control', 'no-store');
+    res.json(gameView());
+  }catch(e){ res.json({ today: {}, total: {} }); }
+});
+app.post('/api/game/play', async (req, res) => {
+  const { game, win } = req.body || {};
+  if(!GAME_IDS.includes(game)) return res.status(400).json({ error: 'bad_game' });
+  // 같은 곳에서 1분에 20판이 넘으면 세지 않음 (장난 방지). IP는 메모리에만 잠깐 두고 저장하지 않음
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'x', minute = Math.floor(Date.now() / 60000);
+  const h = gameMem.ipHits[ip] = (gameMem.ipHits[ip] && gameMem.ipHits[ip].m === minute) ? gameMem.ipHits[ip] : { m: minute, n: 0 };
+  if(++h.n > 20) return res.json({ ok: true });
+  if(Object.keys(gameMem.ipHits).length > 5000) gameMem.ipHits = {};
+  gameMem.pending.push({ date: kstDateString(Date.now()), g: game, w: !!win });
+  try{ await gameFlush(false); }catch(e){ console.error('game save', e && e.message); }
+  res.json({ ok: true });
+});
+
 // 열쇠가 바뀌면(자정 또는 특별 투표) 모아 둔 이전 표는 버림
 function flushOldPoll(key){ if(pollMem.pending.some(p => p.date !== key)) pollMem.pending = pollMem.pending.filter(p => p.date === key); }
 
