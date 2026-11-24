@@ -96,6 +96,7 @@
   .btn{min-height:48px;border-radius:14px;border:1px solid var(--line);background:#353146;color:var(--chalk);font-family:var(--f-body);font-size:15px;font-weight:700;cursor:pointer}
   .btn.num{font-family:var(--f-title);font-weight:400;font-size:22px;min-height:64px;border-color:var(--cen);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
   .btn.num small{font-family:var(--f-body);font-size:11px;color:var(--dim)}
+  .btn.share{background:transparent;border-style:dashed}
   .btn.main{background:var(--gold);color:#2a1f02;border-color:var(--gold)}
   .big{font-family:var(--f-title);font-size:22px;line-height:1.25}
   .badges-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:6px 0}
@@ -131,6 +132,20 @@
 <script>
 (() => {
   const $ = id => document.getElementById(id);
+  const GAME_ID = 'c314';
+  // ---------- 결과 공유 + 익명 판 수 세기 (누가 했는지는 보내지 않음) ----------
+  function report(win){ try{ fetch('/api/game/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: GAME_ID, win: !!win }), keepalive: true }).catch(() => {}); }catch(e){} }
+  const shareBtn = text => `<button class="btn share" type="button" data-share="${encodeURIComponent(text)}">📤 Share result · 결과 공유</button>`;
+  $('card').addEventListener('click', async e => {
+    const b = e.target.closest('.share'); if(!b) return;
+    const text = decodeURIComponent(b.dataset.share);
+    try{ if(navigator.share){ await navigator.share({ text }); return; } }catch(err){ if(err && err.name === 'AbortError') return; }
+    let ok = false;
+    try{ await navigator.clipboard.writeText(text); ok = true; }catch(err){
+      try{ const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); }catch(e2){}
+    }
+    b.textContent = ok ? '✅ Copied! Paste it on X · 복사됐어요' : text;
+  });
   const TARGET = 314, DAILY_CAP = 5, KEY = 'c314Badges';
   // Figure-8 path on a 7×7 grid: top row → down one diagonal → bottom row → up the other diagonal → home
   const PATH = [];
@@ -286,7 +301,9 @@
     const win = st.sum === TARGET, got = win ? addBadges(1) : 0;
     const row = got ? badgeSvg('pop') : badgeSvg('dim');
     const d = st.sum - TARGET;
-    await sheet(`<div class="kind">${win ? '🥧 Exactly π' : '⏳ Home'}</div><div class="badges-row">${row}</div><div class="big" style="text-align:center">${win ? (got ? '314! +1 007 Badge' : '314!') : `${st.sum} · ${Math.abs(d)} ${d > 0 ? 'over' : 'short'}`}</div><p>${win ? (got ? 'You walked the glass and came home with exactly 314. Your badge is saved on this device.' : `Perfect, but you reached today's limit of ${DAILY_CAP} badges. Come back tomorrow.`) : 'So close. Next board will have new numbers. Watch the chance cards and the middle picks.'}</p><button class="btn main" data-v="again" type="button">New board</button>`);
+    report(win);
+    const shareTxt = win ? `⏳ 314 Challenge\n모래시계를 한 바퀴 돌아 정확히 314 🥧\nI came home with exactly 314!\nhttps://dibutades8708.pinet.com/game-314.html` : `⏳ 314 Challenge\n${st.sum}… 314까지 ${Math.abs(d)} ${d > 0 ? '초과' : '부족'}!\nCame home with ${st.sum}, ${Math.abs(d)} ${d > 0 ? 'over' : 'short'}. Can you hit exactly 314?\nhttps://dibutades8708.pinet.com/game-314.html`;
+    await sheet(`<div class="kind">${win ? '🥧 Exactly π' : '⏳ Home'}</div><div class="badges-row">${row}</div><div class="big" style="text-align:center">${win ? (got ? '314! +1 007 Badge' : '314!') : `${st.sum} · ${Math.abs(d)} ${d > 0 ? 'over' : 'short'}`}</div><p>${win ? (got ? 'You walked the glass and came home with exactly 314. Your badge is saved on this device.' : `Perfect, but you reached today's limit of ${DAILY_CAP} badges. Come back tomorrow.`) : 'So close. Next board will have new numbers. Watch the chance cards and the middle picks.'}</p>${shareBtn(shareTxt)}<button class="btn main" data-v="again" type="button">New board</button>`);
     reset();
   }
   function reset(){
