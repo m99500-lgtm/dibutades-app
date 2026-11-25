@@ -181,34 +181,78 @@ async function isPollAdmin(accessToken){
 // ---------- 투표 집계 (저장 횟수를 아끼려고 5분에 한 번, 또는 30표마다 한꺼번에 저장) ----------
 const POLL_BLOB_NAME = 'dibutades-poll.json';
 const pollMem = { d: null, at: 0, pending: [], lastFlush: 0 };
-function pollEmpty(key, n){ return { date: key, counts: Array(n).fill(0), voters: {}, cc: {} }; }
-async function pollLoadBlob(date, n){   // date 자리에는 투표 열쇠(날짜, 특별 투표면 날짜:시각)가 들어옴
-  try{
-    const r = await get(POLL_BLOB_NAME, { access: 'private' });
-    const d = JSON.parse(await new Response(r.stream).text());
-    if(d && d.date === date && Array.isArray(d.counts)){ while(d.counts.length < n) d.counts.push(0); d.voters = d.voters || {}; d.cc = d.cc || {}; return d; }
-  }catch(e){}
-  return pollEmpty(date, n);
+// pv: Pi 로그인으로 확인된 표(계정당 1표)만 따로 센 수 · q: 질문 내용(지난 결과 보관용)
+// history: 지난 투표 결과 요약 (최근 POLL_HISTORY_MAX개, 누가 골랐는지는 남기지 않음)
+const POLL_HISTORY_MAX = 60;
+function pollQ(p){ return p ? { ko: p.ko, en: p.en, theme: p.theme, themeEn: p.themeEn, day: p.date, options: p.options } : null; }
+function pollEmpty(key, n, p){ return { date: key, counts: Array(n).fill(0), pv: Array(n).fill(0), voters: {}, cc: {}, q: pollQ(p), history: [] }; }
+function pollSummary(d){
+  if(!d || !d.q || !Array.isArray(d.counts)) return null;
+  const total = d.counts.reduce((a, b) => a + b, 0);
+  if(!total) return null;   // 아무도 투표하지 않은 날은 남기지 않음
+  const pv = Array.isArray(d.pv) ? d.pv : [];
+  return { key: d.date, day: d.q.day || String(d.date).slice(0, 10), ko: d.q.ko, en: d.q.en, theme: d.q.theme, themeEn: d.q.themeEn,
+    options: d.q.options, counts: d.counts.slice(0, d.q.options.length), pv: d.q.options.map((_, i) => pv[i] || 0),
+    total, verified: pv.reduce((a, b) => a + (b || 0), 0) };
+}
+async function pollReadRaw(){
+  try{ const r = await get(POLL_BLOB_NAME, { access: 'private' }); return JSON.parse(await new Response(r.stream).text()); }catch(e){ return null; }
+}
+async function pollLoadBlob(date, n, p){   // date 자리에는 투표 열쇠(날짜, 특별 투표면 날짜:시각)가 들어옴
+  const d = await pollReadRaw();
+  if(d && d.date === date && Array.isArray(d.counts)){
+    while(d.counts.length < n) d.counts.push(0);
+    d.pv = Array.isArray(d.pv) ? d.pv : []; while(d.pv.length < n) d.pv.push(0);
+    d.voters = d.voters || {}; d.cc = d.cc || {}; d.history = Array.isArray(d.history) ? d.history : [];
+    if(!d.q && p) d.q = pollQ(p);
+    return d;
+  }
+  // 열쇠가 바뀜(자정 또는 특별 투표): 이전 결과를 요약해 history 맨 앞에 넣고 새로 시작
+  const fresh = pollEmpty(date, n, p);
+  const prevHist = d && Array.isArray(d.history) ? d.history : [];
+  const sum = pollSummary(d);
+  fresh.history = (sum ? [sum] : []).concat(prevHist.filter(h => !sum || h.key !== sum.key)).slice(0, POLL_HISTORY_MAX);
+  return fresh;
 }
 function pollApply(d){
+  d.pv = d.pv || [];
   for(const p of pollMem.pending){
-    if(p.date !== d.date || d.voters[p.vid] !== undefined) continue;
-    d.voters[p.vid] = p.choice; d.counts[p.choice] = (d.counts[p.choice] || 0) + 1;
+    if(p.date !== d.date || d.voters[p.vid] !== undefined || (p.pk && d.voters[p.pk] !== undefined)) continue;
+    d.voters[p.vid] = p.choice; if(p.pk) d.voters[p.pk] = p.choice;
+    d.counts[p.choice] = (d.counts[p.choice] || 0) + 1;
+    if(p.pk) d.pv[p.choice] = (d.pv[p.choice] || 0) + 1;
     pollCountryAdd(d, p.choice, p.cc);
   }
   return d;
 }
-async function pollLoad(date, n){
+// 열쇠가 바뀌기 직전에 모아 두고 아직 저장하지 못한 표가 있으면, 버리지 말고 이전 투표에 먼저 저장
+async function pollSaveStale(key){
+  const stale = pollMem.pending.filter(x => x.date !== key);
+  if(!stale.length) return;
+  pollMem.pending = pollMem.pending.filter(x => x.date === key);
+  try{
+    const d = await pollReadRaw();
+    if(!d || !Array.isArray(d.counts)) return;
+    const keep = pollMem.pending; pollMem.pending = stale.filter(x => x.date === d.date);
+    if(pollMem.pending.length){
+      d.voters = d.voters || {}; d.cc = d.cc || {};
+      pollApply(d);
+      await put(POLL_BLOB_NAME, JSON.stringify(d), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
+    }
+    pollMem.pending = keep;
+  }catch(e){ console.error('poll stale save', e && e.message); }
+}
+async function pollLoad(date, n, p){
   if(pollMem.d && pollMem.d.date === date && Date.now() - pollMem.at < 60 * 1000) return pollMem.d;
-  pollMem.pending = pollMem.pending.filter(p => p.date === date);   // 날이 바뀐 표는 버림
-  pollMem.d = pollApply(await pollLoadBlob(date, n));
+  await pollSaveStale(date);
+  pollMem.d = pollApply(await pollLoadBlob(date, n, p));
   pollMem.at = Date.now();
   return pollMem.d;
 }
-async function pollFlush(date, n){
+async function pollFlush(date, n, p){
   if(!pollMem.pending.length) return;
   if(Date.now() - pollMem.lastFlush < 5 * 60 * 1000 && pollMem.pending.length < 30) return;
-  const d = pollApply(await pollLoadBlob(date, n));
+  const d = pollApply(await pollLoadBlob(date, n, p));
   await put(POLL_BLOB_NAME, JSON.stringify(d), { access: 'private', contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
   pollMem.pending = []; pollMem.d = d; pollMem.at = Date.now(); pollMem.lastFlush = Date.now();
 }
@@ -219,36 +263,65 @@ function pollCountryAdd(d, choice, cc){
   const m = d.cc[choice] = d.cc[choice] || {};
   m[k] = (m[k] || 0) + 1;
 }
-function pollView(p, d, vid){
+function pollView(p, d, vid, pk){
   const total = d.counts.reduce((a, b) => a + b, 0);
+  const pv = p.options.map((_, i) => (d.pv && d.pv[i]) || 0);
   const byCountry = p.options.map((_, i) => Object.entries((d.cc && d.cc[i]) || {}).sort((a, b) => b[1] - a[1]).slice(0, 8));
-  return { ...p, byCountry, counts: d.counts.slice(0, p.options.length), total, myChoice: vid && d.voters[vid] !== undefined ? d.voters[vid] : null };
+  let mine = null;
+  if(pk && d.voters[pk] !== undefined) mine = d.voters[pk];
+  else if(vid && d.voters[vid] !== undefined) mine = d.voters[vid];
+  return { ...p, byCountry, counts: d.counts.slice(0, p.options.length), pv, total, verified: pv.reduce((a, b) => a + b, 0), myChoice: mine };
 }
 
 app.get('/api/poll/today', async (req, res) => {
   const p = await getTodayPoll();
   try{
-    flushOldPoll(p.key);
-    const d = await pollLoad(p.key, p.options.length);
+    await pollSaveStale(p.key);
+    const d = await pollLoad(p.key, p.options.length, p);
     res.set('Cache-Control', 'no-store');
     res.json(pollView(p, d, String(req.query.vid || '').slice(0, 64)));
-  }catch(e){ res.json({ ...p, counts: Array(p.options.length).fill(0), total: 0, myChoice: null }); }
+  }catch(e){ res.json({ ...p, counts: Array(p.options.length).fill(0), pv: Array(p.options.length).fill(0), total: 0, verified: 0, myChoice: null }); }
+});
+// 지난 투표 결과 (최근 것부터). 아직 자정 뒤 첫 표가 없어 보관이 안 된 어제 결과도 함께 보여 줌
+app.get('/api/poll/history', async (req, res) => {
+  const n = Math.max(1, Math.min(POLL_HISTORY_MAX, parseInt(req.query.n, 10) || 7));
+  try{
+    const p = await getTodayPoll();
+    await pollSaveStale(p.key);
+    const d = await pollReadRaw();
+    let list = [];
+    if(d){
+      const hist = Array.isArray(d.history) ? d.history : [];
+      const cur = d.date !== p.key ? pollSummary(d) : null;
+      list = (cur ? [cur] : []).concat(hist.filter(h => !cur || h.key !== cur.key));
+    }
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({ items: list.slice(0, n) });
+  }catch(e){ res.json({ items: [] }); }
 });
 app.post('/api/poll/vote', async (req, res) => {
   const p = await getTodayPoll();
-  const { choice, visitorId } = req.body || {};
+  const { choice, visitorId, accessToken } = req.body || {};
   const c = Number(choice), vid = String(visitorId || '').slice(0, 64);
+  // Pi로 로그인한 상태면 계정당 1표로 묶음 (다른 기기·브라우저에서 또 투표해도 한 표만 셈)
+  const piName = accessToken ? await verifyUser(accessToken) : null;
+  const pk = piName ? 'pi:' + piName.trim().toLowerCase() : null;
   const cc = String(req.headers['x-vercel-ip-country'] || '').toUpperCase().slice(0, 2);   // Vercel이 알려 주는 접속 나라 (나라 단위)
   if(!Number.isInteger(c) || c < 0 || c >= p.options.length) return res.status(400).json({ error: 'bad_choice' });
   if(!vid) return res.status(400).json({ error: 'no_visitor' });
   try{
-    const d = await pollLoad(p.key, p.options.length);
-    if(d.voters[vid] === undefined && Object.keys(d.voters).length < 20000){
-      d.voters[vid] = c; d.counts[c] = (d.counts[c] || 0) + 1; pollCountryAdd(d, c, cc);
-      pollMem.pending.push({ date: p.key, vid, choice: c, cc });
-      try{ await pollFlush(p.key, p.options.length); }catch(e){ console.error('poll save', e && e.message); }
+    const d = await pollLoad(p.key, p.options.length, p);
+    d.pv = d.pv || [];
+    if(pk && d.voters[pk] !== undefined){
+      if(d.voters[vid] === undefined) d.voters[vid] = d.voters[pk];   // 이미 이 계정으로 투표함: 이 브라우저에도 표시만 맞춤
+    }else if(d.voters[vid] === undefined && Object.keys(d.voters).length < 40000){
+      d.voters[vid] = c; if(pk) d.voters[pk] = c;
+      d.counts[c] = (d.counts[c] || 0) + 1; if(pk) d.pv[c] = (d.pv[c] || 0) + 1;
+      pollCountryAdd(d, c, cc);
+      pollMem.pending.push({ date: p.key, vid, pk, choice: c, cc });
+      try{ await pollFlush(p.key, p.options.length, p); }catch(e){ console.error('poll save', e && e.message); }
     }
-    res.json(pollView(p, d, vid));
+    res.json(pollView(p, d, vid, pk));
   }catch(e){ console.error('poll vote', e && e.message); res.status(500).json({ error: 'server' }); }
 });
 
@@ -310,8 +383,6 @@ app.post('/api/game/play', async (req, res) => {
   res.json({ ok: true });
 });
 
-// 열쇠가 바뀌면(자정 또는 특별 투표) 모아 둔 이전 표는 버림
-function flushOldPoll(key){ if(pollMem.pending.some(p => p.date !== key)) pollMem.pending = pollMem.pending.filter(p => p.date === key); }
 
 // ---------- 관리자 전용: 오늘의 특별 투표 걸기 / 되돌리기 ----------
 app.post('/api/poll/admin/me', async (req, res) => {
