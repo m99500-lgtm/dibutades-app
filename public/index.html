@@ -1406,6 +1406,37 @@
 
   .write-link{ flex-direction:column; gap:1px; padding:8px 12px; line-height:1.3; }
   .write-link small{ display:block; }
+
+  /* ---------- 투표 중심 첫 화면 (2026-11-25) ---------- */
+  #tab-write .poll .qtext{ font-size:19px; line-height:1.35; }
+  #tab-write .poll .tag{ font-size:11.5px; }
+  .poll-verified{ display:inline-block; margin-left:4px; padding:1px 7px; border-radius:999px; font-size:10.5px; font-weight:700;
+    color:#16a34a; background:rgba(34,197,94,0.14); border:1px solid rgba(34,197,94,0.35); }
+  .poll-login-tip{ display:block; margin-top:3px; font-size:10.5px; opacity:.85; }
+  .write-sub{ margin:12px 2px 6px; font-size:12px; color:var(--chalk-dim); }
+  .past-poll{ margin-top:14px; background:var(--card); border:1px solid var(--card-line); border-radius:16px; padding:14px 16px; }
+  .past-poll[hidden]{ display:none; }
+  .pp-head{ display:flex; align-items:baseline; gap:8px; }
+  .pp-tag{ font-size:11.5px; font-weight:700; color:var(--spray-y); letter-spacing:.5px; }
+  .pp-date{ font-size:11px; color:var(--chalk-dim); margin-left:auto; }
+  .pp-q{ margin-top:4px; font-size:15px; font-weight:700; color:var(--chalk); line-height:1.4; }
+  .pp-q .en{ display:block; font-size:11px; font-weight:400; color:var(--chalk-dim); }
+  .pp-bars{ display:grid; gap:6px; margin-top:10px; }
+  .pp-bar{ position:relative; display:flex; gap:8px; align-items:center; min-height:36px; padding:6px 12px; border-radius:10px;
+    border:1px solid var(--line); overflow:hidden; font-size:13.5px; color:var(--chalk); }
+  .pp-bar .pp-fill{ position:absolute; inset:0 auto 0 0; background:rgba(255,201,60,0.18); }
+  .pp-bar.top .pp-fill{ background:rgba(255,201,60,0.34); }
+  .pp-bar.top{ border-color:var(--spray-y); }
+  .pp-bar .pp-t{ position:relative; flex:1; min-width:0; }
+  .pp-bar .pp-t small{ display:block; font-size:10.5px; color:var(--chalk-dim); }
+  .pp-bar .pp-p{ position:relative; font-weight:700; font-variant-numeric:tabular-nums; color:var(--spray-y); }
+  .pp-foot{ margin-top:8px; font-size:11px; color:var(--chalk-dim); line-height:1.5; }
+  .pp-row{ display:flex; gap:8px; margin-top:10px; }
+  .pp-btn{ flex:1; min-height:40px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--chalk);
+    font-family:inherit; font-size:12.5px; cursor:pointer; }
+  .pp-btn:focus-visible{ outline:2px solid var(--spray-y); outline-offset:2px; }
+  .pp-btn[disabled]{ opacity:.4; cursor:default; }
+  .pp-done{ min-height:16px; margin-top:6px; font-size:11px; color:#16a34a; text-align:center; }
 </style>
 </head>
 <body>
@@ -1416,10 +1447,11 @@
   <div class="wc-card">
     <button type="button" class="wc-x" id="wcX" aria-label="닫기 / Close">✕</button>
     <div class="wc-title" id="wcTitle">디부타데스에 오신 걸 환영해요 🍀<span class="wc-en">Welcome to Dibutades</span></div>
-    <p class="wc-lead">사람이 직접 쓴 한 줄을 모으는 Pi Network의 작은 광장이에요. 느낌 오면 낙서하면 돼요~
-      <span class="wc-en">A small Pi Network square that collects lines written by real people. Feel something? Just scribble it.</span></p>
+    <p class="wc-lead">매일 하나의 질문에 진짜 사람들이 한 표씩 답하는 Pi Network의 작은 광장이에요. 한 번 누르면 끝, 하고 싶은 말은 한 줄 낙서로 남겨요~
+      <span class="wc-en">A small Pi Network square where real people answer one question a day. One tap to vote, and a line if you have more to say.</span></p>
     <ul class="wc-list">
-      <li><span class="ic" aria-hidden="true">✏️</span><span><b>쓰기</b> — 오늘의 투표에 참여하고 한 줄 남기기<span class="wc-en">Write — vote in today's poll and leave a line</span></span></li>
+      <li><span class="ic" aria-hidden="true">🗳️</span><span><b>투표</b> — 오늘의 질문에 한 표, 결과는 투표한 뒤에 보여요 · 어제 결과도 볼 수 있어요<span class="wc-en">Vote — one tap on today's question, results after you vote, plus yesterday's results</span></span></li>
+      <li><span class="ic" aria-hidden="true">✅</span><span><b>Pi 인증 표</b> — Pi로 로그인하고 투표하면 계정당 한 표로 따로 세어요<span class="wc-en">Pi-verified votes — log in with Pi and your vote counts once per account</span></span></li>
       <li><span class="ic" aria-hidden="true">🧱</span><span><b>낙서벽</b> — 모두의 한 줄에 마음 하나<span class="wc-en">Wall — react to everyone's lines</span></span></li>
       <li><span class="ic" aria-hidden="true">🖼️</span><span><b>갤러리</b> — 함께 그리는 '파이오니어들의 은하'<span class="wc-en">Gallery — the Galaxy of Pioneers we draw together</span></span></li>
       <li><span class="ic" aria-hidden="true">🎮</span><span><b>007 게임</b> — 짧은 보드게임 3종<span class="wc-en">007 Game — three short board games</span></span></li>
@@ -1492,7 +1524,7 @@
         </svg>
         <div class="hdr-title">
           <h1 class="logo"><span class="logo-text">디부타데스</span><span class="en">DIBUTADES</span></h1>
-          <p>낙서는 왜 하는 거야?<span class="en">Why do we scribble?</span></p>
+          <p>오늘의 한 표, 진짜 사람들의 생각<span class="en">Today's vote — what real people think</span></p>
         </div>
         <button id="themeToggle" aria-label="화면 밝기 전환">🌙</button>
         <div id="whoami">
@@ -1509,7 +1541,7 @@
     <nav>
       <button class="tab-btn active" data-tab="write">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
-        <span class="nl">쓰기<small>Write</small></span></button>
+        <span class="nl">투표<small>Vote</small></span></button>
       <button class="tab-btn" data-tab="wall">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v6M15 10v5M9 15v5"/></svg>
         <span class="nl">낙서벽<small>Wall</small></span></button>
@@ -1552,6 +1584,7 @@
               </div>
             </div>
           </div>
+          <p class="write-sub">✏️ 투표한 이유나 보기에 없는 생각을 한 줄 낙서로 남겨요 (선택)<span class="en"> · Add a line if you like</span></p>
           <label for="writeMsg" class="sr-only">낙서 내용</label>
           <textarea id="writeMsg" maxlength="200" placeholder="보기에 없는 생각이나 투표한 이유를 한마디 남겨 보세요&#10;Share a thought, or why you voted"></textarea>
           <div class="write-row">
@@ -1560,6 +1593,20 @@
           </div>
           <div class="status" id="writeStatus"></div>
           <p class="hint" id="whoamiText">낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.</p>
+        </div>
+
+        <!-- 지난 투표 결과 (어제 또는 가장 최근에 끝난 투표) -->
+        <div class="past-poll" id="pastPoll" hidden aria-live="polite">
+          <div class="pp-head"><span class="pp-tag" id="ppTag">📊 지난 투표 결과</span><span class="pp-date" id="ppDate"></span></div>
+          <div class="pp-q" id="ppQ"></div>
+          <div class="pp-bars" id="ppBars"></div>
+          <div class="pp-foot" id="ppFoot"></div>
+          <div class="pp-row">
+            <button type="button" class="pp-btn" id="ppPrev" aria-label="더 이전 투표">◀ 이전</button>
+            <button type="button" class="pp-btn" id="ppCopy" aria-label="결과 복사 / Copy results">📋 결과 복사</button>
+            <button type="button" class="pp-btn" id="ppNext" aria-label="더 최근 투표">다음 ▶</button>
+          </div>
+          <div class="pp-done" id="ppDone" role="status"></div>
         </div>
 
         <div class="promo-strip" id="promoStripMain"></div>
@@ -2208,19 +2255,22 @@ function renderPoll(){
   document.getElementById('todayQText').innerHTML = `${escapeHtml(d.ko)}<span class="en">${escapeHtml(d.en)}</span>`;
   const voted = d.myChoice !== null && d.myChoice !== undefined;
   box.classList.toggle('voted', voted);
-  const total = d.total || 0;
+  const total = d.total || 0, verified = d.verified || 0;
+  const few = total < POLL_FEW;   // 표가 적을 때는 %보다 표 수가 더 정직해 보임
   document.getElementById('pollOpts').innerHTML = d.options.map((o, i) => {
     const pct = total ? Math.round((d.counts[i] || 0) / total * 100) : 0;
     const open = voted && pollState.openCc === i;
     return `<button type="button" class="poll-opt${o.other ? ' other' : ''}${voted && d.myChoice === i ? ' mine' : ''}${open ? ' open' : ''}" data-i="${i}"${voted ? ` aria-expanded="${open}"` : ''}>
       <span class="po-fill" style="width:${voted ? pct : 0}%"></span>
       <span class="po-t">${escapeHtml(o.ko)}<small>${escapeHtml(o.en)}</small></span>
-      ${voted ? `<span class="po-p">${pct}%</span>` : ''}
+      ${voted ? `<span class="po-p">${few ? (d.counts[i] || 0) + '표' : pct + '%'}</span>` : ''}
     </button>${open ? pollCountryHtml(d, i) : ''}`;
   }).join('');
+  const vBadge = verified ? ` <span class="poll-verified">✅ Pi 인증 ${verified}명</span>` : '';
+  const loginTip = !currentUser ? `<span class="poll-login-tip">Pi로 로그인하고 투표하면 ✅ 인증 표로 세어요 · Log in with Pi for a verified vote</span>` : '';
   document.getElementById('pollFoot').innerHTML = voted
-    ? `지금까지 ${total}명 참여 · 막대를 누르면 나라별로 볼 수 있어요 · ${d.options[d.myChoice] && d.options[d.myChoice].other ? '아래 칸에 다른 생각을 한마디 남겨 주세요 ✏️' : '투표한 이유를 아래 한마디로 남겨도 좋아요'}<br><span style="opacity:.85">${total} votes · Share your reason below</span>`
-    : `${total ? `지금까지 ${total}명 참여 · ` : ''}투표하면 결과가 보여요 · 보기에 없으면 ✏️ 다른 생각<br><span style="opacity:.85">Vote to see results</span>`;
+    ? `지금까지 ${total}명 참여${vBadge} · 막대를 누르면 나라별로 볼 수 있어요 · ${d.options[d.myChoice] && d.options[d.myChoice].other ? '아래 칸에 다른 생각을 한마디 남겨 주세요 ✏️' : '투표한 이유를 아래 한마디로 남겨도 좋아요'}<br><span style="opacity:.85">${total} votes · Share your reason below</span>`
+    : `${total ? `지금까지 ${total}명 참여${vBadge} · ` : ''}투표하면 결과가 보여요 · 보기에 없으면 ✏️ 다른 생각<br><span style="opacity:.85">Vote to see results</span>${loginTip}`;
   document.querySelectorAll('#pollOpts .poll-opt').forEach(b => b.addEventListener('click', () => votePoll(Number(b.dataset.i))));
   if(typeof syncPollAdmin === 'function') syncPollAdmin();
 }
@@ -2239,7 +2289,7 @@ async function votePoll(i){
   if(!visitorId){ document.getElementById('pollFoot').textContent = '이 브라우저에서는 투표를 저장할 수 없어요.'; return; }
   pollState.busy = true;
   try{
-    const r = await fetch(API_BASE + '/api/poll/vote', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ choice: i, visitorId }) });
+    const r = await fetch(API_BASE + '/api/poll/vote', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ choice: i, visitorId, accessToken: currentUser && currentUser.accessToken || undefined }) });
     const j = await r.json(); if(!r.ok) throw new Error(j.error || 'vote');
     pollState.data = j; renderPoll();
     if(d.options[i] && d.options[i].other) focusWriteForPoll();
@@ -2256,6 +2306,63 @@ async function loadTodayQuestion(){
   }
 }
 loadTodayQuestion();
+
+// ---------- 지난 투표 결과 ----------
+const POLL_FEW = 10;
+const pastPoll = { items: [], idx: 0 };
+function ppDateText(day){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(day || ''); if(!m) return '';
+  const wd = ['일','월','화','수','목','금','토'][new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay()];
+  return `${+m[2]}월 ${+m[3]}일 (${wd})`;
+}
+function ppResultText(h){
+  const few = h.total < POLL_FEW;
+  const lines = h.options.map((o, i) => {
+    const n = h.counts[i] || 0, pct = h.total ? Math.round(n / h.total * 100) : 0;
+    return `${i + 1}) ${o.ko} — ${few ? n + '표' : pct + '%'}`;
+  });
+  return `🗳️ 디부타데스 투표 결과 · ${ppDateText(h.day)}\nQ. ${h.ko}\n${lines.join('\n')}\n참여 ${h.total}명${h.verified ? ` (Pi 인증 ${h.verified}명)` : ''} 🍀\n오늘의 투표 👉 dibutades8708.pinet.com`;
+}
+function renderPastPoll(){
+  const box = document.getElementById('pastPoll'), h = pastPoll.items[pastPoll.idx];
+  if(!h){ box.hidden = true; return; }
+  box.hidden = false;
+  const few = h.total < POLL_FEW, max = Math.max(...h.counts);
+  document.getElementById('ppTag').textContent = pastPoll.idx === 0 ? '📊 지난 투표 결과' : `📊 ${pastPoll.idx + 1}번째 전 투표`;
+  document.getElementById('ppDate').textContent = ppDateText(h.day);
+  document.getElementById('ppQ').innerHTML = `${escapeHtml(h.ko)}<span class="en">${escapeHtml(h.en || '')}</span>`;
+  document.getElementById('ppBars').innerHTML = h.options.map((o, i) => {
+    const n = h.counts[i] || 0, pct = h.total ? Math.round(n / h.total * 100) : 0;
+    return `<div class="pp-bar${n && n === max ? ' top' : ''}"><span class="pp-fill" style="width:${pct}%"></span>
+      <span class="pp-t">${escapeHtml(o.ko)}<small>${escapeHtml(o.en || '')}</small></span><span class="pp-p">${few ? n + '표' : pct + '%'}</span></div>`;
+  }).join('');
+  document.getElementById('ppFoot').innerHTML = `참여 ${h.total}명${h.verified ? ` <span class="poll-verified">✅ Pi 인증 ${h.verified}명</span>` : ''} · ${escapeHtml(h.theme || '')}<br><span style="opacity:.85">${h.total} votes${h.verified ? ` · ${h.verified} Pi-verified` : ''}</span>`;
+  document.getElementById('ppPrev').disabled = pastPoll.idx >= pastPoll.items.length - 1;
+  document.getElementById('ppNext').disabled = pastPoll.idx === 0;
+  document.getElementById('ppDone').textContent = '';
+}
+async function loadPastPoll(){
+  try{
+    const r = await fetch(API_BASE + '/api/poll/history?n=7');
+    const j = await r.json();
+    pastPoll.items = (j.items || []).filter(h => h && Array.isArray(h.options) && Array.isArray(h.counts));
+    pastPoll.idx = 0; renderPastPoll();
+  }catch(e){ document.getElementById('pastPoll').hidden = true; }
+}
+document.getElementById('ppPrev').addEventListener('click', () => { if(pastPoll.idx < pastPoll.items.length - 1){ pastPoll.idx++; renderPastPoll(); } });
+document.getElementById('ppNext').addEventListener('click', () => { if(pastPoll.idx > 0){ pastPoll.idx--; renderPastPoll(); } });
+document.getElementById('ppCopy').addEventListener('click', async () => {
+  const h = pastPoll.items[pastPoll.idx]; if(!h) return;
+  const text = ppResultText(h), done = document.getElementById('ppDone');
+  try{ await navigator.clipboard.writeText(text); done.textContent = '복사했어요. X나 카페에 붙여 넣으면 돼요 🍀'; }
+  catch(e){
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done.textContent = '복사했어요. X나 카페에 붙여 넣으면 돼요 🍀'; }catch(_){ done.textContent = '복사하지 못했어요.'; }
+    ta.remove();
+  }
+});
+loadPastPoll();
 
 // ---------- 관리자: 오늘의 특별 투표 (로저님 계정에만 보임) ----------
 let pollIsAdmin = false, paArmed = false;
@@ -2614,6 +2721,7 @@ async function loginWithPi(opts){
     if(document.getElementById('pagePromo').classList.contains('show')) loadMyTickets();
     if(document.getElementById('pageScam') && document.getElementById('pageScam').classList.contains('show')) checkScamAdmin();
     if(typeof checkPollAdmin === 'function') checkPollAdmin();
+    if(pollState.data) renderPoll();   // "Pi로 로그인하면 인증 표" 안내를 지움
   }catch(e){
     console.error(e);
     if(silent){ rememberLogin(false); return; } // 조용한 재로그인 실패는 안내 없이 넘어감
