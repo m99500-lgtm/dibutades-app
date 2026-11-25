@@ -119,7 +119,8 @@ const POLL_THEMES = [
     ['어릴 적 꿈과 지금의 나는?', 'Your childhood dream and you now?', [['꿈을 이뤘어요', 'Made it'], ['새 꿈을 찾았어요', 'Found a new dream'], ['아직 가는 중', 'Still on my way']]],
     ['받으면 더 기쁜 건?', 'Which feels better to receive?', [['✉️ 손편지', 'A handwritten letter'], ['📱 메시지', 'A text message']]],
     ['내 사진들은 주로 어디에?', 'Where do your photos live?', [['인화한 앨범', 'Printed albums'], ['휴대폰 속', 'On my phone'], ['클라우드', 'In the cloud']]],
-    ['세계에 알리고 싶은 한국 문화는?', 'Korean culture you would share with the world?', [['한글', 'Hangeul'], ['한식', 'Food'], ['K-음악', 'Music'], ['전통 놀이', 'Traditional games']]]
+    ['세계에 알리고 싶은 한국 문화는?', 'Korean culture you would share with the world?', [['한글', 'Hangeul'], ['한식', 'Food'], ['K-음악', 'Music'], ['전통 놀이', 'Traditional games']]],
+    ['로흐 갤러리에서 가장 마음에 남는 연작은?', 'Which series in the Roch Gallery stays with you?', [['외계 시각', 'Alien Sight'], ['새로운 금융의 풍경', 'New Finance'], ['다섯 번의 열', 'Five Fevers'], ['로흐의 세계', "Roch's World"]]]
   ]}
 ];
 const SPECIAL_DAYS = {
