@@ -2482,9 +2482,32 @@ document.getElementById('rewardAdBtn').addEventListener('click', watchRewardedAd
 
 // 갤러리 등 다른 페이지를 다녀와도 로그인이 유지되도록, 로그인한 적이 있으면 조용히 다시 로그인
 const AUTO_LOGIN_KEY = 'dbtAutoLogin';
+// 로그인한 사람 정보: 토큰은 이 탭(sessionStorage)에만, 이름은 12시간 동안 기기(localStorage)에 기억
+const LOGIN_USER_KEY = 'dbtLoginUser';
 function rememberLogin(on){
   try{ on ? sessionStorage.setItem(AUTO_LOGIN_KEY, '1') : sessionStorage.removeItem(AUTO_LOGIN_KEY); }catch(e){}
   try{ on ? localStorage.setItem(AUTO_LOGIN_KEY, String(Date.now())) : localStorage.removeItem(AUTO_LOGIN_KEY); }catch(e){}
+  if(on && currentUser){
+    try{ sessionStorage.setItem(LOGIN_USER_KEY, JSON.stringify({ uid: currentUser.uid, username: currentUser.username, accessToken: currentUser.accessToken })); }catch(e){}
+    try{ localStorage.setItem(LOGIN_USER_KEY, JSON.stringify({ username: currentUser.username })); }catch(e){}
+  }
+  if(!on){
+    try{ sessionStorage.removeItem(LOGIN_USER_KEY); }catch(e){}
+    try{ localStorage.removeItem(LOGIN_USER_KEY); }catch(e){}
+  }
+}
+// 로그인된 화면 / 로그인 전 화면
+function showLoggedInUI(username){
+  document.getElementById('whoamiText').textContent = '@' + username + ' 로 로그인됨 · 개인정보는 쓰지 마세요.';
+  document.getElementById('loginBtn').style.display = 'none';
+  const chip = document.getElementById('userChip');
+  chip.textContent = '@' + username;
+  chip.hidden = false;
+}
+function showLoggedOutUI(){
+  document.getElementById('whoamiText').textContent = '낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.';
+  document.getElementById('loginBtn').style.display = '';
+  document.getElementById('userChip').hidden = true;
 }
 function shouldAutoLogin(){
   try{ if(sessionStorage.getItem(AUTO_LOGIN_KEY) === '1') return true; }catch(e){}
@@ -2506,11 +2529,7 @@ async function loginWithPi(opts){
       username: authResult.user.username,
       accessToken: authResult.accessToken
     };
-    document.getElementById('whoamiText').textContent = '@' + currentUser.username + ' 로 로그인됨 · 개인정보는 쓰지 마세요.';
-    document.getElementById('loginBtn').style.display = 'none';
-    const chip = document.getElementById('userChip');
-    chip.textContent = '@' + currentUser.username;
-    chip.hidden = false;
+    showLoggedInUI(currentUser.username);
     rememberLogin(true);
     if(typeof cosmosTouch === 'function') setTimeout(cosmosTouch, 0);   // 로그인도 은하에 별 하나
     // 앱 홍보 화면이 이미 열려 있으면 내 무료권 정보를 다시 불러옴
@@ -2520,23 +2539,36 @@ async function loginWithPi(opts){
     if(pollState.data) renderPoll();   // "Pi로 로그인하면 인증 표" 안내를 지움
   }catch(e){
     console.error(e);
-    if(silent){ rememberLogin(false); return; } // 조용한 재로그인 실패는 안내 없이 넘어감
+    // 조용한 재로그인 실패: 이 탭에 저장된 로그인이 있으면 그대로 유지(만료되면 서버가 알려줌), 없으면 조용히 로그인 전 화면으로
+    if(silent){ if(!currentUser){ rememberLogin(false); showLoggedOutUI(); } return; }
     showStatus('writeStatus','err','로그인에 실패했습니다: ' + e.message, 'Login failed: ' + e.message);
   }
 }
 document.getElementById('loginBtn').addEventListener('click', ()=>loginWithPi());
 // Pi Browser 안에서만 조용히 다시 로그인 (X·카카오 등 다른 앱 브라우저에서는 Pi 안내창이 떠 버리므로 하지 않음)
 function isPiBrowser(){ return /PiBrowser/i.test(navigator.userAgent || ''); }
-if(shouldAutoLogin() && isPiBrowser()) loginWithPi({ silent:true });
+// 뒤로가기·다른 페이지에서 돌아왔을 때: Pi 확인을 기다리지 않고 바로 로그인된 화면을 보여준 뒤, 뒤에서 조용히 다시 확인
+function restoreLogin(){
+  if(!isPiBrowser() || !shouldAutoLogin()) return;
+  let snap = null;
+  try{ snap = JSON.parse(sessionStorage.getItem(LOGIN_USER_KEY) || 'null'); }catch(e){}
+  if(!snap){ try{ snap = JSON.parse(localStorage.getItem(LOGIN_USER_KEY) || 'null'); }catch(e){} }
+  if(snap && snap.username){
+    if(snap.accessToken && !currentUser) currentUser = { uid: snap.uid, username: snap.username, accessToken: snap.accessToken };
+    showLoggedInUI(snap.username);
+  }
+  loginWithPi({ silent:true });
+}
+restoreLogin();
+// 뒤로가기로 페이지가 캐시에서 되살아난 경우에도 로그인 화면 유지
+window.addEventListener('pageshow', e => { if(e.persisted && currentUser) showLoggedInUI(currentUser.username); });
 
 // 서버가 로그인을 확인하지 못했을 때(토큰 만료 등): 로그인 상태를 풀고 다시 로그인하게 안내
 function handleLoginExpired(statusId){
   currentUser = null;
   { const pa = document.getElementById('pollAdmin'); if(pa) pa.hidden = true; pollIsAdmin = false; }
   rememberLogin(false);
-  document.getElementById('whoamiText').textContent = '낙서는 파이오니어만, 구경은 아무나 가능 · 닉네임은 Pi 계정 이름으로 표시돼요. 개인정보는 쓰지 마세요.';
-  document.getElementById('loginBtn').style.display = '';
-  document.getElementById('userChip').hidden = true;
+  showLoggedOutUI();
   const ko = '로그인이 만료되었어요. 다시 Pi로 로그인해주세요.';
   const en = 'Your login expired. Please log in with Pi again.';
   if(statusId) showStatus(statusId, 'err', ko, en);
