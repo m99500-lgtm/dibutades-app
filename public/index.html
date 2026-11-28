@@ -2516,7 +2516,7 @@ function shouldAutoLogin(){
 }
 async function loginWithPi(opts){
   const silent = !!(opts && opts.silent);
-  if(!silent && !(opts && opts.force) && typeof isPiBrowser === 'function' && !isPiBrowser()){ openPiGuide(); return; }
+  if(!silent && !(opts && opts.force) && !isPiBrowser()){ if(!(await detectPiHost())){ openPiGuide(); return; } }
   if(typeof Pi === 'undefined'){
     if(!silent) alert('Pi Browser 안에서 열어주세요. / Please open this inside Pi Browser.');
     return;
@@ -2531,6 +2531,7 @@ async function loginWithPi(opts){
     };
     showLoggedInUI(currentUser.username);
     rememberLogin(true);
+    rememberPiHost();   // 로그인이 됐다는 건 Pi Browser라는 뜻 (PC용 포함) → 이 기기를 기억
     if(typeof cosmosTouch === 'function') setTimeout(cosmosTouch, 0);   // 로그인도 은하에 별 하나
     // 앱 홍보 화면이 이미 열려 있으면 내 무료권 정보를 다시 불러옴
     if(document.getElementById('pagePromo').classList.contains('show')) loadMyTickets();
@@ -2546,10 +2547,32 @@ async function loginWithPi(opts){
 }
 document.getElementById('loginBtn').addEventListener('click', ()=>loginWithPi());
 // Pi Browser 안에서만 조용히 다시 로그인 (X·카카오 등 다른 앱 브라우저에서는 Pi 안내창이 떠 버리므로 하지 않음)
-function isPiBrowser(){ return /PiBrowser/i.test(navigator.userAgent || ''); }
+// PC용 Pi Browser는 이름표(UA)에 'PiBrowser'가 없을 수 있어요.
+// 그래서 ① 이름표 ② 이 기기에서 Pi 로그인이 된 적이 있는지 ③ Pi 앱과 실제로 대화가 되는지, 셋 중 하나면 Pi Browser로 봐요.
+const PI_HOST_KEY = 'dbtPiHost';
+function rememberPiHost(){ try{ localStorage.setItem(PI_HOST_KEY, '1'); }catch(e){} }
+function isPiBrowser(){
+  if(/PiBrowser|Pi Browser/i.test(navigator.userAgent || '')) return true;
+  try{ return localStorage.getItem(PI_HOST_KEY) === '1'; }catch(e){ return false; }
+}
+let piHostCheck = null;
+function detectPiHost(){
+  if(isPiBrowser()) return Promise.resolve(true);
+  if(piHostCheck) return piHostCheck;
+  piHostCheck = new Promise(res => {
+    if(typeof Pi === 'undefined' || !Pi.nativeFeaturesList){ res(false); return; }
+    const t = setTimeout(() => res(false), 1500);   // 일반 브라우저에서는 대답이 오지 않음
+    try{
+      Pi.nativeFeaturesList().then(f => { clearTimeout(t); const ok = Array.isArray(f) && f.length > 0; if(ok) rememberPiHost(); res(ok); }, () => { clearTimeout(t); res(false); });
+    }catch(e){ clearTimeout(t); res(false); }
+  });
+  return piHostCheck;
+}
+detectPiHost();   // 미리 확인해 두면 로그인 버튼을 눌렀을 때 기다림이 없음
 // 뒤로가기·다른 페이지에서 돌아왔을 때: Pi 확인을 기다리지 않고 바로 로그인된 화면을 보여준 뒤, 뒤에서 조용히 다시 확인
 function restoreLogin(){
-  if(!isPiBrowser() || !shouldAutoLogin()) return;
+  if(!shouldAutoLogin()) return;
+  if(!isPiBrowser()){ detectPiHost().then(ok => { if(ok) restoreLogin(); }); return; }
   let snap = null;
   try{ snap = JSON.parse(sessionStorage.getItem(LOGIN_USER_KEY) || 'null'); }catch(e){}
   if(!snap){ try{ snap = JSON.parse(localStorage.getItem(LOGIN_USER_KEY) || 'null'); }catch(e){} }
@@ -2607,7 +2630,7 @@ writeMsgElRef.addEventListener('drop', (e)=>{ e.preventDefault(); });
 document.getElementById('submitGraffiti').addEventListener('click', async ()=>{
   const msg = document.getElementById('writeMsg').value.trim();
   if(!currentUser){
-    if(!isPiBrowser()){ openPiGuide(); return; }
+    if(!(await detectPiHost())){ openPiGuide(); return; }
     showStatus('writeStatus','err','낙서를 남기려면 먼저 Pi로 로그인해주세요.','Please log in with Pi to post graffiti.');
     return;
   }
@@ -3236,7 +3259,7 @@ async function sendMeal(){
   const text = (input.value || '').trim();
   if(!text){ msgEl.textContent = '오늘 먹은 한 끼를 적어 주세요.'; return; }
   if(!currentUser){
-    if(typeof Pi === 'undefined' || !isPiBrowser()){ openPiGuide(); return; }
+    if(typeof Pi === 'undefined' || !(await detectPiHost())){ openPiGuide(); return; }
     await loginWithPi(); if(!currentUser){ msgEl.textContent = '로그인한 뒤 올릴 수 있어요.'; return; }
   }
   btn.disabled = true; msgEl.textContent = '올리는 중…';
